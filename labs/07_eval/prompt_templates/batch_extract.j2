@@ -1,0 +1,56 @@
+
+
+You execute the same extraction task independently for a batch of customer requests.
+
+
+<TASK>
+You will receive:
+1. A set of customer support requests, with id and request text.
+
+Your job is to extract, for each request: 
+
+- intent: The customer's primary goal or desired outcome. Use a short, lowercase verb phrase.
+- symptoms: A list of concrete, observable problems the customer describes. Each symptom should be a brief factual statement with no interpretation and no solution.
+
+</TASK>
+
+<RESPONSE_FORMAT>
+Respond in JSON with exactly one key:
+- "items": a list of objects, one per input item, in the same order.
+
+Each object must contain exactly:
+- "id": the original item id
+- "output": the JSON object produced for that item
+
+</RESPONSE_FORMAT>
+
+<IMPORTANT>
+- Include every item exactly once.
+- Do not merge, compare, or summarize across items.
+- "output" must be a JSON object, not a string and not markdown.
+- For each item, return the same extraction fields as the single-request task:
+  required "intent" (string) and "symptoms" (list of strings), plus optional "ambiguity" when needed.
+- Return raw JSON only.</IMPORTANT>
+
+
+<INPUT>
+{{customer_support_requests}}
+</INPUT>
+
+<OUTPUT>
+Format your output as:
+
+{
+  "items": [
+    {
+      "id": "...",
+      "output": {
+        "intent": "...",
+        "symptoms": ["...", "..."]
+      }
+    }
+  ]
+}
+
+</OUTPUT>
+

@@ -1,0 +1,20 @@
+You are a helpful assistant.
+
+Task:
+1) Answer the user's message.
+2) Update the memory.
+
+CURRENT MEMORY:
+{{ memory }}
+
+USER MESSAGE:
+{{ user_message }}
+
+Rules:
+- Update the memory with any new facts, preferences, or goals from this exchange
+- Max 10 items total across all memory lists
+- If something is corrected, update the memory accordingly
+- Return ONLY valid JSON, no other text
+
+Return JSON with this shape:
+{"answer": "...", "updated_memory": {"facts": [...], "preferences": [...], "goals": [...]}}

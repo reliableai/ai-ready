@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+
+  OPTION B: Left border aside (blockquote-style)
+  - Content always visible
+  - Visually indented with colored left border
+  - Feels like a sidebar or margin note
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option B: Left Border Aside</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-top: 0.2em;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+
+        /* OPTION B: Left border aside styling */
+        .aside-section {
+            border-left: 4px solid #cbd5e0;
+            padding-left: 1.5em;
+            margin: 2.5em 0;
+            color: #4a5568;
+        }
+        .aside-section .aside-header {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #718096;
+            margin-bottom: 0.5em;
+        }
+        .aside-section .skip-link {
+            font-size: 0.95em;
+            color: #718096;
+            font-style: italic;
+        }
+        .aside-section h3 {
+            color: #718096;
+            font-size: 1em;
+        }
+        .aside-section table {
+            font-size: 0.9em;
+        }
+        .aside-section th {
+            background: #edf2f7;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Option B: Left Border Aside</h1>
+<p><em>Content is always visible but visually de-emphasized with a left border.</em></p>
+
+<hr>
+
+<p>The third option — <em>investigate further before deciding</em> — doesn't exist when you only hear a point estimate.</p>
+
+<div class="aside-section">
+
+<p class="aside-header">📐 Optional: Computing the Value of Uncertainty Awareness</p>
+<p class="skip-link">If you're not interested in the math, <a href="./part-2b-uncertainty-vs-variability.html">skip to Part 2b →</a></p>
+
+<p><strong>Setup: M agents, one customer</strong></p>
+
+<p>You have M agents to evaluate for your company. Your goal: deploy only where you're confident the agent will help more than harm. Ideally, you want most of the agent to be valuable. You know you can't be perfect, but you want, as a ballpark, around 90% of the agents to be valuable on average.</p>
+
+<p>In enterprise AI, a bad deployment erodes customer trust, triggers escalations, and can lose the account. A delayed good deployment costs opportunity — but the customer doesn't know what they're missing.</p>
+
+<h3>Without uncertainty awareness</h3>
+
+<p>Your teams report point estimates. You see:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Agent</th>
+            <th>Reported E[V]</th>
+            <th>Your decision</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>A</td><td>+12</td><td>Deploy</td></tr>
+        <tr><td>B</td><td>+3</td><td>Deploy</td></tr>
+        <tr><td>C</td><td>+18</td><td>Deploy</td></tr>
+        <tr><td>D</td><td>+6</td><td>Deploy</td></tr>
+        <tr><td>E</td><td>−2</td><td>Don't deploy</td></tr>
+        <tr><td>F</td><td>+9</td><td>Deploy</td></tr>
+        <tr><td>G</td><td>+1</td><td>Deploy</td></tr>
+        <tr><td>H</td><td>+15</td><td>Deploy</td></tr>
+        <tr><td>I</td><td>−5</td><td>Don't deploy</td></tr>
+        <tr><td>J</td><td>+7</td><td>Deploy</td></tr>
+    </tbody>
+</table>
+
+<p>You deploy 8 agents. Seems reasonable — they all have positive expected value.</p>
+
+<h3>With uncertainty awareness</h3>
+
+<p>Same agents, same point estimates — but now you also see the uncertainty range:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Agent</th>
+            <th>Reported E[V]</th>
+            <th>Uncertainty range</th>
+            <th>P(E[V] &gt; 0)</th>
+            <th>Your decision</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>A</td><td>+12</td><td>[+8, +16]</td><td>&gt;99%</td><td>Deploy ✓</td></tr>
+        <tr><td>B</td><td>+3</td><td>[−8, +14]</td><td>~65%</td><td><strong>Hold</strong></td></tr>
+        <tr><td>C</td><td>+18</td><td>[+12, +24]</td><td>&gt;99%</td><td>Deploy ✓</td></tr>
+        <tr><td>D</td><td>+6</td><td>[−15, +27]</td><td>~70%</td><td><strong>Hold</strong></td></tr>
+        <tr><td>E</td><td>−2</td><td>[−6, +2]</td><td>~35%</td><td>Don't deploy</td></tr>
+        <tr><td>F</td><td>+9</td><td>[+4, +14]</td><td>&gt;95%</td><td>Deploy ✓</td></tr>
+        <tr><td>G</td><td>+1</td><td>[−12, +14]</td><td>~55%</td><td><strong>Hold</strong></td></tr>
+        <tr><td>H</td><td>+15</td><td>[+10, +20]</td><td>&gt;99%</td><td>Deploy ✓</td></tr>
+        <tr><td>I</td><td>−5</td><td>[−10, 0]</td><td>~5%</td><td>Don't deploy</td></tr>
+        <tr><td>J</td><td>+7</td><td>[+2, +12]</td><td>&gt;95%</td><td>Deploy ✓</td></tr>
+    </tbody>
+</table>
+
+<p>Now you deploy only 5 agents (A, C, F, H, J) — the ones where you're confident.</p>
+
+<p>You hold 3 agents (B, D, G) — not because they look bad, but because the uncertainty is too high.</p>
+
+<h3>What happens next?</h3>
+
+<p>Suppose the true E[V] values are:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Agent</th>
+            <th>Reported E[V]</th>
+            <th>True E[V]</th>
+            <th>Without awareness</th>
+            <th>With awareness</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>A</td><td>+12</td><td>+10</td><td>Deploy ✓</td><td>Deploy ✓</td></tr>
+        <tr><td>B</td><td>+3</td><td>−4</td><td>Deploy ✗ (harm)</td><td>Hold ✓</td></tr>
+        <tr><td>C</td><td>+18</td><td>+15</td><td>Deploy ✓</td><td>Deploy ✓</td></tr>
+        <tr><td>D</td><td>+6</td><td>+8</td><td>Deploy ✓</td><td>Hold (missed)</td></tr>
+        <tr><td>E</td><td>−2</td><td>−3</td><td>Don't deploy ✓</td><td>Don't deploy ✓</td></tr>
+        <tr><td>F</td><td>+9</td><td>+7</td><td>Deploy ✓</td><td>Deploy ✓</td></tr>
+        <tr><td>G</td><td>+1</td><td>−6</td><td>Deploy ✗ (harm)</td><td>Hold ✓</td></tr>
+        <tr><td>H</td><td>+15</td><td>+12</td><td>Deploy ✓</td><td>Deploy ✓</td></tr>
+        <tr><td>I</td><td>−5</td><td>−8</td><td>Don't deploy ✓</td><td>Don't deploy ✓</td></tr>
+        <tr><td>J</td><td>+7</td><td>+5</td><td>Deploy ✓</td><td>Deploy ✓</td></tr>
+    </tbody>
+</table>
+
+<p><strong>Without awareness:</strong> You deployed 8 agents. Two of them (B, G) had true E[V] &lt; 0. You harmed the customer twice.</p>
+
+<p><strong>With awareness:</strong> You deployed 5 agents. All had true E[V] &gt; 0. You missed one good agent (D) — but you harmed the customer zero times.</p>
+
+<h3>The value of visibility</h3>
+
+<p>Uncertainty awareness didn't change the agents. It just made the uncertainty <em>visible</em>.</p>
+
+<p>That visibility alone:</p>
+
+<ul>
+    <li>Prevented 2 harmful deployments</li>
+    <li>Identified 3 agents that need more investigation before deciding</li>
+    <li>Let you deploy 5 agents with high confidence</li>
+</ul>
+
+<p>This is the epistemic value of uncertainty — the value of simply <em>knowing what you don't know</em>.</p>
+
+</div>
+
+<h2>Bias: When Your Estimate Is Systematically Off</h2>
+
+<p>So far we've talked about uncertainty — your estimate has some range around it...</p>
+
+</body>
+</html>

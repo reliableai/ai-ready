@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L5: "Eval" in Software 1.0 (traditional) and 2.0 (ML)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <style>
+        .example-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin: 0.75rem 0;
+        }
+        .example-card .meta {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .example-card .text {
+            font-style: italic;
+            line-height: 1.6;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 1.2rem 0;
+        }
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-box .number {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .stat-box .label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+        .tag {
+            display: inline-block;
+            background: rgba(125, 211, 252, 0.1);
+            border: 1px solid rgba(125, 211, 252, 0.25);
+            border-radius: 4px;
+            padding: 0.15rem 0.5rem;
+            font-size: 0.8rem;
+            margin: 0.15rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .challenge-box {
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin: 1rem 0;
+        }
+        .challenge-box h4 {
+            color: var(--warning);
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L5: "Eval" in Software 1.0 and 2.0</div>
+    <ul>
+        <li><a href="#sw10">1. SW 1.0</a></li>
+        <li><a href="#sw20">2. SW 2.0</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <div class="title-section" id="intro">
+        <h1>"Eval" in Software 1.0 (traditional) and 2.0 (ML)</h1>
+        <p class="subtitle">What's similar and what changes when outputs become probabilistic</p>
+        <p style="margin-top: 1rem;"><a href="https://classroom.github.com/a/5OF77ZDV" target="_blank" style="font-weight: 600;">Accept GitHub Classroom Assignment &rarr;</a></p>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SOFTWARE 1.0: TRADITIONAL -->
+    <!-- ================================================================ -->
+    <section id="sw10">
+        <div class="section-number">01 / SOFTWARE 1.0</div>
+        <h2>Evaluation in traditional software</h2>
+
+        <p>In traditional software, expected outputs are <strong>known</strong>. You write a function, you know what it should return, and you write a test that checks.</p>
+
+        <ul>
+            <li><strong>Unit tests:</strong> assert that <code>add(2, 3) == 5</code></li>
+            <li><strong>Integration tests:</strong> verify that components work together</li>
+            <li><strong>Regression tests:</strong> ensure new changes don't break old behavior</li>
+        </ul>
+
+        <p>Evaluation is <strong>deterministic and binary</strong> &mdash; pass or fail. The hard part is coverage (did you test enough cases?), not measurement (is this output "good enough?").</p>
+
+        <div class="thesis-block">
+            <div class="label">Key property</div>
+            <p>You can always write down the expected output. If you can't, the spec is incomplete &mdash; not the test.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- SOFTWARE 2.0: ML SYSTEMS -->
+    <!-- ================================================================ -->
+    <section id="sw20">
+        <div class="section-number">02 / SOFTWARE 2.0</div>
+        <h2>Evaluation in ML systems</h2>
+
+        <p>Machine learning introduced <strong>probabilistic outputs</strong>. A classifier doesn't return "the right answer" &mdash; it returns a distribution over labels. Evaluation shifts from "is this exact output correct?" to "how good is this model across a test set?"</p>
+
+        <div class="content-card">
+            <h4>Key concepts</h4>
+            <ul>
+                <li><strong>Train/test split</strong> &mdash; evaluate on data the model hasn't seen</li>
+                <li><strong>Metrics</strong> &mdash; precision, recall, F1, AUC, RMSE &mdash; each captures a different aspect of quality</li>
+                <li><strong>Overfitting</strong> &mdash; good on training data, bad on new data</li>
+                <li><strong>Cross-validation</strong> &mdash; robust estimation of model performance</li>
+                <li><strong>Statistical significance</strong> &mdash; is this improvement real or just noise?</li>
+            </ul>
+        </div>
+
+        <p>For a thorough treatment of ML evaluation methodology, see:</p>
+        <ul>
+            <li><a href="https://mlvu.github.io/evaluation/" target="_blank"><strong>MLVU: Evaluation</strong></a> &mdash; full lecture on methodology, metrics, and pitfalls</li>
+            <li><a href="https://mlvu.github.io/lectures/21.Methodology1.annotated.pdf" target="_blank">Methodology lecture (annotated PDF)</a></li>
+        </ul>
+
+        <div class="thesis-block">
+            <div class="label">Key property</div>
+            <p>"Correct" becomes a <strong>distribution</strong>. You need held-out data, aggregate metrics, and statistical reasoning. But you still have ground truth labels to compare against.</p>
+        </div>
+    </section>
+
+
+</main>
+
+<footer>
+    <p>Designing Large Scale AI Systems &middot; Spring 2026</p>
+</footer>
+
+<script>hljs.highlightAll();</script>
+</body>
+</html>
+<!-- DATASETS, CRITIQUE, AND FEEDBACK LOOP SECTIONS MOVED TO L6 -->

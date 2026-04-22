@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From Service to Agent-Oriented Architectures</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo">AI Tools Integration</div>
+    <ul>
+        <li><a href="#intro">Intro</a></li>
+        <li><a href="#objectives">Objectives</a></li>
+        <li><a href="#monoliths">1. Monoliths</a></li>
+        <li><a href="#services">2. Services</a></li>
+        <li><a href="aoa.html">Part 2</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="intro">
+        <h1>From Service to Agent-Oriented Architectures</h1>
+        <p class="subtitle">Components, Services, Tools and AI</p>
+    </div>
+
+    <!-- LEARNING OBJECTIVES -->
+    <section id="objectives">
+        <h2>Learning Objectives</h2>
+
+        <p>This reading focuses on <em>design reasoning</em> rather than framework mastery.</p>
+
+        <p>Throughout this piece, we adopt a design perspective on AI systems.</p>
+
+        <p>Rather than focusing on specific frameworks or APIs, the goal is to reason about:</p>
+
+        <ul>
+            <li>which <strong>system-level properties</strong> we want from AI-enabled systems,</li>
+            <li>which <strong>perspectives</strong> must be considered when designing them,</li>
+            <li>which <strong>abstractions</strong> help manage complexity and scale,</li>
+            <li>and which aspects must be <strong>explicitly specified or standardized</strong> for systems to be interoperable, safe, and evolvable.</li>
+        </ul>
+
+        <p>The historical examples and modern tool integrations discussed below are used as concrete anchors for this broader design discussion.</p>
+
+        <p>By the end, students should be able to:</p>
+
+        <ul>
+            <li>Trace the evolution of <strong>abstractions for distributed systems</strong> (components → services → tools) and explain why new abstractions emerge when existing ones fail.</li>
+            <li>Analyze AI integration from <strong>provider and consumer perspectives</strong>, including how these differ when the consumer is a human versus an AI agent.</li>
+            <li>Explain why some integration standards <strong>succeed or fail</strong>, using SOAP/WSDL/UDDI vs REST as a case study.</li>
+            <li>Distinguish what <strong>must be standardized</strong> versus what can remain flexible when building AI-enabled systems.</li>
+            <li>Identify <strong>open problems</strong> in AI+tools integration (autonomy, testing, observability) that lack mature abstractions.</li>
+        </ul>
+    </section>
+
+    <!-- ASSESSMENT -->
+    <section id="assessment">
+        <h2>Assessment (Course Use)</h2>
+
+        <p>This reading may be assessed, but assessment is optional when the material is used as a standalone reading.</p>
+
+        <p>Assessment focuses on whether students can translate design reasoning into engineering reality.</p>
+
+        <p>Students will be evaluated on whether they can design and implement services that are:</p>
+
+        <div class="content-card">
+            <h4>Testable</h4>
+            <ul>
+                <li>clear and explicit contracts,</li>
+                <li>well-defined inputs, outputs, and error modes,</li>
+                <li>behavior that can be validated independently of the AI model.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Observable</h4>
+            <ul>
+                <li>meaningful logging and tracing of tool usage,</li>
+                <li>visibility into decisions, failures, and side effects,</li>
+                <li>ability to inspect and replay executions.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Autonomous, with explicitly justified boundaries</h4>
+            <ul>
+                <li>clear explanation of what the system may do autonomously,</li>
+                <li>where human approval is required,</li>
+                <li>and why these boundaries are appropriate.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Guarded</h4>
+            <ul>
+                <li>safety and policy constraints enforced by design,</li>
+                <li>protection against misuse, prompt injection, or unintended side effects,</li>
+                <li>explicit handling of failure and uncertainty.</li>
+            </ul>
+        </div>
+
+        <p>The emphasis is not on using a specific framework, but on demonstrating sound system design choices and the ability to reason about their implications.</p>
+
+        <h3>A note on terminology</h3>
+
+        <p>In this essay, we use the following terms with specific intent:</p>
+
+        <ul>
+            <li><strong>Component</strong> — A unit of functionality used <em>within</em> a system boundary, typically invoked in-process (e.g., libraries, modules, classes).</li>
+            <li><strong>Service</strong> — A remotely accessible capability exposed across a network boundary, with an explicit interface and independent lifecycle.</li>
+            <li><strong>API</strong> — A contract describing how a service or component can be invoked, including inputs, outputs, and interaction patterns.</li>
+            <li><strong>Tool</strong> — A callable capability exposed to an AI system or agent runtime, typically wrapping a service or API, and designed to be invoked programmatically by a model rather than a human.</li>
+            <li><strong>Agent</strong> — An AI-driven system that can reason over goals, decide when to invoke tools, and orchestrate actions over time, potentially with limited autonomy.</li>
+        </ul>
+
+        <p>These distinctions are not absolute, but they are useful for reasoning about system design, responsibilities, and where explicit contracts and safeguards are required.</p>
+    </section>
+
+    <!-- SECTION 1 -->
+    <section id="monoliths">
+        <div class="section-number">01 / HISTORY</div>
+        <h2>From monolithic software to modules and classes</h2>
+
+        <p>In the beginning, software was a monolith. We had code written on punching cards.</p>
+
+        <p>Then, with storage and data transfer we could write programs that consist of many lines of code and run them repeatedly.</p>
+
+        <p>Computers got bigger, programs got bigger too. With that we had to organize the code. Why? Because we need to manage complexity, and as Julius Caesar showed us, we do so by <strong>divide and conquer</strong>.</p>
+
+        <div class="image-container">
+            <img src="figs/divide-and-conquer.png" alt="From monolithic code to modules, classes, objects, and packages">
+            <p class="caption">From monolithic code to modular software: divide and conquer enables teamwork.</p>
+        </div>
+
+        <p>As complexity grows, we need teams to write software. Therefore we naturally need to divide the work using modules, packages, objects, classes, and other abstractions.</p>
+
+        <p>What these abstractions have in common is a desire to <strong>encapsulate logic</strong> and <strong>minimize coupling</strong> so that it was possible to evolve each component while keeping the overall code working.</p>
+
+        <p>With multi-person teams classes and modules also allow to divide responsibility while keping a clear and clean "contract" across teams.</p>
+
+        <p>Internally, communication about features and interfaces was provided via documentation, oriented to developers.</p>
+
+        <p><strong>Versions</strong> were managed somewhat ad hoc from a conceptual perspective and, in practice, by working on a shared repo via some variations of git. The layer of "standardization" was mostly defined by the programming language: all components were in C++, or in Java, and the compiler knew how to put pieces together.</p>
+    </section>
+
+    <!-- SECTION 2 -->
+    <section id="services">
+        <div class="section-number">02 / SERVICES</div>
+        <h2>Services</h2>
+
+        <p>With the internet it becomes possible to offer functionality over the net (internally, as an intranet - but also externally). People started building more and more complex "stuff" - and by stuff here I mean also databases and all sorts of resources - and providing access to them on the fly, without the need of packaging and releasing software.</p>
+
+        <div class="image-container">
+            <img src="figs/integration_wild_west.png" alt="Integration wild west - many protocols, no standards">
+            <p class="caption">Before standardization: every integration required custom protocols and middleware.</p>
+        </div>
+
+        <p>Initially the ability to access resources created massive confusion. Teams built point-to-point integrations, shared databases directly, and created tight coupling that made systems brittle and change expensive.</p>
+
+        <p>In other words, everybody was offering and using "services", also - and mainly - internally, often without knowing they were doing so. Something was accessible and therefore it became accessed. When you have code by team A accessing code or data from team B, you do need coordination, just like you need it when you are consuming a class built by another team. This is even more so id you are exposing data as well as structural or implementation detail that you as a dev team need to be able to modify without breaking other services.</p>
+
+        <h3>The Bezos API Mandate (circa 2002)</h3>
+
+        <p>This chaos led to dictats such as the famous Jeff Bezos memo at Amazon:</p>
+
+
+        <blockquote>
+            1. All teams will henceforth expose their data and functionality through service interfaces.<br><br>
+            2. Teams must communicate with each other through these interfaces.<br><br>
+            3. There will be no other form of interprocess communication allowed: no direct linking, no direct reads of another team's data store, no shared-memory model, no back-doors whatsoever. The only communication allowed is via service interface calls over the network.<br><br>
+            4. It doesn't matter what technology they use. HTTP, Corba, Pubsub, custom protocols — doesn't matter.<br><br>
+            5. All service interfaces, without exception, must be designed from the ground up to be externalizable. That is to say, the team must plan and design to be able to expose the interface to developers in the outside world. No exceptions.<br><br>
+            6. Anyone who doesn't do this will be fired.
+        </blockquote>
+
+        <p>This memo crystallized the notion of <strong>service</strong> and the importance of providing access to data and functionality via a relatively stable interface that provides a "contract" between service providers and consumers.</p>
+
+        <p>The key insight was not technical — it was organizational: <strong>treat every consumer as if they were external</strong>, even internal teams. This forces clean boundaries and explicit contracts.</p>
+
+        <p>At this time we also have the birth and rise of SaaS applications and vendors — which appeared like magic to many customers. Simple things, such as the ability to rename a column on an ITSM application, felt incredible to customers used to packaged software upgrade cycles.</p>
+
+        <h3>Service-oriented Architectures</h3>
+
+        <p>While components were managed by the same org, now services are priovided both internally and externally. This proliferation of service gave rise to the notion of Service-Oriented Architectures. The core idea here was to deliver functions via some sort of "stable" interface (people used horrible terms such as "well-defined"). The opportunity was for service providers to offer access to their services over the web and for consumer to use such services.</p>
+
+        <p>Some of the concepts around SOA are described in the book below - now old, but with many concepts still applicable because it was built to survive trends (but not AI and LLMs...)</p>
+
+        <div class="image-container">
+            <img src="figs/best_sellers.png" alt="A true masterpiece on Web services">
+            <p class="caption">No words can describe such an awesome work of art and science.</p>
+        </div>
+
+        <p>Back then, it was still legal to use Comics Sans as a font, and so many pictures used it.</p>
+
+        <div class="image-container">
+            <img src="figs/5.5.1_web_services.png" alt="Web services enabling B2B integration">
+            <p class="caption">Web services standardize protocols, eliminating the need for many different middleware infrastructures. Internal functionality becomes available as a service.</p>
+        </div>
+
+        <div class="image-container">
+            <img src="figs/5.5.2_manual.png" alt="B2B integration with message brokers">
+            <p class="caption">While B2B integration via message brokers is conceptually possible, it rarely happens in practice due to lack of trust, autonomy, and confidentiality.</p>
+        </div>
+
+        <p>The <em>kind</em> of questions we needed to ask - and answer - back then are similar to the ones we need to ask now:</p>
+        <ul>
+            <li>what do we need for services to be able to interact?</li>
+            <li>how can we do so reliably and in a manner that is robust to change, errors, and to the vagaries of the average, distracted developer?</li>
+            <li>what opportunites should we capture? how to maximize the potential?</li>
+            <li><strong>which kind of specifications, agreement ("standard"), abstractions, middleware and "best" practices do we need?</strong></li>
+        </ul>
+
+        <p>Correspondingly, this opportunity gave rise to the question: how do we facilitate exposing services? how do we facilitate consuming services?</p>
+
+        <div class="divider"></div>
+
+        <h4>Description, Discovery, Interaction</h4>
+
+        <p>At first, developers started tackling service description, discovery and interaction.</p>
+
+        <p>As we move across the net, and away from the notion of one compiler bundling code together, the question becomes:</p>
+        <ul>
+            <li>How do we <strong>describe</strong> services so that other people can use them?</li>
+            <li>How does the <strong>communication</strong> take place?</li>
+            <li>How do we become <strong>aware</strong> of the existence of services?</li>
+        </ul>
+
+        <div class="image-container">
+            <img src="figs/5.5.8.png" alt="Service description and discovery stack">
+            <p class="caption">(ca year 2004): The layers needed for service interoperability: common base language, interfaces, business protocols, properties and semantics — plus directories for discovery.</p>
+        </div>
+
+        <p>The problems applies both to machines and humans. First, it was "solved" for humans.</p>
+
+        <p><strong>And this is interesting, as humans are more or less intelligent agents! So there may be lessons we can take.</strong></p>
+
+        <p>Humans can access services via html sent over http. They become aware of the service via ads or web search. And they consume it based on their own intelligence, or lack thereof. The HTML page desrcibes to a human how to use the service.</p>
+
+        <p>A new version simply meant a new web pages, which is served via reload of the page. Because the consumer is a human, changes are ok as long as they are not too confusing for humans. A/B testing was also used to understand which human interface was more condusive of higher usage, hence the orange-colored buttons we now see.</p>
+
+        <div class="image-container">
+            <img src="figs/www.png" alt="The World Wide Web as some early version of tool calling">
+            <p class="caption">The World Wide Web as some early version of tool calling</p>
+        </div>
+
+        <p>Back then the direction towards automation did not include AI. Most interactions were human to service and service to database, with the occasional information aggregator.</p>
+
+        <p>Infornation aggregation happened via either humans (you are the aggregator) or APIs/SOA.</p>
+
+        <p>For SOAs, the question is - what if we want to offer a service to be consumed by a program, or, what if we want to consume such a service. With programmatic access we have both opportunities and problems. A problem is that our client software may not be able to understand the HTML and how to use the service. An opportunity is that in theory we could, as a client, scan for services automatically (e.g., airline reservation services), identify at run time the one that best fits our need, and call it — at scale.</p>
+
+        <p>To solve the problems and capture the opportunities, companies came up with "standards" — specifications that they hoped would become standards. Prime examples were SOAP, WSDL, and UDDI. It is very informative to study what they were trying to specify, why, and why they failed.</p>
+
+        <h3>SOAP, WSDL, and UDDI: The First Odd Attempt at Machine-to-Machine Services</h3>
+
+        <div class="image-container">
+            <img src="figs/uddi.webp" alt="The SOAP/WSDL/UDDI triangle">
+            <p class="caption">The classic web services triangle — Service Registry (UDDI) for discovery, WSDL for description, SOAP for communication.</p>
+        </div>
+
+        <ul>
+            <li><strong><a href="https://www.w3.org/TR/soap12/">SOAP</a></strong> — addressed the communication problem (XML message format) — <a href="https://www.w3schools.com/xml/xml_soap.asp">see example</a></li>
+            <li><strong><a href="https://www.w3.org/TR/wsdl20/">WSDL</a></strong> — addressed the description problem (machine-readable API docs) — <a href="https://www.w3.org/2001/03/14-annotated-WSDL-examples.html">see example</a></li>
+            <li><strong><a href="https://www.oasis-open.org/committees/uddi-spec/doc/spec/v3/uddi-v3.0.2-20041019.htm">UDDI</a></strong> — addressed the discovery problem (global registry) — <a href="https://www.tutorialspoint.com/uddi/uddi_usage_example.htm">see example</a></li>
+        </ul>
+
+        <div class="image-container">
+            <img src="figs/5.13.external_arch.png" alt="External architecture of Web services">
+            <p class="caption">Fig (2004): The external architecture of web services — providers publish descriptions to a registry, requesters find and then interact with providers.</p>
+        </div>
+
+        <p>The vision was compelling: a world where software could automatically discover services, understand how to call them, and integrate on the fly. Dynamic, loosely coupled, language-agnostic integration.</p>
+
+        <div class="content-card">
+            <h4>These specifications did not fail technically — they failed practically.</h4>
+            <p>The main aspect to keep in mind is that <strong>average developers are average</strong>. One is almost tempted to say that average programmers are below average, and we wrestle with math and statistics on this one. But the fact is that if a "standard" (horrible name — there is no such thing — there are specifications and adoption of specifications) is intended for humans, it has to be simple. Nobody can hope that millions of humans read complex specs and understand them — correctly, and in the same way. Even if we "just" hope that developers will implement clients to simplify work for humans, simplicity matters and facilitates adoption.</p>
+            <ul>
+                <li><strong>Complexity killed adoption.</strong> SOAP messages were verbose. WSDL files were notoriously difficult to read and write. The tooling was fragile. What was supposed to simplify integration often made it harder. Developers found themselves debugging XML namespaces instead of building features.</li>
+                <li><strong>The discovery dream never materialized.</strong> UDDI assumed that services would be published to public registries and discovered dynamically. In practice, companies did not want to advertise their internal services publicly, and the trust model for dynamic discovery was never solved. You do not just call an airline reservation service you discovered in a registry — you negotiate a contract, agree on SLAs, exchange credentials.</li>
+                <li><strong>REST won by being simpler.</strong> While the enterprise world debated WS-* specifications (WS-Security, WS-ReliableMessaging, WS-AtomicTransaction...), developers started building APIs with plain HTTP and JSON. REST had no formal specification — just conventions. You could understand it by looking at examples. It was good enough, and good enough won.</li>
+            </ul>
+        </div>
+
+        <p>Part of the problem was also XML: reading XML is a nightmare, and maybe if JSON were a thing back then, they would have been more successful.</p>
+
+        <p>What happens in the end is that developers did not really adopt these specs. instead, they "used REST"</p>
+
+        <p>In fact, REST is a non-standard — using REST means using nothing, pretty much. It's HTTP. Somehow people felt cool because they then found some consistency on when to use GET vs POST vs DELETE and maybe PUT, but nobody cared too much about that, either.</p>
+
+        <p>So what we have instead of WSDL is web pages that describe APIs. Yes, there are attempts to "standardize" but they never went that far or became that useful. In the end you have developers (that is, humans) reading specs on web pages and implementing clients that call the service.</p>
+
+        <p><strong>Versioning</strong> was handled in an ad-hoc way, sometimes by adding version numbers to APIs. SaaS vendors grew increasingly allergic to maintaining many versions and developed a tendency to push clients on the latest versions rather than maintaining loads of versions active.</p>
+
+        <div class="thesis-block">
+            <div class="label">Key Lesson</div>
+            <p>The lesson here is important for AI integration: <strong>standards succeed when they reduce friction, not when they maximize expressiveness.</strong> A protocol that is easy to adopt beats a protocol that is theoretically complete. Or at least that was the case in the past.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <p style="text-align: center; font-size: 1.1em;"><strong>Continue to <a href="aoa.html">Part 2: The Shift</a></strong></p>
+
+    </section>
+
+</main>
+
+<footer>
+    AI Tools Integration — AI Design Course, University of Trento
+    <br><span style="font-size: 0.85em;">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></span>
+</footer>
+
+<script>
+    hljs.highlightAll();
+
+    // Highlight current section in nav
+    const sections = document.querySelectorAll('section[id], .title-section');
+    const navLinks = document.querySelectorAll('nav a');
+
+    window.addEventListener('scroll', () => {
+        let current = 'intro';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (scrollY >= sectionTop - 200) {
+                current = section.getAttribute('id') || 'intro';
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

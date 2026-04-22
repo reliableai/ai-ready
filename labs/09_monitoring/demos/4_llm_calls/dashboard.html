@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo 4 · LLM call dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0E1726; --panel: #182436; --teal: #1C7293; --accent: #F4A261;
+    --text: #E8F1F5; --muted: #8A9BB5; --err: #E07A5F; --ok: #6B9080;
+    --amber: #E0A458; --grid: #22304688; --border: #2a3a55;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+  }
+  header { padding: 20px 32px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-weight: 500; font-size: 22px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .sub a { color: var(--teal); text-decoration: none; }
+  .sub a:hover { text-decoration: underline; }
+
+  .topline {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; padding: 16px 32px 4px;
+  }
+  .kpi {
+    background: var(--panel); border-radius: 8px; padding: 14px 16px;
+    border-left: 3px solid var(--teal);
+  }
+  .kpi .lbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .kpi .val { font-size: 22px; font-weight: 500; margin-top: 4px; }
+  .kpi.warn { border-left-color: var(--amber); }
+  .kpi.err  { border-left-color: var(--err); }
+
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 32px; }
+  .panel { background: var(--panel); border-radius: 8px; padding: 16px; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel h2 {
+    margin: 0 0 2px; font-size: 12px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel h2 a {
+    color: var(--muted); text-decoration: none; font-size: 10px;
+    text-transform: none; letter-spacing: 0; font-weight: 500;
+    border: 1px solid var(--border); padding: 2px 8px; border-radius: 3px;
+  }
+  .panel h2 a:hover { color: var(--text); border-color: var(--text); }
+  .panel .note { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+  .chart-wrap { position: relative; height: 230px; }
+
+  .note-wide { padding: 0 32px 28px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  .note-wide b { color: var(--text); }
+  .note-wide code {
+    background: var(--panel); padding: 1px 5px; border-radius: 3px;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Demo 4 · <span>LLM call dashboard</span></h1>
+  <div class="sub">
+    Aggregations over <code>llm_calls.ndjson</code> — 3000 triage calls
+    across 14 days. Every panel is a reduction over the same rows. Click
+    any "view rows →" link to drill into the
+    <a href="log_viewer.html">log viewer</a>.
+  </div>
+</header>
+
+<div class="topline" id="topline"></div>
+
+<div class="panels">
+
+  <div class="panel">
+    <h2>
+      <span>Latency p50 / p95 — by model</span>
+      <a href="log_viewer.html" id="link_latency">view rows →</a>
+    </h2>
+    <div class="note">Solid = p50, dashed = p95 · 8-hour buckets</div>
+    <div class="chart-wrap"><canvas id="latency"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>
+      <span>Failure rate — per day</span>
+      <a href="log_viewer.html?outcome=schema_fail" id="link_failures">view failing rows →</a>
+    </h2>
+    <div class="note">schema_fail · timeout · api_error — stacked.</div>
+    <div class="chart-wrap"><canvas id="failures"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>
+      <span>Cost per day — by model</span>
+      <a href="log_viewer.html" id="link_cost">view rows →</a>
+    </h2>
+    <div class="note">USD; a verbose-prompt rollout shows up near day 11.</div>
+    <div class="chart-wrap"><canvas id="cost"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>
+      <span>Guardrail trips — per day</span>
+      <a href="log_viewer.html?outcome=blocked_pii" id="link_guardrail">view PII blocks →</a>
+    </h2>
+    <div class="note">blocked_pii + blocked_toxic; bars are counts per day.</div>
+    <div class="chart-wrap"><canvas id="guardrail"></canvas></div>
+  </div>
+
+  <div class="panel wide">
+    <h2>
+      <span>Schema-validation fail rate — per 4h bucket</span>
+      <a href="log_viewer.html?outcome=schema_fail&pv=v3" id="link_schema">view schema fails (v3) →</a>
+    </h2>
+    <div class="note">A broken prompt rollout (v3) is visible as a sharp,
+      bounded spike. Rolled back before most other panels even notice.</div>
+    <div class="chart-wrap"><canvas id="schema"></canvas></div>
+  </div>
+
+</div>
+
+<div class="note-wide">
+  <b>Stories to trace on this dashboard.</b>
+  The <i>schema</i> panel pins down the day-3 v3 rollout — one spike,
+  20 hours wide, isolated to <code>prompt_version=v3</code>.
+  The <i>latency</i> panel shows the day-7/8 vendor incident on
+  <code>gpt-4o</code> (mini is unaffected; the p95 line rails to 15 s =
+  timeout).
+  The <i>cost</i> panel picks up the day-11 "verbose context" config
+  change as a ~2x cost lift, even though latency and quality are fine.
+  The <i>guardrail</i> panel fires from day 13 onward when real user
+  PII started appearing in tickets — the model echoed it into the
+  <code>summary</code> field and the output-side guardrail blocked ~70%.
+</div>
+
+<script src="calls.js"></script>
+<script>
+  const DATA = window.__CALLS__;
+  if (!DATA) {
+    document.body.innerHTML = `<pre style="padding:32px;color:#E07A5F">
+Could not load calls.js. Run:  python gen_calls.py
+</pre>`;
+    throw new Error("no data");
+  }
+
+  const PALETTE = {
+    text: "#E8F1F5", muted: "#8A9BB5", teal: "#1C7293",
+    accent: "#F4A261", ok: "#6B9080", err: "#E07A5F", amber: "#E0A458",
+    grid: "#22304688",
+  };
+  const AXIS = { ticks: { color: PALETTE.muted, maxTicksLimit: 10 }, grid: { color: PALETTE.grid } };
+  const AXIS_Y = t => ({ ...AXIS, title: { display: true, text: t, color: PALETTE.muted } });
+  const LEGEND = { labels: { color: PALETTE.text, boxWidth: 10, boxHeight: 10 } };
+
+  const parseISO = s => new Date(s);
+  const WINDOW_START = new Date(Math.min(...DATA.map(r => parseISO(r.ts).getTime())));
+  const dayOf = ts => Math.floor((parseISO(ts) - WINDOW_START) / 86400000);
+
+  // ---------------- Top-line KPIs ----------------
+  function kpis() {
+    const n = DATA.length;
+    const fails = DATA.filter(r =>
+      ["schema_fail", "timeout", "api_error"].includes(r.outcome)
+    ).length;
+    const pii = DATA.filter(r => r.outcome === "blocked_pii").length;
+    const cost = DATA.reduce((s, r) => s + r.cost_usd, 0);
+
+    const lats = DATA.map(r => r.latency_ms).sort((a, b) => a - b);
+    const p95 = lats[Math.floor(lats.length * 0.95)];
+
+    return [
+      { lbl: "calls (14d)",   val: n.toLocaleString(), cls: "" },
+      { lbl: "failure rate",  val: (fails / n * 100).toFixed(1) + "%",
+        cls: fails / n > 0.02 ? "warn" : "" },
+      { lbl: "p95 latency",   val: p95.toLocaleString() + " ms",
+        cls: p95 > 5000 ? "warn" : "" },
+      { lbl: "total spend",   val: "$" + cost.toFixed(2), cls: "" },
+    ];
+  }
+  const topline = document.getElementById("topline");
+  for (const k of kpis()) {
+    const div = document.createElement("div");
+    div.className = `kpi ${k.cls}`;
+    div.innerHTML = `<div class="lbl">${k.lbl}</div><div class="val">${k.val}</div>`;
+    topline.appendChild(div);
+  }
+
+  // ---------------- Shared bucketing ----------------
+  const BUCKET_HOURS = 8;
+  const bucketKey = (ts, hours) => {
+    const d = parseISO(ts);
+    d.setMinutes(0, 0, 0);
+    d.setHours(Math.floor(d.getHours() / hours) * hours);
+    return d.toISOString();
+  };
+  const fmtBucket = iso => iso.slice(5, 13).replace("T", " ") + "h";
+  const fmtDay    = d => "d" + d;
+
+  const percentile = (arr, q) => {
+    if (arr.length === 0) return 0;
+    const a = arr.slice().sort((x, y) => x - y);
+    return a[Math.min(a.length - 1, Math.floor(q * a.length))];
+  };
+
+  // ---------------- Panel: latency by model ----------------
+  function latencyChart() {
+    const buckets = {};
+    for (const r of DATA) {
+      const b = bucketKey(r.ts, BUCKET_HOURS);
+      (buckets[b] ||= { "gpt-4o-mini": [], "gpt-4o": [] })[r.model].push(r.latency_ms);
+    }
+    const keys = Object.keys(buckets).sort();
+    const mkP = (m, q) => keys.map(k => percentile(buckets[k][m], q));
+
+    new Chart(document.getElementById("latency"), {
+      type: "line",
+      data: {
+        labels: keys.map(fmtBucket),
+        datasets: [
+          { label: "gpt-4o-mini p50", data: mkP("gpt-4o-mini", 0.50),
+            borderColor: PALETTE.teal, backgroundColor: "transparent",
+            pointRadius: 0, tension: 0.2 },
+          { label: "gpt-4o-mini p95", data: mkP("gpt-4o-mini", 0.95),
+            borderColor: PALETTE.teal, backgroundColor: "transparent",
+            pointRadius: 0, borderDash: [4, 4], tension: 0.2 },
+          { label: "gpt-4o p50", data: mkP("gpt-4o", 0.50),
+            borderColor: PALETTE.accent, backgroundColor: "transparent",
+            pointRadius: 0, tension: 0.2 },
+          { label: "gpt-4o p95", data: mkP("gpt-4o", 0.95),
+            borderColor: PALETTE.accent, backgroundColor: "transparent",
+            pointRadius: 0, borderDash: [4, 4], tension: 0.2 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 6, maxRotation: 0 } },
+          y: { ...AXIS_Y("ms (log)"), type: "logarithmic" },
+        },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  // ---------------- Panel: failure rate ----------------
+  function failuresChart() {
+    const byDay = Array.from({length: 14}, () => ({schema_fail: 0, timeout: 0, api_error: 0, total: 0}));
+    for (const r of DATA) {
+      const d = dayOf(r.ts);
+      byDay[d].total++;
+      if (["schema_fail", "timeout", "api_error"].includes(r.outcome)) {
+        byDay[d][r.outcome]++;
+      }
+    }
+    const labels = byDay.map((_, i) => fmtDay(i));
+
+    new Chart(document.getElementById("failures"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "schema_fail", data: byDay.map(b => b.schema_fail), backgroundColor: PALETTE.err },
+          { label: "timeout",     data: byDay.map(b => b.timeout),     backgroundColor: PALETTE.amber },
+          { label: "api_error",   data: byDay.map(b => b.api_error),   backgroundColor: "#8E5D56" },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, stacked: true },
+          y: { ...AXIS_Y("count"), stacked: true, beginAtZero: true },
+        },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  // ---------------- Panel: cost per day ----------------
+  function costChart() {
+    const byDay = Array.from({length: 14}, () => ({ "gpt-4o-mini": 0, "gpt-4o": 0 }));
+    for (const r of DATA) {
+      byDay[dayOf(r.ts)][r.model] += r.cost_usd;
+    }
+    const labels = byDay.map((_, i) => fmtDay(i));
+
+    new Chart(document.getElementById("cost"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "gpt-4o-mini", data: byDay.map(b => b["gpt-4o-mini"]), backgroundColor: PALETTE.teal },
+          { label: "gpt-4o",      data: byDay.map(b => b["gpt-4o"]),      backgroundColor: PALETTE.accent },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, stacked: true },
+          y: { ...AXIS_Y("USD"), stacked: true, beginAtZero: true,
+               ticks: { ...AXIS.ticks, callback: v => "$" + v.toFixed(3) } },
+        },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  // ---------------- Panel: guardrail trips ----------------
+  function guardrailChart() {
+    const byDay = Array.from({length: 14}, () => ({ blocked_pii: 0, blocked_toxic: 0 }));
+    for (const r of DATA) {
+      if (r.outcome === "blocked_pii")   byDay[dayOf(r.ts)].blocked_pii++;
+      if (r.outcome === "blocked_toxic") byDay[dayOf(r.ts)].blocked_toxic++;
+    }
+    const labels = byDay.map((_, i) => fmtDay(i));
+
+    new Chart(document.getElementById("guardrail"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "blocked_pii",   data: byDay.map(b => b.blocked_pii),   backgroundColor: PALETTE.amber },
+          { label: "blocked_toxic", data: byDay.map(b => b.blocked_toxic), backgroundColor: PALETTE.err },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, stacked: true },
+          y: { ...AXIS_Y("trips"), stacked: true, beginAtZero: true },
+        },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  // ---------------- Panel: schema-fail rate (wide, 4h buckets) ----------------
+  function schemaChart() {
+    const H = 4;
+    const buckets = {};
+    for (const r of DATA) {
+      const b = bucketKey(r.ts, H);
+      (buckets[b] ||= { n: 0, fail: 0 }).n++;
+      if (r.outcome === "schema_fail") buckets[b].fail++;
+    }
+    const keys = Object.keys(buckets).sort();
+    const rate = keys.map(k => buckets[k].fail / Math.max(1, buckets[k].n));
+
+    new Chart(document.getElementById("schema"), {
+      type: "line",
+      data: {
+        labels: keys.map(fmtBucket),
+        datasets: [
+          { label: "schema-fail rate", data: rate,
+            borderColor: PALETTE.err, backgroundColor: "#E07A5F22",
+            pointRadius: 0, borderWidth: 2, tension: 0.2, fill: true },
+          { label: "alert threshold 0.02", data: rate.map(() => 0.02),
+            borderColor: PALETTE.amber, backgroundColor: "transparent",
+            pointRadius: 0, borderDash: [2, 3], borderWidth: 1 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 14, maxRotation: 0 } },
+          y: { ...AXIS_Y("fail / total"), min: 0, max: 1,
+               ticks: { ...AXIS.ticks, callback: v => (v * 100).toFixed(0) + "%" } },
+        },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  latencyChart();
+  failuresChart();
+  costChart();
+  guardrailChart();
+  schemaChart();
+</script>
+</body>
+</html>

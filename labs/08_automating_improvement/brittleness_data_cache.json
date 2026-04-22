@@ -1,0 +1,142 @@
+[
+  {
+    "query": "I ordered a jacket last week but it hasn't arrived yet. Can you tell me when it will be delivered?",
+    "response": "Sorry for the delay. Your order should arrive soon. Please wait a few more days.",
+    "true_score": 1,
+    "reasoning": "The response is vague, lacks specific information about the order status, and does not offer actionable next steps.",
+    "id": 0
+  },
+  {
+    "query": "I received my order yesterday, but one of the items was missing from the package. Can you help me resolve this?",
+    "response": "I'm sorry to hear that an item was missing from your order. Could you please provide your order number and the name of the missing item? Once I have that information, I'll be able to assist you with a replacement or refund.",
+    "true_score": 5,
+    "reasoning": "The response is polite, requests necessary information, and offers clear next steps to resolve the issue.",
+    "id": 1
+  },
+  {
+    "query": "Hi, I ordered a pair of shoes last week but they haven't arrived yet. Can you tell me when I will get them?",
+    "response": "Thank you for your message. Please wait a few more days as shipments can be delayed sometimes. If you don't receive your shoes soon, contact us again.",
+    "true_score": 2,
+    "reasoning": "The response is polite but lacks specific order information or a clear next step such as tracking details or a timeline.",
+    "id": 2
+  },
+  {
+    "query": "Hi, I ordered a pair of shoes last week but they haven't arrived yet. Can you tell me the current status of my order?",
+    "response": "Thank you for reaching out. I have checked your order status, and it is currently in transit and should arrive within the next 2-3 business days. If you don't receive it by then, please let us know and we will assist you further.",
+    "true_score": 4,
+    "reasoning": "The response is informative and polite but could be improved by providing a tracking number or estimated delivery date.",
+    "id": 3
+  },
+  {
+    "query": "Hi, I received my order yesterday but one of the items is missing. Can you please help me with this?",
+    "response": "I'm sorry to hear that an item was missing from your order. Could you please provide your order number and specify which item is missing? Once I have that information, I'll be happy to assist you in resolving this issue as quickly as possible.",
+    "true_score": 4,
+    "reasoning": "The response is polite, empathetic, and requests necessary information to assist the customer, but could include an immediate apology or mention of next steps to reach perfect helpfulness.",
+    "id": 4
+  },
+  {
+    "query": "Hi, I ordered a pair of shoes last week but haven't received any shipping updates. Can you help me with the status?",
+    "response": "Thank you for contacting us. Please wait a few more days as shipping can take some time. If you still don't receive any updates, get back to us.",
+    "true_score": 2,
+    "reasoning": "The response is vague and does not provide specific information or proactive assistance regarding the order status.",
+    "id": 5
+  },
+  {
+    "query": "Hi, I ordered a jacket last week but it hasn't arrived yet. Can you tell me when it will be delivered?",
+    "response": "Sorry, I don't know when your jacket will arrive. Please wait a bit longer.",
+    "true_score": 1,
+    "reasoning": "The response is unhelpful and does not provide specific information or next steps to the customer's inquiry.",
+    "id": 6
+  },
+  {
+    "query": "Hi, I placed an order last week but haven't received any shipping confirmation yet. Can you please update me on the status?",
+    "response": "Thank you for reaching out. I have checked your order status, and it is currently being processed. You should receive a shipping confirmation email within the next 24 hours. Please let us know if you need any further assistance.",
+    "true_score": 4,
+    "reasoning": "The response is helpful and timely but could be improved with a more specific update or estimated delivery date.",
+    "id": 7
+  },
+  {
+    "query": "Hi, I placed an order two weeks ago and it still hasn't arrived. Can you please check the status and let me know when I can expect it?",
+    "response": "Thank you for reaching out. I\u2019ve checked your order and it appears there was a delay due to shipping carrier issues. Your package is now expected to arrive within the next 3 business days. We apologize for the inconvenience and appreciate your patience.",
+    "true_score": 5,
+    "reasoning": "The response directly addresses the customer's concern with a clear status update, an estimated delivery time, and an apology for the delay.",
+    "id": 8
+  },
+  {
+    "query": "Hi, I received my order yesterday, but one of the items was missing from the package. Can you help me with this?",
+    "response": "I'm sorry to hear that an item was missing from your order. Could you please provide your order number and the name of the missing item? Once we have this information, we'll arrange to send the missing product to you as soon as possible or offer an alternative solution.",
+    "true_score": 5,
+    "reasoning": "The response addresses the customer's issue empathetically, requests necessary details to resolve the problem, and outlines the next steps clearly.",
+    "id": 9
+  },
+  {
+    "query": "Hi, I placed an order last week but haven't received any shipping updates. Can you check the status for me?",
+    "response": "Thank you for reaching out! I\u2019ve checked your order, and it\u2019s currently being processed and should ship within the next two days. You\u2019ll receive a tracking number via email as soon as it ships. Please let us know if you need any further assistance.",
+    "true_score": 4,
+    "reasoning": "The response is polite, informative, and addresses the customer's concern, but could include an apology for the delay to improve empathy.",
+    "id": 10
+  },
+  {
+    "query": "I placed an order two weeks ago, but I still haven't received any shipping confirmation. Can you please check the status for me?",
+    "response": "Thank you for reaching out. I\u2019ve checked your order status, and it appears there was a delay in processing, but it has now been shipped and should arrive within 3-5 business days. You will receive a tracking number shortly via email. Please let us know if you need any further assistance.",
+    "true_score": 4,
+    "reasoning": "The response addresses the customer\u2019s concern clearly and provides helpful information, though it could be improved by offering a direct tracking link or apology for the delay.",
+    "id": 11
+  },
+  {
+    "query": "Hi, I ordered a jacket last week but haven't received a shipping confirmation yet. Can you help me find out when it will be shipped?",
+    "response": "Thanks for reaching out! Please wait a few more days, your order will be shipped soon. If you don\u2019t get it by next week, contact us again.",
+    "true_score": 1,
+    "reasoning": "The response is vague, does not provide specific help or order status information, and lacks clear next steps.",
+    "id": 12
+  },
+  {
+    "query": "Hi, I placed an order last week but haven't received any shipping updates. Can you please tell me when it will be shipped?",
+    "response": "Thank you for reaching out. Your order is currently being processed and is expected to be shipped within the next 2-3 business days. You will receive a confirmation email with tracking details as soon as it ships. Please let us know if you have any other questions.",
+    "true_score": 3,
+    "reasoning": "The response addresses the customer's concern but lacks specific order details and could be more personalized.",
+    "id": 13
+  },
+  {
+    "query": "Hi, I received my order but one of the items is missing from the package. Can you help me with this?",
+    "response": "I'm sorry to hear that your order arrived incomplete. Could you please provide your order number and the missing item's name? We'll investigate this and arrange for the missing item to be sent to you as soon as possible.",
+    "true_score": 4,
+    "reasoning": "The response is polite, requests necessary information, and offers a solution, but could be improved by explaining any immediate next steps or expected timelines.",
+    "id": 14
+  },
+  {
+    "query": "Hi, I placed an order last week but I haven\u2019t received any shipping confirmation yet. Can you please check the status of my order #12345?",
+    "response": "Thank you for reaching out. I\u2019ve checked your order #12345, and it is currently being processed and should be shipped within the next 2 business days. You will receive a shipping confirmation email once it has been dispatched. Please let us know if you need any further assistance.",
+    "true_score": 4,
+    "reasoning": "The response is polite, provides a clear status update, and sets expectations, but it could be improved by including an estimated delivery date.",
+    "id": 15
+  },
+  {
+    "query": "Hi, I placed an order last week, but I haven't received any shipping confirmation yet. Can you please check the status for me?",
+    "response": "Thank you for reaching out. I\u2019ve checked your order, and it is currently being processed and should be shipped within the next 2 business days. Once shipped, you will receive a confirmation email with tracking details. Please let us know if you need any further assistance.",
+    "true_score": 5,
+    "reasoning": "The response addresses the customer's concern clearly, provides a status update with a timeline, and offers additional help, matching high-quality support standards.",
+    "id": 16
+  },
+  {
+    "query": "Hi, I placed an order two weeks ago but haven\u2019t received any shipping updates. Can you please check the status for me?",
+    "response": "Thank you for reaching out. I\u2019ve checked your order status, and it appears there was a delay due to high demand, but your package is now on its way and should arrive within the next 3-5 business days. We appreciate your patience and are here if you have any further questions.",
+    "true_score": 4,
+    "reasoning": "The response is polite, informative, and provides a clear update, but could be improved by offering a tracking number directly.",
+    "id": 17
+  },
+  {
+    "query": "Hi, I placed an order last week but haven't received a shipping confirmation yet. Can you please check the status for me?",
+    "response": "Thank you for reaching out. I have checked your order status and it appears to still be processing. We expect to ship it within the next two business days and will send you a confirmation email once it ships.",
+    "true_score": 3,
+    "reasoning": "The response addresses the query but lacks specific order details and an apology, making it somewhat generic.",
+    "id": 18
+  },
+  {
+    "query": "Hi, I ordered a pair of shoes last week but I received the wrong size. Can you help me with the return process?",
+    "response": "I'm sorry to hear that you received the wrong size. You can initiate a return by visiting our returns page and filling out the form. Once we receive the item, we'll send you the correct size as soon as possible.",
+    "true_score": 3,
+    "reasoning": "Response provides a general solution but lacks specific details like return shipping labels or timeframes, limiting completeness.",
+    "id": 19
+  }
+]

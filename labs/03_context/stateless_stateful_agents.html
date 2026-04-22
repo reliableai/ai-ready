@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L3: Managing Context</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L3: Managing Context</div>
+    <ul>
+        <li><a href="#challenge">Challenge</a></li>
+        <li><a href="#stateless">1. Stateless</a></li>
+        <li><a href="#full-history">2. Full History</a></li>
+        <li><a href="#window">3. Window</a></li>
+        <li><a href="#memory">4. Memory</a></li>
+        <li><a href="#long-term">5. Long-term</a></li>
+        <li><a href="#design">6. Design</a></li>
+        <li><a href="#takeaways">Takeaways</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="challenge">
+        <h1>Managing Context</h1>
+        <p class="subtitle">LLMs are stateless. Context is your responsibility &mdash; you send it, or it doesn't exist.</p>
+    </div>
+
+    <!-- INTRO -->
+    <section>
+        <h3>The central challenge</h3>
+
+        <p>Every time you call an LLM, it starts from scratch. There is no server-side session, no implicit memory. The model only sees the <code>messages</code> array you send in <em>that</em> request &mdash; nothing more.</p>
+
+        <p>This has profound implications for <strong>cost</strong>, <strong>latency</strong>, and <strong>architecture</strong>. This lesson walks through five strategies, each solving a problem the previous one creates:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Strategy</th>
+                    <th>Problem it solves</th>
+                    <th>New problem it creates</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Stateless</strong></td>
+                    <td>Simplest possible call</td>
+                    <td>No memory at all</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Full history</strong></td>
+                    <td>Model remembers everything</td>
+                    <td>Quadratic cost growth</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Sliding window</strong></td>
+                    <td>Bounded cost</td>
+                    <td>Forgets old context</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Summarization</strong></td>
+                    <td>Preserves old context cheaply</td>
+                    <td>Lossy compression</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Long-term memory</strong></td>
+                    <td>Persists across sessions</td>
+                    <td>Needs user identity + storage</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- SECTION 1: STATELESS -->
+    <section id="stateless">
+        <div class="section-number">01 / STATELESS CALLS</div>
+        <h2>Each call is independent</h2>
+
+        <p>The Chat Completions API is <strong>stateless by design</strong>. Two separate calls share nothing:</p>
+
+        <pre><code class="language-python"># Turn 1: tell the model your name
+r1 = client.chat.completions.create(
+    model="gpt-4.1-mini",
+    messages=[{"role": "user", "content": "My name is Alice."}],
+)
+# Turn 1: "Nice to meet you, Alice!"
+
+# Turn 2: ask for your name — but we DON'T send turn 1
+r2 = client.chat.completions.create(
+    model="gpt-4.1-mini",
+    messages=[{"role": "user", "content": "What is my name?"}],
+)
+# Turn 2: "I don't have access to your name."</code></pre>
+
+        <p>The model can't answer because it literally never saw the first message.</p>
+
+        <div class="thesis-block">
+            <div class="label">When stateless is fine</div>
+            <p>Single-shot tasks: translation, classification, extraction &mdash; anything where each request is self-contained. Cost per call is constant and predictable.</p>
+        </div>
+
+        <h3>Provider-managed state: the Responses API</h3>
+
+        <p>OpenAI's <strong>Responses API</strong> can keep conversation state server-side. Chain turns using <code>previous_response_id</code>:</p>
+
+        <pre><code class="language-python">resp1 = client.responses.create(model="gpt-4.1-mini", input="My name is Alice.")
+
+resp2 = client.responses.create(
+    model="gpt-4.1-mini",
+    input="What is my name?",
+    previous_response_id=resp1.id,   # server remembers turn 1
+)
+# "Your name is Alice."</code></pre>
+
+        <p>Convenient, but it's a black box &mdash; you don't control what's kept or trimmed. For the rest of this lesson, we'll manage context ourselves.</p>
+    </section>
+
+    <!-- SECTION 2: FULL HISTORY -->
+    <section id="full-history">
+        <div class="section-number">02 / FULL HISTORY REPLAY</div>
+        <h2>How ChatGPT works under the hood</h2>
+
+        <p>The fix is simple: keep a <code>messages</code> list and append every exchange. On each turn, send the whole thing.</p>
+
+        <pre><code class="language-python">history = []
+
+# Turn 1
+history.append({"role": "user", "content": "My name is Alice."})
+r1 = client.chat.completions.create(model=MODEL, messages=history)
+history.append({"role": "assistant", "content": r1.choices[0].message.content})
+
+# Turn 2 — the model now sees BOTH messages
+history.append({"role": "user", "content": "What is my name?"})
+r2 = client.chat.completions.create(model=MODEL, messages=history)
+# "Your name is Alice."</code></pre>
+
+        <p>It works &mdash; but on turn 50, you send 50 turns of history. On turn 500, you send 500 turns.</p>
+
+        <h3>The quadratic problem</h3>
+
+        <p>If each turn adds ~300 tokens, the input tokens on turn N are roughly 300N. The <strong>cumulative</strong> input tokens across all turns grow as ~150N&sup2;.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Turn</th>
+                    <th>Prompt tokens</th>
+                    <th>Cumulative input</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>18</td><td>18</td></tr>
+                <tr><td>4</td><td>148</td><td>329</td></tr>
+                <tr><td>8</td><td>471</td><td>1,723</td></tr>
+                <tr><td>12</td><td>720</td><td>4,337</td></tr>
+            </tbody>
+        </table>
+
+        <div class="content-card">
+            <h4>The cost math</h4>
+            <p>At gpt-4.1-mini pricing ($0.40/M input tokens), a 10-turn conversation is pennies. Scale to 500 turns and you're at ~$15 cumulative input cost for a <em>single</em> conversation.</p>
+            <p><strong>Latency grows too:</strong> more input tokens = more processing time. By turn 100+, users may wait 5&ndash;10 seconds per response.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 3: SLIDING WINDOW -->
+    <section id="window">
+        <div class="section-number">03 / SLIDING WINDOW</div>
+        <h2>Bounded cost, lossy context</h2>
+
+        <p>The simplest fix: only send the last N turns. Cost is now <strong>bounded</strong> regardless of conversation length.</p>
+
+        <pre><code class="language-python">WINDOW_TURNS = 2
+window = full_history[-2 * WINDOW_TURNS :]  # last 2 exchanges
+
+# Ask something that requires early context
+messages = window + [{"role": "user", "content": "What is my name?"}]
+r = client.chat.completions.create(model=MODEL, messages=messages)
+# "I don't have that information."  ← name was in turn 1, outside the window</code></pre>
+
+        <div class="thesis-block">
+            <div class="label">The tradeoff</div>
+            <p>Cost is bounded, but we've lost important context. Alice's name and project details were in turns 1&ndash;5, outside the window. We need a way to <strong>compress</strong> old context, not just drop it.</p>
+        </div>
+
+        <h3>What is a "turn"?</h3>
+
+        <p>A turn is one user message plus all subsequent assistant and tool activity until the next user input. When trimming, always cut at <strong>turn boundaries</strong> &mdash; never split a user message from its response.</p>
+
+        <pre><code class="language-text">Turn 1:  user("Hi")  →  assistant("Hello!")
+Turn 2:  user("Look up X")  →  tool_call("search")  →  tool_result(...)  →  assistant("Here's X")
+Turn 3:  user("Thanks")  →  assistant("You're welcome!")
+                              ↑
+             With window=2, keep turns 2-3. Turn 1 is dropped entirely.</code></pre>
+    </section>
+
+    <!-- SECTION 4: SUMMARIZATION / MEMORY -->
+    <section id="memory">
+        <div class="section-number">04 / SUMMARIZATION &amp; MEMORY</div>
+        <h2>Compress old context, don't drop it</h2>
+
+        <p>Instead of a separate summarization step, ask the model to do both in <strong>one call</strong>:</p>
+        <ol>
+            <li>Answer the user's question</li>
+            <li>Update a running memory summary</li>
+        </ol>
+
+        <p>Each turn sends: <code>[system prompt with current memory] + [user message]</code>. The model returns both an answer and updated memory as structured JSON.</p>
+
+        <pre><code class="language-python">PROMPT_TEMPLATE = Template("""You are a helpful assistant.
+
+CURRENT MEMORY:
+{{ memory }}
+
+USER MESSAGE:
+{{ user_message }}
+
+Return JSON: {"answer": "...",
+  "updated_memory": {"facts": [...], "preferences": [...], "goals": [...]}}""")
+
+# Each turn: render template → call API → parse JSON → update memory
+memory_text = json.dumps(memory)
+prompt = PROMPT_TEMPLATE.render(memory=memory_text, user_message=user_message)
+r = client.chat.completions.create(
+    model=MODEL,
+    messages=[{"role": "user", "content": prompt}],
+    response_format={"type": "json_object"},
+)
+parsed = json.loads(r.choices[0].message.content)
+answer = parsed["answer"]
+memory = parsed["updated_memory"]  # carry forward to next turn</code></pre>
+
+        <h3>How it works</h3>
+
+        <pre><code class="language-text">[SYSTEM]  You are a helpful assistant.
+          CURRENT MEMORY: {"facts": ["Name: Alice", "Location: Trento"], ...}
+          ... return {"answer": "...", "updated_memory": {...}} ...
+
+[USER]    What is my name and what do I do?    ← only the current turn</code></pre>
+
+        <p>One API call per turn. Bounded tokens. No growing history. The memory acts as <strong>lossy compression</strong> of the entire conversation.</p>
+
+        <h3>Memory stays bounded</h3>
+
+        <p>Running an 8-turn conversation with memory, prompt tokens stay roughly flat:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Turn</th>
+                    <th>Prompt tokens</th>
+                    <th>Memory size (chars)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>140</td><td>133</td></tr>
+                <tr><td>3</td><td>190</td><td>283</td></tr>
+                <tr><td>5</td><td>198</td><td>283</td></tr>
+                <tr><td>8</td><td>204</td><td>283</td></tr>
+            </tbody>
+        </table>
+
+        <p>Compare this to section 2 where tokens grew linearly per turn and quadratically in total.</p>
+
+        <h3>Two complementary approaches</h3>
+
+        <p>The OpenAI Agents SDK formalizes two short-term memory strategies that can be combined:</p>
+
+        <div class="content-card">
+            <h4>Context Trimming</h4>
+            <p>Drop older turns wholesale. Deterministic, zero latency, preserves recent context verbatim. But causes abrupt context loss.</p>
+            <p><strong>Best for:</strong> independent task sequences, operational automation, local-context workflows.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>Context Summarization</h4>
+            <p>When turns exceed a limit, compress everything before the last N turns into a <strong>synthetic message pair</strong>. The old history is replaced with a summary injected as a fake user&rarr;assistant exchange.</p>
+            <p><strong>Best for:</strong> multi-issue support, planning, RAG-heavy workflows, policy Q&amp;A.</p>
+        </div>
+
+        <h3>Synthetic message injection</h3>
+
+        <p>When summarizing, the old conversation prefix is replaced with a synthetic pair:</p>
+
+        <pre><code class="language-text">[Synthetic user]:      "Summarize the conversation so far."
+[Synthetic assistant]:  "{structured summary of turns 1-7}"
+[Real turn 8]:          user("What metrics should I use?")
+[Real turn 9]:          user("Remind me: what's my project?")
+                         ↑
+          Last N turns remain verbatim; older turns are compressed into the summary.</code></pre>
+
+        <details>
+            <summary><strong>Summary prompt design tips</strong></summary>
+            <div class="details-content">
+                <ul>
+                    <li><strong>Structured sections:</strong> organize by topic (facts, decisions, tools, status) not chronologically</li>
+                    <li><strong>Max length:</strong> cap at ~200 words to keep the compression useful</li>
+                    <li><strong>Contradiction checking:</strong> resolve conflicts between what the user said vs. what the system found</li>
+                    <li><strong>Uncertainty marking:</strong> flag uncertain facts as "UNVERIFIED" rather than guessing</li>
+                    <li><strong>Tool insights:</strong> capture which operations worked/failed and why</li>
+                </ul>
+            </div>
+        </details>
+    </section>
+
+    <!-- SECTION 5: LONG-TERM MEMORY -->
+    <section id="long-term">
+        <div class="section-number">05 / LONG-TERM MEMORY</div>
+        <h2>Persisting across sessions</h2>
+
+        <p>Everything above is <strong>short-term memory</strong> &mdash; it dies when the conversation ends. Real applications need to remember users <em>across</em> conversations.</p>
+
+        <h3>The extract &rarr; save &rarr; load &rarr; inject pattern</h3>
+
+        <div class="content-card">
+            <h4>1. End of session: extract</h4>
+            <p>Ask the LLM to pull out structured facts worth remembering: facts, preferences, decisions, expertise &mdash; not ephemeral details.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>2. Save to storage</h4>
+            <p>Persist those facts to disk or a database, keyed by user ID.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>3. Start of next session: load &amp; inject</h4>
+            <p>Load the user's facts and inject them into the system prompt. The model "remembers" a user it never actually spoke to.</p>
+        </div>
+
+        <pre><code class="language-python"># End of session 1: extract facts
+extracted = extract_long_term_facts(session1_conversation)
+save_user_memory("marco", extracted)
+# {"facts": ["PhD student in Trento", "Studies GNNs", ...],
+#  "preferences": ["short, direct explanations"]}
+
+# Start of session 2: inject into system prompt
+loaded = load_user_memory("marco")
+messages = [
+    {"role": "system", "content": f"""You are a helpful assistant.
+
+LONG-TERM MEMORY (from previous sessions):
+Facts: {loaded['facts']}
+Preferences: {loaded['preferences']}
+
+Use this memory naturally."""},
+    {"role": "user", "content": "What do you know about me?"},
+]
+# "You're Marco, a PhD student in Trento studying GNNs for drug discovery..."</code></pre>
+
+        <p>This is the pattern behind <strong>ChatGPT's "Memory" feature</strong>. It requires user identity &mdash; you need to know <em>whose</em> facts to load.</p>
+
+        <h3>Who does what?</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Short-term memory</th>
+                    <th>Long-term memory</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ChatGPT</td>
+                    <td>Conversation history</td>
+                    <td>"Memory" feature (extracted facts)</td>
+                </tr>
+                <tr>
+                    <td>Claude</td>
+                    <td>Conversation context</td>
+                    <td>Project Knowledge (uploaded docs)</td>
+                </tr>
+                <tr>
+                    <td>GitHub Copilot</td>
+                    <td>Current file + open tabs</td>
+                    <td>Repository patterns, coding style</td>
+                </tr>
+                <tr>
+                    <td>Customer service bot</td>
+                    <td>Current ticket</td>
+                    <td>Customer history, past issues</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="thesis-block">
+            <div class="label">Privacy note</div>
+            <p>Long-term memory means storing personal data. In production: clear data policies, user controls (view/delete), secure storage, GDPR compliance. A JSON file is fine for learning, not for production.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 6: DESIGN DECISIONS -->
+    <section id="design">
+        <div class="section-number">06 / DESIGN DECISIONS</div>
+        <h2>When to use which strategy</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Strategy</th>
+                    <th>Cost</th>
+                    <th>Context quality</th>
+                    <th>Best for</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Stateless</strong></td>
+                    <td>Constant</td>
+                    <td>None</td>
+                    <td>Single-shot tasks (translate, classify, extract)</td>
+                </tr>
+                <tr>
+                    <td><strong>Full history</strong></td>
+                    <td>Quadratic</td>
+                    <td>Perfect</td>
+                    <td>Short conversations (&lt;20 turns), debugging</td>
+                </tr>
+                <tr>
+                    <td><strong>Sliding window</strong></td>
+                    <td>Bounded</td>
+                    <td>Recent only</td>
+                    <td>Independent task sequences, automation</td>
+                </tr>
+                <tr>
+                    <td><strong>Window + summary</strong></td>
+                    <td>Bounded</td>
+                    <td>Good (lossy)</td>
+                    <td>Long conversations, support, planning</td>
+                </tr>
+                <tr>
+                    <td><strong>Long-term memory</strong></td>
+                    <td>Bounded + storage</td>
+                    <td>Cross-session</td>
+                    <td>Personalized assistants, returning users</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Key design questions</h3>
+
+        <ol>
+            <li><strong>How long are your conversations?</strong> &mdash; 5 turns? Full history is fine. 100+ turns? You need windowing or summarization.</li>
+            <li><strong>Does old context matter?</strong> &mdash; If each turn is independent (e.g., code completion), a small window suffices. If users reference early decisions, you need summarization.</li>
+            <li><strong>Do users return?</strong> &mdash; One-off interactions don't need long-term memory. Returning users benefit enormously from it.</li>
+            <li><strong>What should memory forget?</strong> &mdash; Not all information deserves to be remembered. Selective memory (project facts vs. chitchat) is often better than total recall.</li>
+        </ol>
+
+        <details>
+            <summary><strong>Further reading: OpenAI Agents SDK Session Memory</strong></summary>
+            <div class="details-content">
+                <p>The <a href="https://developers.openai.com/cookbook/examples/agents_sdk/session_memory">OpenAI Agents SDK cookbook</a> formalizes trimming and summarization as <code>TrimmingSession</code> and <code>SummarizingSession</code> classes. Key patterns:</p>
+                <ul>
+                    <li><strong>Turn boundary detection:</strong> scan backward from the end to find the Nth user message; never split a turn</li>
+                    <li><strong>Async lock discipline:</strong> release the lock during slow summarization calls, recheck conditions after</li>
+                    <li><strong>Metadata separation:</strong> keep observability data (timestamps, synthetic flags) out of what the model sees</li>
+                    <li><strong>Eval strategy:</strong> transcript replay, LLM-as-judge on summary quality, entity matching on subsequent turns</li>
+                </ul>
+            </div>
+        </details>
+    </section>
+
+    <!-- TAKEAWAYS -->
+    <section id="takeaways">
+        <div class="section-number">TAKEAWAYS</div>
+        <h2>Key points</h2>
+
+        <ol>
+            <li><strong>LLMs are stateless.</strong> Context is your responsibility &mdash; you send it, or it doesn't exist.</li>
+            <li><strong>Full history doesn't scale.</strong> Cost and latency grow quadratically with conversation length.</li>
+            <li><strong>Memory is lossy compression.</strong> You choose what to keep and what to lose. The summarizer decides what matters.</li>
+            <li><strong>Short-term vs long-term.</strong> Short-term resets with the conversation; long-term persists across sessions and requires user identity.</li>
+            <li><strong>Design for your constraints.</strong> Window size, summary format, persistence strategy &mdash; all tradeoffs with no universal right answer.</li>
+        </ol>
+
+        <div class="content-card">
+            <h4>Lab</h4>
+            <p>Open <code>session4_managing_context.py</code> to walk through each strategy with live API calls. Exercises in <code>session4_exercises.py</code> (solutions in <code>session4_solutions.py</code>).</p>
+            <p>CLI scripts for the full interactive experience:</p>
+            <pre><code class="language-bash">uv run python labs/03_context/1_stateless_agent.py
+uv run python labs/03_context/2_stateful_agent.py
+uv run python labs/03_context/3_agent_with_memory.py
+uv run python labs/03_context/4_agent_with_long_term_memory.py</code></pre>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Designing Large Scale AI Systems &middot; Spring 2026</p>
+</footer>
+
+<script>hljs.highlightAll();</script>
+</body>
+</html>

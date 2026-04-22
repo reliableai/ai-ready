@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterating in the Dark: Organizational Blindness in AI Evaluations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --surface-light: #1f2b47;
+            --primary: #d4af37;
+            --primary-dim: #b8962f;
+            --text: #e8e8e8;
+            --text-muted: #a0a0b0;
+            --border: #2a3a5a;
+            --success: #4ade80;
+            --warning: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Jost', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 16px;
+            line-height: 1.7;
+            color: var(--text);
+            background-color: var(--bg);
+        }
+
+        /* Header */
+        header {
+            background: rgba(22, 33, 62, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .site-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .site-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+
+        .feedback-teaser {
+            font-size: 0.9rem;
+            color: var(--text);
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 3rem;
+            margin-bottom: 1.25rem;
+            color: var(--primary);
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        a:hover {
+            color: var(--text);
+        }
+
+        strong {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        em {
+            color: var(--text-muted);
+        }
+
+        ul, ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2.5rem 0;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        /* Executive Summary Box */
+        .summary-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--primary);
+            border-radius: 8px;
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+        }
+
+        .summary-box h3 {
+            margin-top: 0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .summary-box ol {
+            margin-bottom: 0;
+        }
+
+        .summary-box li {
+            margin-bottom: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .summary-box li strong {
+            color: var(--text);
+        }
+
+        .summary-box li:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Intro Section */
+        .intro-section {
+            display: grid;
+            grid-template-columns: 1fr 180px;
+            gap: 2rem;
+            align-items: start;
+            margin: 2rem 0;
+        }
+
+        .intro-section img {
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        @media (max-width: 640px) {
+            .intro-section {
+                grid-template-columns: 1fr;
+            }
+            .intro-section img {
+                max-width: 180px;
+                margin: 0 auto;
+            }
+        }
+
+        .lead-text {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        /* Series Cards */
+        .series-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .series-card {
+            background: linear-gradient(135deg, var(--surface) 0%, var(--surface-light) 100%);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .series-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dim));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .series-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .series-card:hover::before {
+            opacity: 1;
+        }
+
+        .series-card .part-label {
+            display: inline-block;
+            font-family: 'Fira Code', monospace;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--primary);
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+        }
+
+        .series-card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .series-card h3 a {
+            color: var(--text);
+        }
+
+        .series-card h3 a:hover {
+            color: var(--primary);
+        }
+
+        .series-card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* Deep Dive Cards */
+        .series-card.deep-dive {
+            background: linear-gradient(135deg, #2a2a1e 0%, #1f2518 100%);
+            border-color: #3a3a2a;
+            margin-left: 3.5rem;
+        }
+
+        .series-card.deep-dive .part-label {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--warning);
+        }
+
+        .series-card.deep-dive::before {
+            background: linear-gradient(90deg, var(--warning), #d4a020);
+        }
+
+        /* Key Themes */
+        .themes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .theme-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+        }
+
+        .theme-card p {
+            margin: 0;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .theme-card strong {
+            color: var(--primary);
+        }
+
+        /* Audience */
+        .audience-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+        }
+
+        .audience-grid li {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .audience-grid li strong {
+            color: var(--text);
+            display: block;
+            margin-bottom: 0.15rem;
+        }
+
+        /* Course CTA */
+        .course-cta {
+            background: linear-gradient(135deg, #2a2518 0%, #1f1c12 100%);
+            border: 1px solid #4a4030;
+            border-radius: 8px;
+            padding: 1.5rem 2rem;
+            margin: 2.5rem 0;
+        }
+
+        .course-cta h3 {
+            margin: 0 0 0.75rem 0;
+            color: var(--text);
+            font-size: 1.15rem;
+        }
+
+        .course-cta > p {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        .cta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .cta-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+        }
+
+        .cta-card h4 {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin: 0 0 0.5rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .cta-card a {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .cta-footnote {
+            font-size: 0.95rem;
+            color: #ffffff;
+            font-weight: 500;
+            margin-top: 1rem;
+            margin-bottom: 0;
+        }
+
+        /* Quote */
+        .quote-block {
+            border-left: 3px solid var(--primary);
+            padding: 1rem 1.5rem;
+            margin: 2.5rem 0;
+            background: var(--surface);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .quote-block p {
+            margin: 0;
+            font-style: italic;
+            color: var(--text);
+            font-size: 1.05rem;
+        }
+
+        .quote-block .attribution {
+            margin-top: 0.75rem;
+            font-style: normal;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Glossary link */
+        .glossary-link {
+            display: inline-block;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1.25rem;
+            margin: 1rem 0;
+            transition: border-color 0.2s;
+        }
+
+        .glossary-link:hover {
+            border-color: var(--primary);
+        }
+
+        /* Centered image */
+        .img-center {
+            display: block;
+            margin: 2rem auto;
+            max-width: 500px;
+        }
+
+        /* Quick Feedback */
+        .quick-feedback {
+            margin-top: 3rem;
+            padding: 1.5rem 2rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .quick-feedback h3 {
+            margin: 0 0 0.5rem;
+            font-size: 1.1rem;
+            color: var(--text);
+        }
+        .quick-feedback p {
+            margin: 0 0 1rem;
+            color: var(--text-muted);
+            max-width: 640px;
+        }
+        .quick-feedback textarea {
+            width: 100%;
+            max-width: 640px;
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            resize: vertical;
+        }
+        .quick-feedback textarea::placeholder {
+            color: var(--text-muted);
+        }
+        .quick-feedback textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .quick-feedback button {
+            margin-top: 0.75rem;
+            padding: 0.5rem 1.25rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .quick-feedback button:hover {
+            background: var(--primary);
+            color: var(--bg);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="site-title"><a href="./index-alt.html">Iterating in the Dark</a></div>
+        <nav>
+            <a href="https://reliableai.github.io/ai-design-2026/">AI Design</a>
+            <a href="https://reliableai.github.io/knowledge_management_2026/">Knowledge Mgmt</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <h1>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</h1>
+    <p class="subtitle">A five-part series</p>
+
+    <p class="feedback-teaser">
+        Have a take on AI evaluation? <a href="#feedback">Leave one sentence of feedback</a>.
+    </p>
+
+    <div class="summary-box">
+        <h3>Executive Summary</h3>
+        <ol>
+            <li><strong>In agentic AI, evaluation is the bottleneck.</strong> Agentic AI systems can iterate on development far faster than organizations can learn from them.</li>
+            <li><strong>Evaluation is hard because it is an experiment design problem, not a software testing problem.</strong> Each evaluation embeds many consequential design decisions that can dramatically change the apparent outcome.</li>
+            <li><strong>Most organizations are neither equipped nor incentivized to manage agentic evaluation.</strong> Tooling, methods, training, and reporting structures systematically hide uncertainty.</li>
+            <li><strong>This is a change leadership can make today.</strong> The questions executives ask shape what teams feel able to report.</li>
+            <li><strong>This is fixable</strong> — failure modes are not inherent to AI. They require better evaluation practices, reporting standards, and decision discipline.</li>
+        </ol>
+    </div>
+
+    <hr />
+
+    <div class="intro-section">
+        <div>
+            <p class="lead-text">You have all been in this room.</p>
+            <p>A slide goes up. There's a metric—"Technical Accuracy", a number: 89%, and a color—green.</p>
+            <p>Getting these metrics, numbers, and even the colors "right" are foundational to the success of a product.</p>
+        </div>
+        <img src="./images/image1.png" alt="Technical Accuracy 89% meeting slide" />
+    </div>
+
+    <p>This output is very consequential. Not only does it determine ship/no-ship decisions, but it tells engineers where to focus their energy, where to improve. The metrics act like a loss profile and give us axes along which we need to improve our product.</p>
+
+    <img src="./images/loss_flat.png" alt="Loss profile optimization landscape" class="img-center" />
+
+    <p>And as AI takes more of a leading role in development, getting the right metrics and the right measures is central to effective product improvement iterations — possibly even automating the entire process.</p>
+
+    <p>This series explores a structural problem in how organizations evaluate AI systems: we are building highly consequential systems, making decisions based on evaluation numbers, and systematically both <em>underestimating</em> and <em>ignoring</em> the bias and uncertainty in those numbers.</p>
+
+    <h2>The Series</h2>
+
+    <div class="series-grid">
+        <div class="series-card">
+            <span class="part-label">Part 1</span>
+            <h3><a href="./part-1-structural-flaw.html">A Structural Flaw in Judgment</a></h3>
+            <p>Why "89% accuracy" might be meaningless—or worse, misleading. The three facets: visibility, culture, and action.</p>
+        </div>
+
+        <div class="series-card">
+            <span class="part-label">Part 2</span>
+            <h3><a href="./part-2-cost-of-ignorance.html">The Cost of Ignorance</a></h3>
+            <p>Wasted cycles, misallocated portfolios, and production failures that were predictable all along.</p>
+        </div>
+
+        <div class="series-card deep-dive">
+            <span class="part-label">Deep Dive</span>
+            <h3><a href="./part-2b-uncertainty-vs-variability.html">Uncertainty vs Variability</a></h3>
+            <p>The critical distinction between uncertainty (reducible) and variability (real differences).</p>
+        </div>
+
+        <div class="series-card">
+            <span class="part-label">Part 3</span>
+            <h3><a href="./part-3-value-of-better-measurement.html">Better "Evals" Beats Better Dev</a></h3>
+            <p>Why better eval leads to better quality even without touching the system.</p>
+        </div>
+
+        <div class="series-card deep-dive">
+            <span class="part-label">Deep Dive</span>
+            <h3><a href="./part-3b-from-value-to-scorecard.html">From Value to Scorecards</a></h3>
+            <p>Breaking down value into scorecard dimensions to define axes of iterative improvements.</p>
+        </div>
+
+        <div class="series-card">
+            <span class="part-label">Part 4</span>
+            <h3><a href="./part-4-sources-of-error.html">Where and Why "Eval" Goes Wrong</a></h3>
+            <p>From sample size effects to noisy LLM judges. Each source alone can flip your decisions.</p>
+        </div>
+
+        <div class="series-card">
+            <span class="part-label">Part 5</span>
+            <h3><a href="./part-5-what-to-do.html">Simple Actions that Work</a></h3>
+            <p>Addressing visibility, action, and culture. Practical tools and methodology assistants.</p>
+        </div>
+    </div>
+
+    <h2>Key Themes</h2>
+
+    <div class="themes-grid">
+        <div class="theme-card">
+            <p><strong>Every score has two error terms:</strong> bias (systematic) and noise (random). Bias is harder to see but often more dangerous.</p>
+        </div>
+        <div class="theme-card">
+            <p><strong>Selection turns noise into bias:</strong> Even unbiased evaluations become optimistic when you pick winners.</p>
+        </div>
+        <div class="theme-card">
+            <p><strong>Small differences are noise:</strong> A 4-point gap gives ~24% chance of picking the wrong system.</p>
+        </div>
+        <div class="theme-card">
+            <p><strong>Uncertainty is larger than you think:</strong> 100 examples at 82% gives a ~16-point-wide 95% CI.</p>
+        </div>
+        <div class="theme-card">
+            <p><strong>Better eval beats more dev:</strong> Measurement enables better decisions—before touching agents.</p>
+        </div>
+        <div class="theme-card">
+            <p><strong>Culture matters:</strong> Point estimates feel decisive. Pretending certainty is the real weakness.</p>
+        </div>
+    </div>
+
+    <h2>Who This Is For</h2>
+
+    <ul class="audience-grid">
+        <li><strong>Engineering leaders</strong> making ship/no-ship decisions</li>
+        <li><strong>ML/AI practitioners</strong> designing eval pipelines</li>
+        <li><strong>Product managers</strong> interpreting quality numbers</li>
+        <li><strong>Executives</strong> who need the right questions</li>
+    </ul>
+
+    <section class="course-cta">
+        <h3>Want a hands-on playbook for this?</h3>
+        <p>I teach two <strong>100% free, in-person</strong> (with remote options) practitioner courses:</p>
+
+        <div class="cta-grid">
+            <div class="cta-card">
+                <h4>Shipping AI Systems</h4>
+                <a href="https://reliableai.github.io/ai-design-2026/">Designing Large Scale AI Systems</a>
+            </div>
+            <div class="cta-card">
+                <h4>Data Health + RAG</h4>
+                <a href="https://reliableai.github.io/knowledge_management_2026/">Knowledge Management for AI Systems</a>
+            </div>
+        </div>
+
+        <p class="cta-footnote">
+            Materials available as courses start in <strong>mid-February</strong>.<br />
+            Contact me for free remote attendance (<a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>).
+        </p>
+    </section>
+
+    <div class="quote-block">
+        <p>"Any measurement, without knowledge of the uncertainty, is meaningless."</p>
+        <p class="attribution">— Walter Lewin, MIT</p>
+    </div>
+
+    <div class="glossary-link">
+        <strong><a href="./glossary.html">Glossary and Notation</a></strong> — Key terms used throughout this series.
+    </div>
+
+    <section id="feedback" class="quick-feedback">
+        <h3>Have 20 seconds?</h3>
+        <p>
+            What's the <em>one thing</em> you'd change about AI evaluation or reporting
+            to make it <strong>reliable and actionable</strong>?
+        </p>
+        <form action="https://formsubmit.co/adaa0c88245095dc975bd57f5b3d0f43" method="POST">
+            <input type="hidden" name="_subject" value="AI Eval Feedback">
+            <input type="hidden" name="_captcha" value="false">
+            <textarea
+                name="feedback"
+                rows="4"
+                placeholder="One sentence is perfect."
+                required></textarea>
+            <br>
+            <button type="submit">Submit</button>
+        </form>
+    </section>
+
+    <footer>
+        Content by Fabio Casati (Content reflects only my personal views and opinions) · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+    </footer>
+</main>
+
+</body>
+</html>

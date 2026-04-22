@@ -1,0 +1,44 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# Secrets
+.env
+.env.local
+
+# Generated data caches
+overfitting_data_cache.json
+
+# Jupyter autosaves
+.ipynb_checkpoints/
+
+# Generated experiment runs
+loop_runs/
+
+# Datasets (downloaded or processed, not part of repo source)
+labs/**/datasets/
+
+# Binary / large data artifacts
+*.parquet
+*.ndjson
+*.npy
+*.zip
+*.wav
+
+# IDE / tool local state
+.vscode/
+.idea/
+.claude/

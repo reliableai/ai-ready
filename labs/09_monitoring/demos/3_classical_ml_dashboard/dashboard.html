@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo 3 · Classical-ML monitoring dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0E1726; --panel: #182436; --teal: #1C7293; --accent: #F4A261;
+    --text: #E8F1F5; --muted: #8A9BB5; --err: #E07A5F; --ok: #6B9080;
+    --amber: #E0A458; --grid: #22304688; --border: #2a3a55;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+  }
+  header { padding: 20px 32px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-weight: 500; font-size: 22px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .sub code { background: var(--panel); padding: 1px 6px; border-radius: 3px; font-size: 12px; }
+
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 32px; }
+  .panel { background: var(--panel); border-radius: 8px; padding: 16px; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel h2 {
+    margin: 0 0 10px; font-size: 12px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+  }
+  .chart-wrap { position: relative; height: 240px; }
+  .chart-wrap.tall { height: 280px; }
+
+  /* Tile grid for training jobs */
+  .tiles { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0; }
+  .tile {
+    width: 28px; height: 28px; border-radius: 4px; cursor: pointer;
+    border: 1px solid transparent; transition: transform 0.08s, border-color 0.08s;
+  }
+  .tile:hover { transform: translateY(-1px); border-color: var(--text); }
+  .tile.succeeded { background: var(--ok); }
+  .tile.failed    { background: var(--err); }
+  .tile.hung      { background: var(--amber); }
+  .tile.running   { background: var(--teal); }
+  .tile.selected  { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .legend { display: flex; gap: 16px; font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+
+  /* Drawer — job detail */
+  .drawer {
+    margin: 0 32px 32px; background: var(--panel); border-radius: 8px;
+    padding: 16px; border-left: 3px solid var(--accent);
+    display: none;
+  }
+  .drawer.open { display: block; }
+  .drawer h3 { margin: 0 0 4px; font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+  .drawer .meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px 24px; font-size: 12px; margin: 8px 0 16px;
+  }
+  .drawer .meta div { color: var(--muted); }
+  .drawer .meta b { color: var(--text); font-weight: 500; }
+  .drawer pre {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; margin: 0; font-family: "SF Mono", Consolas, monospace;
+    font-size: 12px; color: var(--text); overflow-x: auto; max-height: 200px; overflow-y: auto;
+  }
+  .drawer .close {
+    float: right; background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;
+  }
+  .drawer .close:hover { color: var(--text); border-color: var(--text); }
+
+  .note { padding: 0 32px 32px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  .note b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Demo 3 · <span>classical-ML monitoring dashboard</span></h1>
+  <div class="sub">
+    Training-job fleet board · duration-vs-rolling-median · serving latency ·
+    rolling accuracy (once labels arrive). Click any tile for the error log.
+    Incidents to look for: a <code>/checkout</code>-style quality dip on days
+    8–10, then a hard break on days 12–14 when a feature pipeline changed units.
+  </div>
+</header>
+
+<div class="panels">
+
+  <!-- Panel 1 — training-job fleet board -->
+  <div class="panel wide">
+    <h2>Training fleet — last 14 days</h2>
+    <div id="tiles" class="tiles"></div>
+    <div class="legend">
+      <span><span class="sw" style="background: var(--ok);"></span>succeeded</span>
+      <span><span class="sw" style="background: var(--err);"></span>failed</span>
+      <span><span class="sw" style="background: var(--teal);"></span>running (fresh heartbeat)</span>
+      <span><span class="sw" style="background: var(--amber);"></span>hung (stale heartbeat)</span>
+    </div>
+  </div>
+
+  <!-- Panel 2 — duration vs rolling median -->
+  <div class="panel">
+    <h2>Training duration — completed runs</h2>
+    <div class="chart-wrap"><canvas id="duration"></canvas></div>
+  </div>
+
+  <!-- Panel 3 — serving latency -->
+  <div class="panel">
+    <h2>Serving latency (p50 solid · p95 dashed)</h2>
+    <div class="chart-wrap"><canvas id="latency"></canvas></div>
+  </div>
+
+  <!-- Panel 4 — rolling accuracy -->
+  <div class="panel wide">
+    <h2>Rolling accuracy on labelled traffic</h2>
+    <div class="chart-wrap tall"><canvas id="accuracy"></canvas></div>
+  </div>
+</div>
+
+<!-- Click-to-drawer for job details -->
+<div id="drawer" class="drawer">
+  <button class="close" onclick="document.getElementById('drawer').classList.remove('open')">close</button>
+  <h3 id="drawer-title">Job detail</h3>
+  <div class="meta" id="drawer-meta"></div>
+  <pre id="drawer-log"></pre>
+</div>
+
+<div class="note">
+  <b>What you're meant to see.</b> The tile grid shows 36 training runs; most green,
+  clusters of red on days 3 (OOM) and 12 (SchemaMismatch), an amber hung run from a few
+  minutes ago. The duration panel's rolling-median line flags the day-13 runaway long
+  before it would have failed. The latency panel is the point: it <em>barely moves</em>
+  across the whole 14 days. The accuracy panel is where the drift actually shows — a
+  gentle dip on days 8–10, a brief recovery, then a hard drop from day 12 onward that no
+  infra metric could have caught.
+</div>
+
+<script src="data.js"></script>
+<script>
+  // ===================== Shared helpers ==================================
+
+  const PALETTE = {
+    text: "#E8F1F5", muted: "#8A9BB5", teal: "#1C7293",
+    accent: "#F4A261", ok: "#6B9080", err: "#E07A5F", amber: "#E0A458",
+    grid: "#22304688",
+  };
+
+  const AXIS = { ticks: { color: PALETTE.muted, maxTicksLimit: 12 }, grid: { color: PALETTE.grid } };
+  const AXIS_Y = t => ({ ...AXIS, title: { display: true, text: t, color: PALETTE.muted } });
+  const LEGEND = { labels: { color: PALETTE.text, boxWidth: 10, boxHeight: 10 } };
+
+  const parseISO = s => new Date(s);
+  const minutesSince = (a, b) => (a - b) / 60000;
+
+  // ===================== Data load =======================================
+
+  const DATA = window.__DATA__;
+  if (!DATA) {
+    document.body.innerHTML = `<pre style="padding:32px;color:#E07A5F">
+Could not load data.js. Run:  python train_and_monitor.py
+</pre>`;
+    throw new Error("no data");
+  }
+  const RUNS = DATA.runs;
+  const ERRORS = Object.fromEntries(DATA.errors.map(e => [e.job_id, e]));
+  const PREDS = DATA.preds;
+
+  // A single "now" — the latest timestamp across all data. Lets heartbeat
+  // staleness be computed the same way every student sees.
+  const NOW = new Date(Math.max(
+    ...RUNS.map(r => parseISO(r.last_heartbeat_at || r.started_at)),
+    ...PREDS.map(p => parseISO(p.ts)),
+  ));
+
+  // ===================== Panel 1: tile grid ==============================
+
+  function tileClass(run) {
+    if (run.status === "SUCCEEDED") return "succeeded";
+    if (run.status === "FAILED")    return "failed";
+    // RUNNING — split by heartbeat freshness.
+    const hb = parseISO(run.last_heartbeat_at);
+    const ageMin = minutesSince(NOW, hb);
+    return ageMin > 10 ? "hung" : "running";
+  }
+
+  function renderTiles() {
+    const wrap = document.getElementById("tiles");
+    wrap.innerHTML = "";
+    for (const run of RUNS) {
+      const t = document.createElement("div");
+      t.className = `tile ${tileClass(run)}`;
+      t.title = `${run.job_id} · ${run.status} · started ${run.started_at.slice(5,16).replace("T"," ")}`;
+      t.onclick = () => openDrawer(run);
+      wrap.appendChild(t);
+    }
+  }
+
+  function openDrawer(run) {
+    document.querySelectorAll(".tile").forEach(t => t.classList.remove("selected"));
+    event.currentTarget.classList.add("selected");
+
+    const err = ERRORS[run.job_id] || { error_kind: null, tail_log: [] };
+    const hb = parseISO(run.last_heartbeat_at);
+    const ageMin = minutesSince(NOW, hb);
+    const hbStr = run.status === "RUNNING"
+      ? `${run.last_heartbeat_at} &nbsp;<span style="color:${ageMin>10?PALETTE.amber:PALETTE.ok}">(${ageMin.toFixed(1)} min ago)</span>`
+      : run.last_heartbeat_at;
+
+    const meta = [
+      ["job_id", run.job_id],
+      ["model", run.model],
+      ["status", `<b style="color:${run.status === "FAILED" ? PALETTE.err : run.status === "RUNNING" ? PALETTE.amber : PALETTE.ok}">${run.status}</b>`],
+      ["started_at", run.started_at],
+      ["last_heartbeat_at", hbStr],
+      ["finished_at", run.finished_at || "—"],
+      ["duration_s", run.duration_s ?? "—"],
+      ["holdout_acc", run.holdout_acc ?? "—"],
+      ["exit_code", run.exit_code ?? "—"],
+      ["error_kind", err.error_kind ? `<b style="color:${PALETTE.err}">${err.error_kind}</b>` : "—"],
+    ];
+    document.getElementById("drawer-title").textContent = `${run.job_id} · ${run.model}`;
+    document.getElementById("drawer-meta").innerHTML =
+      meta.map(([k, v]) => `<div>${k}: <b>${v}</b></div>`).join("");
+    document.getElementById("drawer-log").textContent =
+      err.tail_log.length ? err.tail_log.join("\n") : "(no log tail)";
+    document.getElementById("drawer").classList.add("open");
+  }
+
+  // ===================== Panel 2: duration vs rolling median =============
+
+  function durationChart(ctx) {
+    // Include only runs with a numeric duration_s (skip Hung).
+    const completed = RUNS
+      .filter(r => r.duration_s != null)
+      .slice()
+      .sort((a, b) => parseISO(a.started_at) - parseISO(b.started_at));
+
+    // Rolling median of the last 5 completed runs (same window regardless of status).
+    function rollingMedian(arr, w) {
+      const out = [];
+      for (let i = 0; i < arr.length; i++) {
+        const lo = Math.max(0, i - w + 1);
+        const sl = arr.slice(lo, i + 1).map(r => r.duration_s).sort((a, b) => a - b);
+        out.push(sl[Math.floor(sl.length / 2)]);
+      }
+      return out;
+    }
+    const medians = rollingMedian(completed, 5);
+
+    const labels = completed.map(r => r.started_at.slice(5, 16).replace("T", " "));
+    const pointColor = r =>
+      r.status === "SUCCEEDED" ? PALETTE.ok
+      : r.status === "FAILED"  ? PALETTE.err
+      : PALETTE.teal;
+
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "duration (s)",
+            data: completed.map(r => r.duration_s),
+            borderColor: "transparent",
+            pointBackgroundColor: completed.map(pointColor),
+            pointBorderColor: completed.map(pointColor),
+            pointRadius: 5,
+            showLine: false,
+          },
+          {
+            label: "rolling median (5)",
+            data: medians,
+            borderColor: PALETTE.accent,
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.3,
+            borderDash: [6, 4],
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 8, maxRotation: 0 } },
+          y: { ...AXIS_Y("seconds (log)"), type: "logarithmic" },
+        },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  // ===================== Panel 3: serving latency ========================
+
+  // 4-hour buckets keep each point averaged over ~25 predictions —
+  // enough samples that a single wrong call doesn't swing the line.
+  const BUCKET_HOURS = 4;
+  function timeBucket(ts) {
+    const d = parseISO(ts);
+    d.setMinutes(0, 0, 0);
+    d.setHours(Math.floor(d.getHours() / BUCKET_HOURS) * BUCKET_HOURS);
+    return d.toISOString();
+  }
+  function fmtBucket(iso) {
+    return iso.slice(5, 13).replace("T", " ") + "h";
+  }
+
+  function latencyChart(ctx) {
+    const buckets = {};
+    for (const p of PREDS) {
+      const b = timeBucket(p.ts);
+      (buckets[b] ||= []).push(p.latency_ms);
+    }
+    const keys = Object.keys(buckets).sort();
+    const percentile = (arr, q) => {
+      const a = arr.slice().sort((x, y) => x - y);
+      return a[Math.min(a.length - 1, Math.floor(q * a.length))];
+    };
+
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: keys.map(fmtBucket),
+        datasets: [
+          { label: "p50", data: keys.map(k => percentile(buckets[k], 0.50)),
+            borderColor: PALETTE.teal, backgroundColor: "transparent",
+            pointRadius: 0, tension: 0.2 },
+          { label: "p95", data: keys.map(k => percentile(buckets[k], 0.95)),
+            borderColor: PALETTE.teal, backgroundColor: "transparent",
+            pointRadius: 0, borderDash: [4, 4], tension: 0.2 },
+          { label: "SLO (15 ms)", data: keys.map(() => 15),
+            borderColor: PALETTE.err, backgroundColor: "transparent",
+            pointRadius: 0, borderDash: [2, 3], borderWidth: 1 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 8, maxRotation: 0 } },
+          y: AXIS_Y("ms"),
+        },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  // ===================== Panel 4: rolling accuracy =======================
+
+  // Colored-band backgrounds for drift regimes. Chart.js plugin.
+  const regimeBandPlugin = {
+    id: "regimeBand",
+    beforeDraw(chart, args, opts) {
+      const { ctx, chartArea, scales } = chart;
+      const x = scales.x;
+      const bands = opts.bands || [];
+      ctx.save();
+      for (const b of bands) {
+        const x0 = x.getPixelForValue(b.from);
+        const x1 = x.getPixelForValue(b.to);
+        if (!isFinite(x0) || !isFinite(x1)) continue;
+        ctx.fillStyle = b.color;
+        ctx.fillRect(x0, chartArea.top, x1 - x0, chartArea.bottom - chartArea.top);
+        // Label at top of band.
+        ctx.fillStyle = PALETTE.muted;
+        ctx.font = "11px sans-serif";
+        ctx.fillText(b.label, x0 + 6, chartArea.top + 14);
+      }
+      ctx.restore();
+    },
+  };
+
+  function accuracyChart(ctx) {
+    // Bucket labelled predictions into hourly buckets; skip unlabelled (the
+    // "hole" at the end of the x-axis is the point — labels haven't arrived).
+    const buckets = {};
+    for (const p of PREDS) {
+      if (p.true_label == null) continue;
+      const b = timeBucket(p.ts);
+      (buckets[b] ||= { n: 0, correct: 0 }).n++;
+      if (p.predicted_class === p.true_label) buckets[b].correct++;
+    }
+    const keys = Object.keys(buckets).sort();
+    const acc = keys.map(k => buckets[k].correct / buckets[k].n);
+
+    // Build regime bands from the predictions data itself.
+    const bands = [];
+    let curr = null, start = null;
+    for (const p of PREDS) {
+      const b = timeBucket(p.ts);
+      if (p.regime !== curr) {
+        if (curr && curr !== "healthy") {
+          bands.push({
+            from: fmtBucket(start), to: fmtBucket(b),
+            color: curr === "broken" ? "#E07A5F22"
+                  : curr === "creeping" ? "#F4A26122"
+                  : "#1C729322",
+            label: curr,
+          });
+        }
+        curr = p.regime;
+        start = b;
+      }
+    }
+    if (curr && curr !== "healthy") {
+      bands.push({
+        from: fmtBucket(start), to: fmtBucket(keys[keys.length - 1]),
+        color: curr === "broken" ? "#E07A5F22"
+              : curr === "creeping" ? "#F4A26122"
+              : "#1C729322",
+        label: curr,
+      });
+    }
+
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: keys.map(fmtBucket),
+        datasets: [
+          { label: "rolling accuracy (1h buckets)", data: acc,
+            borderColor: PALETTE.accent, backgroundColor: "transparent",
+            pointRadius: 0, borderWidth: 2, tension: 0.2 },
+          { label: "threshold 0.95", data: acc.map(() => 0.95),
+            borderColor: PALETTE.err, backgroundColor: "transparent",
+            pointRadius: 0, borderDash: [2, 3], borderWidth: 1 },
+          { label: "threshold 0.85", data: acc.map(() => 0.85),
+            borderColor: PALETTE.amber, backgroundColor: "transparent",
+            pointRadius: 0, borderDash: [2, 3], borderWidth: 1 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: {
+          x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 14, maxRotation: 0 } },
+          y: { ...AXIS_Y("accuracy"), min: 0, max: 1 },
+        },
+        plugins: {
+          legend: LEGEND,
+          regimeBand: { bands },
+        },
+      },
+      plugins: [regimeBandPlugin],
+    });
+  }
+
+  // ===================== Go ==============================================
+
+  renderTiles();
+  durationChart(document.getElementById("duration"));
+  latencyChart(document.getElementById("latency"));
+  accuracyChart(document.getElementById("accuracy"));
+</script>
+
+</body>
+</html>

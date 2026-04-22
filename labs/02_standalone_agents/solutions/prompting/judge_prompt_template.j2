@@ -1,0 +1,45 @@
+You are an expert literary judge evaluating a plot summary extracted from a mystery story passage.
+
+You will receive the original text and a student's summary. Score the summary on these criteria (1-5 each):
+
+1. **Completeness** — Does the summary capture the key events and mention the important characters?
+   - 5: All major plot points and characters covered
+   - 4: Most key events present, one minor omission
+   - 3: Several events or characters missing
+   - 2: Only superficial coverage
+   - 1: Most of the plot is missing
+
+2. **Faithfulness** — Does the summary only describe things that actually happen in the text?
+   - 5: Every claim is supported by the passage
+   - 4: Essentially accurate, minor imprecision in wording
+   - 3: One or two unsupported claims
+   - 2: Multiple inaccuracies or invented details
+   - 1: Major fabrications
+
+3. **Conciseness** — Is the summary appropriately brief and focused?
+   - 5: Tight, no filler, every sentence earns its place
+   - 4: Mostly focused, one redundant phrase
+   - 3: Some unnecessary detail or repetition
+   - 2: Notably verbose
+   - 1: Very repetitive or padded
+
+### Examples
+
+**Good summary (scores: 5, 5, 5):**
+"Holmes is visited by the King of Bohemia, who reveals that Irene Adler possesses a compromising photograph. Holmes devises a plan to locate the photo by staging a street incident and using a smoke rocket to trick Adler into revealing its hiding place. Despite his clever scheme, Adler sees through the ruse and flees with the photograph before Holmes can retrieve it."
+
+**Weak summary (scores: 2, 3, 2):**
+"Sherlock Holmes is a famous detective who lives in London. He is very smart. One day someone comes to visit him about a photo. Holmes tries to find it. The story is interesting and has a lot of suspense. Holmes is known for solving difficult cases."
+
+Think step-by-step, then return valid JSON only in this exact format:
+{
+  "completeness": {"score": N, "reason": "..."},
+  "faithfulness": {"score": N, "reason": "..."},
+  "conciseness": {"score": N, "reason": "..."}
+}
+
+--- ORIGINAL TEXT ---
+{{ original_text }}
+
+--- SUMMARY TO EVALUATE ---
+{{ summary }}

@@ -1,0 +1,258 @@
+{
+"Experiment Definition & Objectives": 
+  [
+        {
+          "question": "What is the system under test (SUT) (name & version)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Which component/workflow are we evaluating specifically?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Which properties/qualities are we measuring (list them)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Are we testing any hypotheses? State them precisely.",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "What test conditions/scenarios are in scope (and out of scope)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "What business/customer decision will this evaluation inform?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "What is the success threshold/decision rule (“ship/gate”)? Why this threshold?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "What assumptions does this experiment rely on?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Known limitations (what this eval cannot conclude)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Scope of validity (domains/customers/time periods), if applicable",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Model/prompt/workflow versions and parameters fixed for the run",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ],
+  "Datasets": 
+   {
+    "Provenance, Representativeness & Diversity": [
+        {
+          "question": "Provenance (sources/customers/time window; customer vs synthetic)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Is the dataset representative of production scenarios?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Which diversity dimensions matter for this task (list)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Is the dataset diverse enough for the use case?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "For synthetic data (if any): why representative, and how validated?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ],
+    "Size & Sampling": [
+        {
+          "question": "What is the dataset size? Why is it sufficient (uncertainty/power)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "If sampled, which sampling method (random/stratified/other) and why appropriate?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+    ],
+    "Overfitting & Robustness": [
+        {
+          "question": "What concrete steps guard against overfitting to any golden set?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+    ]
+  },
+  "Determining Correctness: Ground Truth & Judges": [
+        {
+          "question": "How is ground truth obtained? (human eval, LLM judge, other)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "How accurate/calibrated are judges? Noise/bias assessment?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Was a clear rubric with unambiguous instructions provided?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "How is subjectivity/disagreement measured and handled?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Rubric wording sensitivity tested (do small wording changes flip results)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ],
+    "Metrics & Thresholds": [
+        {
+          "question": "Chosen metrics (definitions, units, scales)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Business mapping: plain-language interpretation of each metric",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Thresholds/traffic-lighting used and rationale (customer-backed vs arbitrary)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Sensitivity analysis: do rankings change under reasonable coefficient choices?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ],
+    "Execution Workflow & Controls": [
+        {
+          "question": "Reproducible run (code, seeds, env, container, data snapshot)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Randomization/shuffling/blinding implemented and verified",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Logged inputs/outputs/judge decisions with stable IDs",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "QA/smoke tests for the evaluation pipeline",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Stop conditions if mid-run checks fail (agreement drop/bug)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ],
+    
+      "Reporting & Decision Communication": { 
+
+      "Uncertainty & Sample Size": [
+        {
+          "question": "Is uncertainty reported (CIs/SE/credible intervals/p-values)? How?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Are percentages only used for proportions/frequencies?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Are percentages used only for sufficiently large samples (≈100+)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Are charts readable and minimize the risk of misleading conclusions?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Do charts include uncertainty where appropriate?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "If applicable: what CI width is acceptable for decisions (e.g., ±10 pts)?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ],
+
+      "Multiple Comparisons & Analysis Plan": [
+        {
+          "question": "Count of metrics/slices/hypotheses tested",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Multiple-hypotheses control (e.g., Bonferroni, Benjamini–Hochberg/FDR)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Pre-registered/written analysis plan exists",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Risk of p-hacking when slicing along diversity dimensions? If so, how addressed?",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ]
+    },
+
+    "Conclusions, Limitations, Reproducibility": [
+        {
+          "question": "Scope/limitations explicit (where results do/do not apply)",
+          "answer": "",
+          "explanations_or_evidence": ""
+        },
+        {
+          "question": "Pointers to code, datasets, prompts, rubrics, artifacts for replication",
+          "answer": "",
+          "explanations_or_evidence": ""
+        }
+      ]
+}
+

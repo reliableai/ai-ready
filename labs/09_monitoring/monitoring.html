@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L10: Monitoring, Observability and Reporting</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L10: Monitoring, Observability and Reporting</div>
+    <ul>
+        <li><a href="#why">1. Why AI is harder</a></li>
+        <li><a href="#guardrails">2. Runtime checks</a></li>
+        <li><a href="#logging">3. Logging</a></li>
+        <li><a href="#tracing">4. Tracing</a></li>
+        <li><a href="#ci-reporting">5. CI &amp; Reporting</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <div class="title-section" id="intro">
+        <h1>Monitoring, Observability and Reporting</h1>
+        <p class="subtitle">Runtime checks, structured logging, tracing, and CI-integrated evaluation harnesses &mdash; closing the loop from eval rubrics to production.</p>
+    </div>
+
+    <p>We spent Skillset 2 building the tools to know whether our AI system works: datasets, rubrics and LLM-as-judge, experiments with uncertainty. Those tools run <em>before</em> deploy. This lesson is about what happens <em>after</em>: how you keep knowing your system works once real users are touching it, at 3am, on traffic you didn't design for, with a model provider that silently changed something under you last Tuesday.</p>
+
+    <p>Monitoring an AI system is not the same problem as monitoring a classical service. There is no exit code for "the answer was wrong." There is no HTTP 500 for "the model drifted." The failures are semantic, probabilistic, and slow to surface. The monitoring stack has to be designed for that reality.</p>
+
+    <!-- ================================================================ -->
+    <!-- WHY AI IS HARDER -->
+    <!-- ================================================================ -->
+    <section id="why">
+        <div class="section-number">01 / WHY AI SYSTEMS ARE HARDER TO MONITOR</div>
+        <h2>What changes when the code is a model</h2>
+
+        <p>Classical monitoring assumes a deterministic service: for a given input, a correct implementation produces the same output every time, and "wrong" means a crash, a timeout, or an assertion failure. AI systems break all three assumptions at once.</p>
+
+        <div class="content-card">
+            <h4>Why classical monitoring underfits AI systems</h4>
+            <ul>
+                <li><strong>Non-determinism:</strong> the same input can produce different outputs across calls. Flakiness is not a bug, it is the substrate. "Retry until green" is not a strategy.</li>
+                <li><strong>Semantic failures:</strong> a wrong answer returns HTTP 200. The model is confident, the JSON validates, the latency is fine &mdash; and the content is hallucinated. Nothing in your infra layer can see it.</li>
+                <li><strong>Silent drift:</strong> the model provider ships a new checkpoint, the users start asking slightly different questions, a tool's API changes its error text. Your code didn't change. Your quality did.</li>
+                <li><strong>Long-tailed failures:</strong> most requests are fine. The failures cluster in narrow slices (a specific language, a specific tool, a specific user cohort). Aggregate metrics hide them.</li>
+                <li><strong>Cost and latency are correctness signals:</strong> a cheap wrong answer is often worse than an expensive right one; a slow answer that the user abandons is a failure even if the content would have been perfect. Performance is part of quality, not separate from it.</li>
+                <li><strong>Ground truth is partial:</strong> you rarely know, in production, whether a given answer was correct. You have proxies &mdash; thumbs, retries, handoff rates, follow-up questions &mdash; and those proxies are themselves biased.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>The three horizons of feedback</h4>
+            <p>A production AI system should be watched at three time scales simultaneously, each trading latency for fidelity:</p>
+            <ul>
+                <li><strong>Offline (seconds &ndash; minutes).</strong> Every PR runs the eval harness from L7&ndash;L9 against a golden set. Fast, cheap, low fidelity (your golden set is never the full input distribution).</li>
+                <li><strong>Online (minutes &ndash; hours).</strong> Canary deploys, shadow traffic, sampled LLM-as-judge on live requests. Slower, costlier, much higher fidelity &mdash; it's the real distribution.</li>
+                <li><strong>Human (hours &ndash; weeks).</strong> Thumbs, support tickets, user interviews, manual review of sampled traces. Slowest, but the only source of certain kinds of ground truth (subtle harm, tone, domain facts).</li>
+            </ul>
+            <p>Any system that relies on only one of these horizons is flying partially blind. Offline alone misses drift. Online alone is noisy. Human alone is too slow to prevent incidents.</p>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>You cannot alert on "the model got it wrong." You can only alert on <em>proxies</em> for wrongness &mdash; guardrail rejection rate, latency, cost, judge score on sampled traffic, user thumbs, retry rate, tool-failure rate. The job of monitoring is to design a set of proxies that <em>fail before users do</em>, and to know the failure modes of the proxies themselves.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- RUNTIME CHECKS / GUARDRAILS -->
+    <!-- ================================================================ -->
+    <section id="guardrails">
+        <div class="section-number">02 / RUNTIME CHECKS &amp; GUARDRAILS</div>
+        <h2>Rubrics you are willing to run on every request</h2>
+
+        <p>A <strong>guardrail</strong> is a check that runs on every request (or every response), in the critical path, and decides whether to pass, repair, reject, or fall back. Structurally, a guardrail is just a rubric from L7 &mdash; but subject to much harder constraints: it has to be cheap enough to run on every call, deterministic enough to be debuggable, and safe enough to fail loudly when it's wrong.</p>
+
+        <div class="content-card">
+            <h4>Where guardrails sit in the request path</h4>
+            <ul>
+                <li><strong>Input-side:</strong> schema validation on incoming requests, prompt-injection detection, PII/secret filters, length and cost budgeting, rate limiting per user/session, policy pre-checks.</li>
+                <li><strong>Model-side:</strong> bounded tokens, bounded tool-call depth, timeouts, temperature/seed discipline for reproducibility where possible.</li>
+                <li><strong>Output-side:</strong> JSON / schema validation of structured outputs, factual anchors (does a cited URL return 200? is a cited document in your index?), policy checks (toxicity, unsafe content), "did the model actually call the tool I asked for, or did it hallucinate a plausible answer?"</li>
+                <li><strong>Cross-cutting:</strong> per-user budgets, per-tenant cost caps, circuit breakers that trip when guardrail rejection rate spikes.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Guardrails have failure modes too</h4>
+            <ul>
+                <li><strong>False positives</strong> that block legitimate traffic &mdash; the most common way guardrails silently degrade a product. You need a dashboard for guardrail <em>rejection</em> rate broken down by guardrail, not just an alert on model errors.</li>
+                <li><strong>Latency inflation.</strong> Every cascaded check adds p50 and p95. Five 50-ms guardrails is a 250-ms tax on every call.</li>
+                <li><strong>Guardrail drift.</strong> If a guardrail is itself an LLM judge, it drifts when the judge model is upgraded. Pin the judge version, or treat the guardrail output as a first-class signal that needs its own regression evals.</li>
+                <li><strong>Over-trust.</strong> A passing guardrail is not a proof of correctness &mdash; it is a proof that <em>this particular check</em> did not fire. Do not let a green guardrail suppress other monitoring.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Design patterns</h4>
+            <ul>
+                <li><strong>Fail-closed vs. fail-open, per check.</strong> A prompt-injection filter should probably fail closed (reject on uncertainty). A toxicity classifier on casual chat might fail open with a log, because the cost of false positives is user-visible rudeness.</li>
+                <li><strong>Retry-with-repair.</strong> On schema-invalid output, feed the validator error back to the model and ask it to fix (once). Cheap, effective, preserves latency.</li>
+                <li><strong>Fallback chains.</strong> Cheap model &rarr; strong model &rarr; canned response &rarr; human handoff. Each layer has its own latency/cost/quality profile; pick the one that matches the failure.</li>
+                <li><strong>Circuit breakers.</strong> If the guardrail rejection rate crosses a threshold (e.g. 3&times; baseline for 5 minutes), stop serving that prompt version and roll back. The rejection rate is almost always the first signal of a regression.</li>
+                <li><strong>Every guardrail emits an event.</strong> A guardrail that silently rejects is worse than one that does nothing &mdash; you cannot debug what you cannot see.</li>
+            </ul>
+        </div>
+
+        <p>A compact example: a decorator that validates an LLM's structured output, retries once on failure, and always emits a structured event. It is deliberately vendor-neutral &mdash; no framework, just stdlib plus Pydantic.</p>
+
+<pre><code class="language-python">from pydantic import BaseModel, ValidationError
+import json, time, logging, uuid
+
+log = logging.getLogger("agent")
+
+class Decision(BaseModel):
+    action: str
+    confidence: float
+
+def guardrail_structured(schema):
+    """Validate LLM output against a Pydantic schema; retry-with-repair once."""
+    def deco(fn):
+        def wrapper(*args, **kwargs):
+            call_id = str(uuid.uuid4())
+            t0 = time.time()
+            raw = fn(*args, **kwargs)
+            try:
+                parsed = schema.model_validate_json(raw)
+                log.info(json.dumps({
+                    "event": "guardrail.ok", "call_id": call_id,
+                    "schema": schema.__name__, "latency_ms": int((time.time()-t0)*1000),
+                }))
+                return parsed
+            except ValidationError as e:
+                log.warning(json.dumps({
+                    "event": "guardrail.repair", "call_id": call_id,
+                    "schema": schema.__name__, "error": str(e)[:200],
+                }))
+                # Retry-with-repair: feed the error back to the model.
+                raw2 = fn(*args, repair_hint=str(e), **kwargs)
+                try:
+                    return schema.model_validate_json(raw2)
+                except ValidationError as e2:
+                    log.error(json.dumps({
+                        "event": "guardrail.fail", "call_id": call_id,
+                        "schema": schema.__name__, "error": str(e2)[:200],
+                    }))
+                    raise
+        return wrapper
+    return deco
+</code></pre>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>A guardrail is a rubric you are willing to run on every request. Rubrics you are <em>not</em> willing to run at request time (too slow, too expensive, too noisy) belong in the offline eval harness &mdash; not in production. Deciding which rubric goes where is an architectural choice, not a configuration one.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- LOGGING -->
+    <!-- ================================================================ -->
+    <section id="logging">
+        <div class="section-number">03 / LOGGING &amp; STRUCTURED EVENTS</div>
+        <h2>One row per call in a table you could hand to an analyst</h2>
+
+        <p>The first observability primitive is still plain logs &mdash; but AI systems produce enough structure that stringly-typed log lines stop being useful almost immediately. The discipline is: every LLM call and every tool invocation emits <strong>one JSON event</strong> with a stable schema, linked to other events by shared ids.</p>
+
+        <div class="content-card">
+            <h4>What to log for a single LLM call</h4>
+            <ul>
+                <li><strong>Identity:</strong> <code>trace_id</code>, <code>span_id</code>, <code>parent_span_id</code>, <code>request_id</code>, hashed <code>user_id</code> / <code>session_id</code>.</li>
+                <li><strong>Configuration:</strong> <code>model</code>, <code>model_version</code>, <code>prompt_version</code> (hash or tag), <code>temperature</code>, <code>seed</code>, tool set.</li>
+                <li><strong>Inputs / outputs:</strong> input and output <em>token counts</em>; the prompt and response themselves gated by log level and environment (see PII card below).</li>
+                <li><strong>Tool calls:</strong> which tools were invoked, arguments (redacted as needed), latency per tool, success/failure.</li>
+                <li><strong>Economics:</strong> latency (wall-clock), cost in dollars (computed from tokens &times; rate card), retries, guardrail verdicts.</li>
+                <li><strong>Outcome:</strong> a coarse-grained status &mdash; <code>ok</code>, <code>repaired</code>, <code>rejected</code>, <code>failed</code>, <code>fallback</code>.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Logging PII and secrets &mdash; patterns that actually hold up</h4>
+            <p>The single most common logging mistake in LLM systems is writing the raw prompt to a log stream that is retained longer, or seen by more people, than the prompt's data classification allows. A few patterns that work in practice:</p>
+            <ul>
+                <li><strong>Hash identifiers, don't store them.</strong> <code>user_id</code> becomes <code>sha256(user_id + salt)[:16]</code>. You can still count distinct users, correlate sessions, and join on traces, without carrying raw identifiers into logs.</li>
+                <li><strong>Environment-gated verbosity.</strong> Dev and staging log full prompts and responses at <code>DEBUG</code>. Prod logs only token counts and outcomes at <code>INFO</code>. Prompts and responses in prod go to a separate, shorter-retention, access-controlled store &mdash; if anywhere.</li>
+                <li><strong>Regex and tokenizer-based redactors.</strong> A redactor sits between your event producer and the log sink, scrubbing email, phone, SSN, credit-card patterns, and replacing them with typed placeholders like <code>&lt;EMAIL&gt;</code>. This is a defence in depth &mdash; assume the upstream layer will occasionally leak.</li>
+                <li><strong>Never log secrets.</strong> API keys, OAuth tokens, and tool credentials should be structurally impossible to log (wrap them in a type whose <code>__repr__</code> returns <code>"***"</code>). Redactors are a backstop, not the primary defence.</li>
+                <li><strong>Retention policy, written down.</strong> Define per-event retention: coarse metrics (latency, cost, outcome) can live for a year; raw prompts should not. The retention policy is part of the logging design, not an afterthought.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Log levels for AI systems</h4>
+            <ul>
+                <li><strong><code>DEBUG</code></strong> &mdash; full prompt/response payloads, per-token events. Dev and staging only.</li>
+                <li><strong><code>INFO</code></strong> &mdash; normal turn records: model, tokens, latency, cost, outcome. Default in prod.</li>
+                <li><strong><code>WARNING</code></strong> &mdash; guardrail repairs, fallbacks triggered, tool retries. Something is bending but not broken.</li>
+                <li><strong><code>ERROR</code></strong> &mdash; guardrail failures, unrecoverable tool errors, bounded-retry exhaustion.</li>
+                <li><strong><code>CRITICAL</code></strong> &mdash; safety-policy violations, PII leaks, cost/rate-limit breaches at tenant scope. Pages a human.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Cardinality discipline</h4>
+            <p>A log event with a user-generated string in a metric tag is a resource bomb. <em>Do</em> tag events with <code>model</code>, <code>prompt_version</code>, <code>guardrail_verdict</code>, <code>outcome</code> &mdash; all small, bounded sets. <em>Do not</em> tag events with raw user prompts, free-text tool arguments, or response snippets. Keep high-cardinality content in the event body; keep metric tags bounded.</p>
+        </div>
+
+<pre><code class="language-python">import json, logging, sys, hashlib
+from dataclasses import dataclass, asdict
+from typing import Optional
+
+SALT = "rotate-me-per-deploy"
+
+def hash_id(value: str) -> str:
+    return hashlib.sha256((SALT + value).encode()).hexdigest()[:16]
+
+@dataclass
+class LLMCallRecord:
+    event: str                # "llm.call"
+    trace_id: str
+    span_id: str
+    parent_span_id: Optional[str]
+    user_hash: str
+    model: str
+    prompt_version: str
+    input_tokens: int
+    output_tokens: int
+    latency_ms: int
+    cost_usd: float
+    guardrail_verdict: str    # "ok" | "repaired" | "rejected"
+    outcome: str              # "ok" | "repaired" | "failed" | "fallback"
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        # record.msg is expected to already be a dict.
+        if isinstance(record.msg, dict):
+            payload = record.msg
+        else:
+            payload = {"message": str(record.msg)}
+        payload["level"] = record.levelname
+        payload["logger"] = record.name
+        return json.dumps(payload, default=str)
+
+h = logging.StreamHandler(sys.stdout)
+h.setFormatter(JsonFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[h])
+log = logging.getLogger("agent")
+
+# Later, at the end of an LLM call:
+log.info(asdict(LLMCallRecord(
+    event="llm.call", trace_id="t-abc", span_id="s-1", parent_span_id=None,
+    user_hash=hash_id("user-42"), model="gpt-x", prompt_version="v7",
+    input_tokens=812, output_tokens=134, latency_ms=1420, cost_usd=0.0041,
+    guardrail_verdict="ok", outcome="ok",
+)))
+</code></pre>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Every LLM call should produce one row in a table you could hand to an analyst tomorrow. If your logs are stringly-typed ("<code>Got response from model, tokens: 134</code>"), you cannot slice by prompt version, you cannot compute p95 latency per tool, you cannot alert on cost per user. The structure is the product.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- TRACING -->
+    <!-- ================================================================ -->
+    <section id="tracing">
+        <div class="section-number">04 / TRACING &amp; OBSERVABILITY</div>
+        <h2>A causal graph of your agent's thinking</h2>
+
+        <p>Logs tell you what happened, one event at a time. Agents are trees of LLM calls and tool calls, and what you usually need to answer &mdash; "why did this particular answer go wrong?" &mdash; requires the causal structure, not a flat timeline. That is what a <strong>trace</strong> gives you.</p>
+
+        <div class="content-card">
+            <h4>Core concepts</h4>
+            <ul>
+                <li><strong>Trace:</strong> a single end-to-end request, uniquely identified.</li>
+                <li><strong>Span:</strong> one unit of work within a trace &mdash; an LLM call, a tool invocation, a guardrail, a retry. Spans have a start time, end time, and attributes.</li>
+                <li><strong>Parent / child:</strong> spans form a tree. The root is typically <code>agent.run</code>; its children are <code>llm.call</code> and <code>tool.call</code>; retries and guardrail repairs become child spans of the call they repair.</li>
+                <li><strong>Attributes:</strong> key-value pairs on a span (model, prompt version, input tokens, rubric score, guardrail verdict).</li>
+                <li><strong>Events:</strong> timestamped markers within a span (retry triggered, guardrail repaired, fallback taken).</li>
+                <li><strong>Baggage:</strong> attributes that propagate down the tree (user hash, tenant id, experiment arm).</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>GenAI semantic conventions &mdash; and why standard names matter</h4>
+            <p>OpenTelemetry maintains emerging semantic conventions for GenAI spans: <code>gen_ai.system</code>, <code>gen_ai.request.model</code>, <code>gen_ai.request.temperature</code>, <code>gen_ai.usage.input_tokens</code>, <code>gen_ai.usage.output_tokens</code>, <code>gen_ai.response.finish_reason</code>. Using the standard names is not a style preference: it is what makes your spans portable across backends (any OTel-compatible UI can display them), queryable alongside industry benchmarks, and compatible with future auto-instrumentation for OpenAI / Anthropic / other SDKs. Proprietary attribute names lock you in.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>What a well-instrumented agent trace looks like</h4>
+            <p>The structure you want to see in your trace viewer, for a single user request:</p>
+            <div class="ascii-diagram">agent.run  (trace_id=t-abc, user_hash=..., prompt_version=v7)
+ |-- llm.call  (model=gpt-x, input_tokens=812, output_tokens=22)     [decides to call tool]
+ |-- tool.call  (name=search, args_hash=..., latency_ms=320, ok)
+ |-- guardrail.check  (name=schema, verdict=ok)
+ |-- llm.call  (model=gpt-x, input_tokens=994, output_tokens=134)    [final answer]
+ |-- guardrail.check  (name=toxicity, verdict=ok)
+ \-- outcome  (cost_usd=0.0041, total_latency_ms=1420)</div>
+            <p>Every span carries the attributes you need to answer an operational question from the trace alone: which prompt version, which tools fired, which guardrails ran, how much did it cost, how long did each step take. If you cannot reconstruct a bad output from its trace, you are not observable yet.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>Sampling</h4>
+            <ul>
+                <li><strong>Head-based sampling.</strong> Decide at the start of a trace whether to keep it, typically uniform (e.g. 10%). Cheap, but you lose information about rare failures.</li>
+                <li><strong>Tail-based sampling.</strong> Decide at the end: keep 100% of errors and guardrail rejections, keep 100% of the slowest p99 of traces, keep 1% of routine successes. Much more useful; requires buffering spans until the trace completes.</li>
+                <li><strong>Bias towards what is diagnostic.</strong> A uniform sample is the wrong default for AI systems &mdash; the failures are rare, and rare failures are exactly what you need to study.</li>
+            </ul>
+        </div>
+
+        <p>A minimal OpenTelemetry setup in plain Python &mdash; a context manager that emits a GenAI-conformant span for an LLM call. The console exporter writes spans to stdout so students can see them directly; swapping to any OTel-compatible backend (Phoenix, Langfuse, Jaeger, Tempo) is a one-line change on the provider.</p>
+
+<pre><code class="language-python">from contextlib import contextmanager
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+# For a real backend, swap the two lines above for an OTLP exporter:
+# from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+# processor = SimpleSpanProcessor(OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces"))
+
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer("agent")
+
+@contextmanager
+def trace_llm_call(model: str, prompt_version: str):
+    with tracer.start_as_current_span("llm.call") as span:
+        # Use standard GenAI attribute names for portability.
+        span.set_attribute("gen_ai.system", "openai-compatible")
+        span.set_attribute("gen_ai.request.model", model)
+        span.set_attribute("prompt.version", prompt_version)
+        usage = {"input_tokens": 0, "output_tokens": 0}
+        try:
+            yield usage
+            span.set_attribute("gen_ai.usage.input_tokens", usage["input_tokens"])
+            span.set_attribute("gen_ai.usage.output_tokens", usage["output_tokens"])
+        except Exception as e:
+            span.record_exception(e)
+            span.set_attribute("outcome", "failed")
+            raise
+</code></pre>
+
+        <div class="content-card">
+            <h4>What exists out there &mdash; and when to reach for it</h4>
+            <p>You can (and in this lab, will) build a minimal trace viewer yourself &mdash; a script that reads OTel console output and renders a collapsible HTML span tree. That exercise is worth doing: it makes "a trace is a list of spans with parent ids and attributes" concrete. The table below is the landscape you will meet in industry, and when each tool earns its keep.</p>
+            <ul>
+                <li><strong>Phoenix</strong> (Arize, open source). LLM-native trace UI &mdash; prompts, completions, token counts, tool calls, rubric scores. Built-in LLM-as-judge runners that can score stored traces. Reach for it when you want trace &harr; eval round-tripping out of the box.</li>
+                <li><strong>Langfuse</strong> (open source, self-hostable). Similar space to Phoenix. Strong at dataset/experiment management: promote a production trace into a golden-set test case, re-run it against a new prompt version, diff the results. Reach for it when your offline/online loop is the bottleneck.</li>
+                <li><strong>Jaeger</strong> (CNCF, open source). Classic distributed-tracing backend, general-purpose. No GenAI awareness, but mature search and timeline UI at scale. Reach for it when you are embedding AI into an existing microservices stack that already speaks OTel.</li>
+                <li><strong>LangSmith</strong> (hosted, by LangChain). Tightly integrated with the LangChain ecosystem; strong trace and eval workflows. Reach for it when you are already committed to that stack and want the path of least resistance.</li>
+                <li><strong>Grafana Tempo</strong> (open source). High-scale trace storage that pairs with Grafana dashboards and Loki logs. Reach for it when you care most about long retention and correlating traces with infra metrics.</li>
+            </ul>
+            <p>Framework auto-instrumentation is the other axis: several of these tools ship adapters for OpenAI / Anthropic / LangChain / LlamaIndex that emit GenAI-conformant spans for you. If you are on a mainstream stack, that is often the single biggest win.</p>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight (build vs. buy)</div>
+            <p>Build a viewer when you are learning, when your instrumentation is unusual, or when you want to own the primitives. Adopt an existing tool when you need scale, team workflows, auto-instrumentation for mainstream SDKs, or dataset&harr;trace round-tripping. The choice is not "which vendor" but "which problem am I currently solving."</p>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>A trace is a causal graph of your agent's thinking. If you can reconstruct <em>why</em> a bad output happened from its trace alone &mdash; which prompt version, which tool returned what, which guardrail ran &mdash; you are observable. If you can only see "the agent answered wrong," you are not.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- CI &amp; REPORTING -->
+    <!-- ================================================================ -->
+    <section id="ci-reporting">
+        <div class="section-number">05 / CI-INTEGRATED EVAL HARNESSES &amp; REPORTING</div>
+        <h2>Offline, online, and a weekly number you can defend</h2>
+
+        <p>The offline eval harness from L7&ndash;L9 only earns its keep if it runs automatically, on every change, with a policy about when it blocks a merge. The production dashboard only earns its keep if someone looks at it &mdash; which means it has to tell a story, not dump metrics. This section is about wiring those together.</p>
+
+        <div class="content-card">
+            <h4>Offline: what a CI eval gate should do</h4>
+            <ul>
+                <li><strong>Run the golden set on every PR that touches the prompt, the tools, or the agent loop.</strong> Small PRs that don't touch these can skip the gate (gated by path filters), to keep CI fast.</li>
+                <li><strong>Budget.</strong> Tokens, wall-clock, and dollars are capped per run. If a PR blows the budget, the build fails before any quality claim is made.</li>
+                <li><strong>Regression policy using uncertainty (from L8&ndash;L9).</strong> Do not block on raw mean drops &mdash; block when the new version's score is <em>significantly worse</em> at a pre-declared confidence level. A 2-point drop with overlapping CIs is noise; a 2-point drop with disjoint CIs is a regression.</li>
+                <li><strong>Pin everything in the artifact.</strong> Dataset version, rubric version, judge model and version, prompt version, git SHA. A CI run that cannot be reproduced six months later is a run you cannot defend.</li>
+                <li><strong>Never let a flaky rubric silently pass.</strong> A rubric whose CI crosses the threshold means "we don't know" &mdash; treat it as a soft-fail that requires review, not a pass.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Online: evaluating on live traffic</h4>
+            <ul>
+                <li><strong>Canary.</strong> Route a small % of traffic (often 1&ndash;5%) to the new prompt/model. Compare sampled judge scores, guardrail rejection rates, latency, and cost between control and canary. Promote or roll back based on the canary, not on offline scores alone.</li>
+                <li><strong>Shadow.</strong> The new version sees real inputs, produces outputs that are judged but never returned to users. More expensive &mdash; you pay for two completions per shadowed request &mdash; but safe for high-risk changes.</li>
+                <li><strong>Sampled LLM-as-judge in prod.</strong> Every request is a potential eval, but judging every one is unaffordable. Sample (uniformly, or tail-biased toward errors and slow traces) and run the rubric. Remember the L7 caveat: your production judge is a system that needs its own agreement tracking against human labels.</li>
+                <li><strong>Drift signals.</strong> Rising guardrail rejection rate, shifting input embedding distribution, changing output length distribution, changing tool-call mix, changing language mix. None of these directly measure quality, but all of them are early indicators.</li>
+                <li><strong>User signal.</strong> Thumbs, retries, handoff-to-human rate, session abandonment. Biased but cheap &mdash; and the only source of signal that is guaranteed to be user-grounded.</li>
+            </ul>
+        </div>
+
+<pre><code class="language-python"># A pytest-style CI eval test. Fails the build only when the regression
+# is statistically significant given the golden-set sample size.
+import math
+import pytest
+from eval_harness import load_golden_set, run_agent, judge
+from stats import bootstrap_ci_diff   # from the L8-L9 utilities
+
+BASELINE_SCORE = 0.82       # pinned from the last green main-branch run
+ALPHA = 0.05                # significance level for regression gate
+
+@pytest.mark.eval
+def test_rubric_regression():
+    dataset = load_golden_set("v3")     # pinned dataset version
+    outputs = [run_agent(x) for x in dataset]
+    scores  = [judge(x, y, rubric_version="v4") for x, y in zip(dataset, outputs)]
+    new_mean = sum(scores) / len(scores)
+    # 95% CI on the *difference* from baseline, via bootstrap.
+    lo, hi = bootstrap_ci_diff(scores, BASELINE_SCORE, alpha=ALPHA)
+    # Regression only if the upper bound of the CI is below zero
+    # (i.e., we are confident the new version is worse).
+    assert hi &gt;= 0, (
+        f"Significant regression: new={new_mean:.3f}, "
+        f"baseline={BASELINE_SCORE:.3f}, CI=[{lo:.3f},{hi:.3f}]"
+    )
+</code></pre>
+
+        <div class="content-card">
+            <h4>Anatomy of a weekly AI-system report</h4>
+            <p>The weekly report is the piece of the monitoring stack that actually changes behaviour &mdash; because it is the piece humans read. A report that dumps thirty metrics is a report no one reads. A useful weekly report is small, opinionated, and tells a story. A minimal template that holds up:</p>
+            <ul>
+                <li><strong>One quality number, with a confidence interval.</strong> Aggregate rubric score on a representative slice of production traffic (or on the golden set, clearly labelled). The CI matters: a 1-point move inside a 3-point CI is not news.</li>
+                <li><strong>One cost number.</strong> Dollars per successful request, or per active user. Broken into model cost vs. tool cost vs. guardrail cost if any of them is material.</li>
+                <li><strong>One safety / guardrail number.</strong> Guardrail rejection rate, or a composite of the critical ones. Alongside false-positive evidence (sampled rejections reviewed by a human).</li>
+                <li><strong>Short prose: "what changed and why."</strong> Three sentences linking the numbers to the deploys, dataset changes, and incidents of the week. The prose is the point &mdash; numbers without interpretation do not travel across teams.</li>
+                <li><strong>One action item.</strong> What the team will do next week as a consequence. A report without an action item becomes wallpaper.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Incident reviews for AI systems</h4>
+            <p>Classical post-mortems ask: what was the bug, what was the commit, what is the fix. For AI systems, the failure is more often a <em>distribution shift</em> than a bug &mdash; the code is unchanged, but the inputs, the model, or the world moved. A post-mortem that concludes "the model got worse" without identifying which slice, which change, and which signal would have caught it earlier has not done its job. The output of a good AI incident review is usually not a code fix; it is <em>a new guardrail, a new monitoring slice, or a new eval case</em>.</p>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>The CI gate and the production dashboard are the same rubric, run on different data at different cadences. Design them together &mdash; the same rubric version, the same outcome schema, the same uncertainty discipline &mdash; or you will find yourself chasing gaps between offline and online scores that are really gaps in your own instrumentation.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- WRAP -->
+    <!-- ================================================================ -->
+    <section id="wrap">
+        <div class="section-number">/ WRAP</div>
+        <h2>Where this leaves us</h2>
+
+        <p>Monitoring an AI system is less about dashboards and more about <em>closing the loop</em>: every guardrail is a rubric from L7; every CI eval gate uses the uncertainty machinery from L8&ndash;L9; every production trace is a potential new golden-set case; every weekly report is a chance to decide what next week's experiments should be. The instrumentation is not separate from the engineering &mdash; it <em>is</em> the engineering, once your system is non-deterministic.</p>
+
+        <p>In the lab you will build a tiny agent with one tool, wire it with structured logging, OpenTelemetry spans, and two guardrails, and render its traces in a hand-rolled HTML viewer. Then you will deliberately break the prompt, run it on a small golden set, and watch which signals catch the regression first &mdash; the guardrail rate, the rubric score, or the cost. The sequence of what fails first is the most important thing you can learn about your own monitoring stack.</p>
+
+        <div class="thesis-block">
+            <div class="label">One-line summary</div>
+            <p>Evaluation doesn't stop at the CI gate. Production is the hardest eval set you will ever have, and instrumentation is how you read it.</p>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Designing Large Scale AI Systems &middot; Spring 2026</p>
+</footer>
+
+<script>hljs.highlightAll();</script>
+</body>
+</html>

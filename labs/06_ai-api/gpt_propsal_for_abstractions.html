@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposal: Abstractions for Governable Agentic Tool Ecosystems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo">Governable Agentic Systems</div>
+    <ul>
+        <li><a href="ai_tools_integration.html">Part 1</a></li>
+        <li><a href="aoa.html">Part 2</a></li>
+        <li><a href="aoa2.html">Part 3</a></li>
+        <li><a href="#motivation">Motivation</a></li>
+        <li><a href="#abstractions">Abstractions</a></li>
+        <li><a href="#practices">Practices</a></li>
+        <li><a href="#mcp">MCP</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="intro">
+        <h1>Proposal: Abstractions, Practices, and "Where They Live"</h1>
+        <p class="subtitle">for Governable Agentic Tool Ecosystems (MCP-compatible)</p>
+    </div>
+
+    <!-- MOTIVATION -->
+    <section id="motivation">
+        <div class="section-number">01 / MOTIVATION</div>
+        <h2>Motivation</h2>
+
+        <p>Agentic systems are distributed systems that can <strong>read</strong>, <strong>decide</strong>, and <strong>act</strong>. The core risk is not "models are dumb"; it's that:</p>
+        <ul>
+            <li>authority is implicit,</li>
+            <li>commitments are blurred,</li>
+            <li>failures are silent,</li>
+            <li>and responsibility becomes a debate after the fact.</li>
+        </ul>
+
+        <p>So the goal of this proposal is practical:</p>
+
+        <blockquote>Define a small set of abstractions and practices that make agentic systems <strong>governable at scale</strong> — and be explicit about where each abstraction should be <strong>declared</strong>, <strong>enforced</strong>, and <strong>evidenced</strong>.</blockquote>
+
+        <p>A useful framing is three planes:</p>
+        <ul>
+            <li><strong>Data plane</strong>: actions that change state (tools/services)</li>
+            <li><strong>Control plane</strong>: authority, guardrails, policy</li>
+            <li><strong>Evidence plane</strong>: traces, receipts, approvals</li>
+        </ul>
+
+        <p>MCP is best viewed as a standardized boundary in the data plane that can carry control and evidence metadata.</p>
+
+        <div class="divider"></div>
+
+        <h3>Design principle: "Declare / Enforce / Evidence" (often different places)</h3>
+
+        <p>For each abstraction, we should be able to answer:</p>
+        <ol>
+            <li><strong>Where is it declared?</strong> (who states the rule/meaning)</li>
+            <li><strong>Where is it enforced?</strong> (who can actually prevent violation)</li>
+            <li><strong>Where is it evidenced?</strong> (what artifacts prove what happened)</li>
+        </ol>
+
+        <p><strong>If we can't answer these, we don't have a system; we have vibes.</strong></p>
+
+    </section>
+
+    <!-- ABSTRACTIONS -->
+    <section id="abstractions">
+        <div class="section-number">02 / ABSTRACTIONS</div>
+        <h2>Core abstractions to develop</h2>
+
+        <div class="content-card">
+            <h4>1) Capability semantics (meaning, not just schema)</h4>
+            <p><strong>What:</strong> preconditions, side effects, reversibility, risk tier, cost model, common failure modes.</p>
+            <ul>
+                <li><strong>Declared by:</strong> provider (they know semantics)</li>
+                <li><strong>Enforced by:</strong> provider (hard bounds) + middleware (cross-tool policy)</li>
+                <li><strong>Evidenced by:</strong> receipts + traces</li>
+            </ul>
+            <p><strong>MCP fit:</strong> MCP can carry this as structured metadata alongside tool descriptions, but MCP does not define the schema for "meaning".</p>
+        </div>
+
+        <div class="content-card">
+            <h4>2) Action classes + risk tiers (shared vocabulary)</h4>
+            <p><strong>What:</strong> minimal taxonomy like:</p>
+            <ul>
+                <li>action class: <code>read</code>, <code>write</code>, <code>transfer</code>, <code>irreversible</code>, <code>safety_sensitive</code></li>
+                <li>risk category: <code>financial</code>, <code>privacy</code>, <code>safety</code>, <code>reputational</code></li>
+                <li>risk level: <code>low/med/high</code> (or numeric)</li>
+            </ul>
+            <ul>
+                <li><strong>Declared by:</strong> provider per operation</li>
+                <li><strong>Used by:</strong> clients/agents to decide confirmations and UI summaries</li>
+                <li><strong>Enforced by:</strong> provider/middleware (thresholds, scopes), client (UX gating)</li>
+            </ul>
+            <p><strong>Why this matters:</strong> it's the cheapest "standardization" that unlocks consistent guardrails, monitoring, and consent.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>3) Commitment points: Preview → Commit (two-phase)</h4>
+            <p><strong>What:</strong> make irreversible actions explicit and hard to bypass.</p>
+            <ul>
+                <li><code>preview()</code> returns:
+                    <ul>
+                        <li>stable summary of effects (what the user would approve)</li>
+                        <li>a <code>confirm_token</code> (or commit reference)</li>
+                        <li>optional computed plan / price / constraints</li>
+                    </ul>
+                </li>
+                <li><code>commit(confirm_token, …)</code> performs the irreversible step
+                    <ul>
+                        <li>must be idempotent (idempotency key)</li>
+                        <li>must return a receipt</li>
+                    </ul>
+                </li>
+            </ul>
+            <ul>
+                <li><strong>Declared by:</strong> provider (commit semantics are domain truth)</li>
+                <li><strong>Orchestrated by:</strong> client/agent (step-by-step flow + summaries)</li>
+                <li><strong>Enforced by:</strong> provider (cannot commit without token / policy)</li>
+                <li><strong>Evidenced by:</strong> commit event + receipt</li>
+            </ul>
+            <p><strong>MCP fit:</strong> MCP makes it easy to expose both calls consistently; it does not mandate the pattern.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>4) Consent / delegation artifacts (authority objects)</h4>
+            <p><strong>What:</strong> consent is an object, not a chat message:</p>
+            <ul>
+                <li>principal (who authorized)</li>
+                <li>scope (what resources)</li>
+                <li>thresholds (limits)</li>
+                <li>expiry / revocation</li>
+                <li>terms/policy version references (see next)</li>
+            </ul>
+            <ul>
+                <li><strong>Created by:</strong> client UX and/or middleware consent service</li>
+                <li><strong>Validated by:</strong> provider at commit boundary (must be checkable)</li>
+                <li><strong>Stored by:</strong> middleware/platform (often) or provider (if account owner)</li>
+                <li><strong>Evidenced by:</strong> consent ID referenced in receipts + traces</li>
+            </ul>
+            <p><strong>Why:</strong> if consent isn't an artifact, you can't reason about responsibility or disputes.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>5) Terms / policy artifacts (what rules applied)</h4>
+            <p><strong>What:</strong> treat "terms & conditions" and policy as versioned, referenceable inputs to authority:</p>
+            <ul>
+                <li><code>terms_version</code>, <code>policy_version</code></li>
+                <li>what disclosures were shown (at least as a stable reference)</li>
+                <li>which version was accepted for this action/authority grant</li>
+            </ul>
+            <ul>
+                <li><strong>Published by:</strong> provider/platform</li>
+                <li><strong>Presented by:</strong> client (at the moment it matters)</li>
+                <li><strong>Enforced by:</strong> provider/middleware at commit (must reference a valid version)</li>
+                <li><strong>Evidenced by:</strong> acceptance artifact + receipt fields + trace events</li>
+            </ul>
+            <p>This is the bridge between "technical correctness" and "legal defensibility".</p>
+        </div>
+
+        <div class="content-card">
+            <h4>6) Guided interaction / flow semantics (the "whole website" problem)</h4>
+            <p><strong>What:</strong> the missing web affordance: state + allowed next steps + required confirmations.</p>
+            <p>Two practical flavors:</p>
+            <ul>
+                <li><strong>Provider flow hints</strong>: "if the user wants X, typical safe sequence is …"</li>
+                <li><strong>Client-owned orchestration</strong>: client chooses UX, but must respect constraints and commit points</li>
+            </ul>
+            <ul>
+                <li><strong>Declared by:</strong> provider as hints + hard constraints; client as UX flow</li>
+                <li><strong>Enforced by:</strong> provider at commitment points; middleware for cross-tool rules</li>
+                <li><strong>Evidenced by:</strong> trace shows step progression; receipts show commits</li>
+            </ul>
+            <p><strong>Non-goal:</strong> providers shouldn't own everyone's UX.<br>
+            <strong>Goal:</strong> providers should expose enough structure that clients don't have to guess.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>7) Receipts (durable outcomes)</h4>
+            <p><strong>What:</strong> every state-changing action returns a structured receipt:</p>
+            <ul>
+                <li>what changed (object IDs, deltas or stable summary)</li>
+                <li>under what authority basis (consent/delegation reference)</li>
+                <li>when, where, correlation IDs</li>
+                <li>reversible? compensation path?</li>
+            </ul>
+            <ul>
+                <li><strong>Produced by:</strong> provider (source of truth)</li>
+                <li><strong>Stored by:</strong> client + middleware for audit/support</li>
+                <li><strong>Evidenced by:</strong> receipts are the evidence</li>
+            </ul>
+            <p><strong>Without receipts, responsibility becomes storytelling.</strong></p>
+        </div>
+
+        <div class="content-card">
+            <h4>8) Semantic traces (OpenTelemetry + conventions)</h4>
+            <p><strong>What:</strong> tracing plumbing + a shared semantic layer:</p>
+            <ul>
+                <li>one agent run = <strong>trace</strong></li>
+                <li>each tool/MCP invocation = <strong>span</strong></li>
+                <li>approvals, refusals, preview, commit, compensation = <strong>events</strong> or spans</li>
+                <li>receipts referenced by ID</li>
+            </ul>
+            <ul>
+                <li><strong>Implemented by:</strong> all layers (client/middleware/provider)</li>
+                <li><strong>Standardized as:</strong> OpenTelemetry-compatible semantic conventions (community)</li>
+                <li><strong>Privacy controls:</strong> redaction, access control, retention (must be explicit)</li>
+            </ul>
+            <p>This matters because:</p>
+            <ul>
+                <li>guardrails without observability are unverifiable,</li>
+                <li>"success" without meaning is misleading,</li>
+                <li>silent failures dominate at scale.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>9) Business assertions (postconditions / invariants)</h4>
+            <p><strong>What:</strong> detect "successful nonsense":</p>
+            <ul>
+                <li>invariant checks (domain truth)</li>
+                <li>postconditions ("intended outcome holds")</li>
+                <li>statistical assertions (system-level drift)</li>
+            </ul>
+            <ul>
+                <li><strong>Declared by:</strong> provider (domain invariants) + sometimes client (intent invariants)</li>
+                <li><strong>Evaluated by:</strong> provider + middleware</li>
+                <li><strong>Evidenced by:</strong> assertion outcomes in traces/metrics and receipts/errors</li>
+            </ul>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3>Where these should live (quick residence map)</h3>
+
+        <p><strong>Clients/agents</strong> should own:</p>
+        <ul>
+            <li>intent elicitation, interaction policy (ask vs infer)</li>
+            <li>step-by-step UX and user-facing summaries</li>
+            <li>collecting approvals and producing consent artifacts (or calling a consent service)</li>
+            <li>propagating trace context, emitting semantic events</li>
+        </ul>
+
+        <p><strong>Providers/services</strong> should own:</p>
+        <ul>
+            <li>capability semantics metadata (as much as feasible)</li>
+            <li>enforceable constraints: permissions, scope, budgets, rate limits</li>
+            <li>commitment boundaries (preview/commit) and refusal on ambiguity at commit time</li>
+            <li>receipts as a first-class output</li>
+        </ul>
+
+        <p><strong>Middleware/platform</strong> often must exist to own:</p>
+        <ul>
+            <li>cross-tool policy (one place to encode org rules)</li>
+            <li>consent lifecycle (issuance, expiry, revocation)</li>
+            <li>trace pipeline defaults (redaction, retention, access control)</li>
+            <li>anomaly detection + automated analysis loops</li>
+        </ul>
+
+        <p><strong>A healthy system uses all three intentionally.</strong></p>
+
+    </section>
+
+    <!-- PRACTICES -->
+    <section id="practices">
+        <div class="section-number">03 / PRACTICES</div>
+        <h2>Practices to develop (not optional at scale)</h2>
+
+        <h3>Provider practices</h3>
+        <ul>
+            <li>publish action class + risk tier per capability</li>
+            <li>require preview/commit for irreversible/high-risk actions</li>
+            <li>refuse ambiguous requests at commit boundaries (structured refusal reasons)</li>
+            <li>always return receipts for state changes</li>
+            <li>version semantics (meaning changes are breaking changes)</li>
+            <li>agentic misuse-case design (ambiguity, escalation bypass, consent laundering)</li>
+        </ul>
+
+        <h3>Client/agent practices</h3>
+        <ul>
+            <li>do not guess across commitment boundaries (clarify or preview)</li>
+            <li>show stable summaries that match commits</li>
+            <li>treat consent as an artifact (IDs, scope, expiry), not chat text</li>
+            <li>handle recovery deliberately (retry vs compensate vs escalate)</li>
+            <li>propagate trace context and emit semantic events consistently</li>
+        </ul>
+
+        <h3>Middleware practices</h3>
+        <ul>
+            <li>central policy engine (cross-tool budgets/scopes/data rules)</li>
+            <li>consent lifecycle service (grant, revoke, audit)</li>
+            <li>OpenTelemetry-based trace pipeline with strict redaction rules</li>
+            <li>automated error analysis (detect patterns of refusal, silent failure, misuse)</li>
+        </ul>
+
+        <div class="divider"></div>
+
+        <h3>What to standardize first (minimal viable "community agreement")</h3>
+
+        <p>If we want the smallest set that unlocks the most:</p>
+
+        <ol>
+            <li><strong>Action class + risk tier vocabulary</strong></li>
+            <li><strong>Preview → Commit pattern</strong> (confirm tokens + idempotency)</li>
+            <li><strong>Receipt schema</strong> (what changed + authority basis + correlation IDs)</li>
+            <li><strong>Consent/delegation schema</strong> (scope/threshold/expiry/revocation + terms/policy version refs)</li>
+            <li><strong>OpenTelemetry semantic conventions</strong> for agent-tool runs:
+                <ul>
+                    <li>tool invocation span</li>
+                    <li>preview, approval requested/granted, refusal, commit, compensation events</li>
+                    <li>receipt reference fields</li>
+                </ul>
+            </li>
+        </ol>
+
+        <p>Everything else can evolve around these.</p>
+
+    </section>
+
+    <!-- MCP -->
+    <section id="mcp">
+        <div class="section-number">04 / MCP</div>
+        <h2>Where MCP helps (and where it does not)</h2>
+
+        <h3>MCP helps with</h3>
+        <ul>
+            <li><strong>Local capability enumeration (per server)</strong> and consistent invocation structure</li>
+            <li>a stable boundary where:
+                <ul>
+                    <li>policy hooks can be inserted,</li>
+                    <li>trace context can be propagated,</li>
+                    <li>validation and throttling can be applied (architecture-dependent)</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>MCP does not define</h3>
+        <ul>
+            <li>capability semantics (meaning)</li>
+            <li>guided flow semantics</li>
+            <li>autonomy/authority contracts</li>
+            <li>consent/terms artifacts</li>
+            <li>receipts and business assertions</li>
+            <li>semantic tracing conventions</li>
+        </ul>
+
+        <p>So the strategy is not "MCP solves governance". It is:</p>
+
+        <blockquote>Use MCP as the substrate, then standardize the semantics and evidence on top.</blockquote>
+
+        <div class="divider"></div>
+
+        <h3>Closing thought</h3>
+
+        <p>If we do this well, we get something the Web had implicitly:</p>
+        <ul>
+            <li>guided interaction,</li>
+            <li>meaningful commitment,</li>
+            <li>and a paper trail.</li>
+        </ul>
+
+        <p>But we make it explicit and machine-operable:</p>
+        <ul>
+            <li>authority becomes a contract,</li>
+            <li>safety becomes enforceable,</li>
+            <li>and responsibility becomes evidence-backed rather than narrative-driven.</li>
+        </ul>
+
+    </section>
+
+</main>
+
+<footer>
+    AI Tools Integration — AI Design Course, University of Trento
+    <br><span style="font-size: 0.85em;">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></span>
+</footer>
+
+<script>
+    hljs.highlightAll();
+
+    // Highlight current section in nav
+    const sections = document.querySelectorAll('section[id], .title-section');
+    const navLinks = document.querySelectorAll('nav a');
+
+    window.addEventListener('scroll', () => {
+        let current = 'intro';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (scrollY >= sectionTop - 200) {
+                current = section.getAttribute('id') || 'intro';
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

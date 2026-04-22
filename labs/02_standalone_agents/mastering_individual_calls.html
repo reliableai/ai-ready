@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L2: Mastering Individual AI Calls</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L2: Mastering Individual AI Calls</div>
+    <ul>
+        <li><a href="#intro">Intro</a></li>
+        <li><a href="#roles">1. Roles</a></li>
+        <li><a href="#anatomy">2. Anatomy</a></li>
+        <li><a href="#temperature">3. Temperature</a></li>
+        <li><a href="#prompting">4. Prompting</a></li>
+        <li><a href="#structured">5. Structured</a></li>
+        <li><a href="#quality">6. Quality</a></li>
+        <li><a href="#stateful">7. State</a></li>
+        <li><a href="#references">References</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="intro">
+        <h1>Mastering Individual Calls to LLMs</h1>
+        <p class="subtitle">Roles of AI in software, prompt engineering, structured outputs, and stateless vs stateful interactions</p>
+        <p style="margin-top: 1.5rem;">
+            Slides: <a href="session3_v2_mastering_individual_calls.pdf">Mastering Individual Calls</a>
+        </p>
+    </div>
+
+    <!-- INTRO -->
+    <section>
+        <h3>The plan for today</h3>
+        <ol>
+            <li><strong>Roles of AI in software</strong> &mdash; Understand the roles of AI in software: think before you implement</li>
+            <li><strong>Making good individual calls</strong> &mdash; Understand how to make "good" individual calls to AI</li>
+            <li><strong>Stateless vs stateful interactions</strong> &mdash; Understand nuances of stateless vs stateful interactions and context management</li>
+        </ol>
+
+        <h3>Learning objectives</h3>
+        <p>By the end of this lesson, you will be able to:</p>
+        <ol>
+            <li>Identify the three roles AI plays in software systems and decide when each applies</li>
+            <li>Construct effective API calls with well-designed system messages, user messages, and parameters</li>
+            <li>Apply prompting techniques: few-shot, chain-of-thought, structured output, and prompt chaining</li>
+            <li>Understand the difference between stateless and stateful interactions and how to manage context</li>
+        </ol>
+    </section>
+
+    <!-- SECTION 1: ROLES OF AI -->
+    <section id="roles">
+        <div class="section-number">01 / ROLES OF AI IN SOFTWARE</div>
+        <h2>Three roles for AI</h2>
+
+        <p>Before writing any code, ask: <strong>what role does AI play in this system?</strong> The answer shapes everything &mdash; architecture, testing, risk management.</p>
+
+        <div class="content-card">
+            <h4>01 &mdash; AI as a Component</h4>
+            <p>AI is embedded inside your solution &mdash; a model call in the pipeline. You design around its strengths and limitations: prompts, guardrails, evaluation, fallback logic.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>02 &mdash; AI as a Coding Agent</h4>
+            <p>AI helps you write, review, and refactor code. It accelerates development but the output is traditional software &mdash; deterministic, testable, fully under your control.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>03 &mdash; AI as a User</h4>
+            <p>AI consumes and produces information through your system. It calls your APIs, reads your docs, and acts on your data. You need to design for this new kind of consumer.</p>
+        </div>
+
+        <h3>When do you need AI as a component?</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Characteristics</th>
+                    <th>Examples</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>No AI</strong><br><em>Fully specifiable</em></td>
+                    <td>Behavior is specified, reviewed, and approved. Outputs are deterministic and testable. Adding AI adds complexity without value.</td>
+                    <td>Billing logic, form validation, API routing, access control</td>
+                </tr>
+                <tr>
+                    <td><strong>AI as a Convenience</strong><br><em>Easier in English</em></td>
+                    <td>The behavior can be fully written down as rules, but a prompt is simpler than writing code. English becomes the implementation language. Outputs are known &mdash; you can still test correctness.</td>
+                    <td>Data format conversion, template filling, rule-based classification</td>
+                </tr>
+                <tr>
+                    <td><strong>AI as a System Component</strong><br><em>Hard to specify</em></td>
+                    <td>Behavior is too complex or contextual for rules. Hard to write conventional tests &mdash; no expected output. The value comes precisely from what's hard to specify.</td>
+                    <td>Summarization, intent detection, creative generation, open-ended Q&amp;A</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="thesis-block">
+            <div class="label">Think before you build</div>
+            <p>Ask yourself: <strong>1.</strong> What are you building &mdash; how "reviewable" and fixed you want your output? <strong>2.</strong> Who are you building for? If the answer to #2 is "humans", think harder.</p>
+        </div>
+
+        <h3>Four challenges of working with LLMs</h3>
+
+        <ol>
+            <li><strong>Getting a single call right</strong> &mdash; How do I craft a prompt that reliably produces the output I need?</li>
+            <li><strong>Managing a conversation</strong> &mdash; How do I give the model the right context across turns without blowing up cost?</li>
+            <li><strong>Long-term memory</strong> &mdash; How do I remember a user across sessions &mdash; their facts, preferences, history?</li>
+            <li><strong>Enterprise / community knowledge</strong> &mdash; How do I connect knowledge across users while respecting privacy?</li>
+        </ol>
+    </section>
+
+    <!-- SECTION 2: ANATOMY -->
+    <section id="anatomy">
+        <div class="section-number">02 / ANATOMY OF AN API CALL</div>
+        <h2>The building blocks</h2>
+
+        <p>Every API call has three parts: the <strong>system message</strong>, the <strong>user message</strong>, and the <strong>parameters</strong>.</p>
+
+        <h3>Your first API call</h3>
+
+        <pre><code class="language-python">from openai import OpenAI
+
+client = OpenAI()
+
+response = client.chat.completions.create(
+    model="gpt-4.1-mini",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"},
+    ],
+    temperature=0.0,
+)
+
+print(response.choices[0].message.content)
+# >>> The capital of France is Paris.</code></pre>
+
+        <h3>System vs. User messages</h3>
+
+        <p>Two distinct roles that frame every API call.</p>
+
+        <div class="content-card">
+            <h4>System Message</h4>
+            <p><strong>Purpose:</strong> Defines the model's persona, tone, constraints, and output format.</p>
+            <p><strong>Convention:</strong> You resend it every call, but keep it the same across turns. The API is stateless.</p>
+            <p><strong>Tip:</strong> Put guardrails and formatting rules here so they can't be overridden by user input.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>User Message</h4>
+            <p><strong>Purpose:</strong> The actual task, question, or input data for this specific request.</p>
+            <p><strong>Changes:</strong> Every turn. Each new request or follow-up goes here.</p>
+            <p><strong>Tip:</strong> Include few-shot examples, context, and delimiters in the user message for best results.</p>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key principle</div>
+            <p>System = stable rules. User = variable input. <strong>Separate concerns cleanly.</strong></p>
+        </div>
+
+        <h3>System message examples</h3>
+
+        <p>Same question, same model, same temperature &mdash; completely different tone and depth:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>System Message</th>
+                    <th>User Message</th>
+                    <th>Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>"You are a formal financial analyst. Be precise and use technical terminology."</td>
+                    <td>"Explain what an API is."</td>
+                    <td><em>An Application Programming Interface (API) is a formally defined contract specifying how software components exchange data and invoke operations...</em></td>
+                </tr>
+                <tr>
+                    <td>"You are a friendly teacher explaining concepts to a 10-year-old. Use analogies."</td>
+                    <td>"Explain what an API is."</td>
+                    <td><em>Think of an API like a waiter in a restaurant! You tell the waiter what you want, they go to the kitchen, and bring back exactly what you asked for...</em></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>UI vs API</h3>
+
+        <p>With both, you have <strong>defaults</strong> and <strong>controls</strong>. But they vary &mdash; and you must make choices intentionally. New features come out every day.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Chat UI</th>
+                    <th>API</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Tools</strong></td>
+                    <td>Product-managed</td>
+                    <td>Developer-defined</td>
+                </tr>
+                <tr>
+                    <td><strong>Memory</strong></td>
+                    <td>Product-managed</td>
+                    <td>Developer-managed (if you want)</td>
+                </tr>
+                <tr>
+                    <td><strong>Structured outputs</strong></td>
+                    <td>Best-effort</td>
+                    <td>Enforced via JSON Schema</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- SECTION 3: TEMPERATURE -->
+    <section id="temperature">
+        <div class="section-number">03 / TEMPERATURE &amp; PARAMETERS</div>
+        <h2>The creativity dial</h2>
+
+        <div class="content-card">
+            <h4>Low Temperature (0.0 &ndash; 0.3)</h4>
+            <p><strong>Behavior:</strong> Picks the most likely token <em>almost</em> every time. Output is almost consistent and repeatable.</p>
+            <p><strong>Best for:</strong> Classification, data extraction.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>High Temperature (0.7 &ndash; 1.5)</h4>
+            <p><strong>Behavior:</strong> Flattens the probability distribution, giving less-likely tokens a real chance. Output varies across runs.</p>
+            <p><strong>Best for:</strong> Creative writing, brainstorming, dialogue, exploration, generating diverse options.</p>
+        </div>
+
+        <h3>Temperature in action</h3>
+
+        <p>Prompt: <em>"Write a one-sentence description of the ocean."</em></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>temp=0.0</th>
+                    <th>temp=0.7</th>
+                    <th>temp=1.5</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><em>The ocean is a vast body of saltwater that covers over 70% of the Earth's surface.</em></td>
+                    <td><em>The ocean is an immense, ever-shifting expanse of saltwater teeming with life.</em></td>
+                    <td><em>Beneath turquoise veils the ocean hums ancient lullabies to forgotten shores.</em></td>
+                </tr>
+                <tr>
+                    <td>Deterministic, same every time</td>
+                    <td>Similar but varied</td>
+                    <td>Wildly different</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="thesis-block">
+            <div class="label">Rule of thumb</div>
+            <p>Start at <strong>0.0</strong> for precision tasks, <strong>0.7</strong> for creative tasks. Adjust from there.</p>
+        </div>
+
+        <h3>Other useful API parameters</h3>
+
+        <p>Six knobs that control how the model generates its response:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>What it does</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>top_p</strong> (Nucleus)</td>
+                    <td>Alternative to temperature. Samples from the smallest set of tokens whose cumulative probability exceeds <code>p</code>.</td>
+                </tr>
+                <tr>
+                    <td><strong>max_tokens</strong></td>
+                    <td>Hard cap on response length. Prevents runaway generation and controls cost.</td>
+                </tr>
+                <tr>
+                    <td><strong>stop sequences</strong></td>
+                    <td>Strings that halt generation when encountered. Useful for structured outputs.</td>
+                </tr>
+                <tr>
+                    <td><strong>frequency_penalty</strong></td>
+                    <td>Penalizes tokens proportional to how often they've appeared. Reduces repetition in long-form text.</td>
+                </tr>
+                <tr>
+                    <td><strong>presence_penalty</strong></td>
+                    <td>Flat penalty for any token that has appeared at all. Encourages the model to explore new topics.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>Default values work for most cases. <strong>Tune one parameter at a time and measure the impact.</strong></p>
+    </section>
+
+    <!-- SECTION 4: PROMPTING COOKBOOK -->
+    <section id="prompting">
+        <div class="section-number">04 / PROMPTING COOKBOOK</div>
+        <h2>Reusable patterns for modern LLMs</h2>
+
+        <div class="thesis-block">
+            <div class="label">The real key insights</div>
+            <p><strong>1.</strong> Ask the model &mdash; iterate &mdash; "fine tune" the prompt. <strong>2.</strong> Don't trust people with "key meta-insight slides" &mdash; just try stuff.</p>
+        </div>
+
+        <h3>The meta-insight</h3>
+
+        <ol>
+            <li><strong>Calibrate specificity</strong> &mdash; Find the Goldilocks zone between brittle over-specification and vague under-specification. Anthropic calls this "the right altitude."</li>
+            <li><strong>Models follow literally</strong> &mdash; Claude 4.x does exactly what you ask &mdash; no more, no less. If you want thoroughness, ask for it. If you want brevity, specify it.</li>
+            <li><strong>Cut redundancy, not structure</strong> &mdash; Remove hedging and over-explanation. Keep output format, constraints, audience, and verification criteria.</li>
+        </ol>
+
+        <h3>A possible prompt skeleton</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ROLE</th>
+                    <th>OBJECTIVE</th>
+                    <th>CONTEXT</th>
+                    <th>CONSTRAINTS</th>
+                    <th>OUTPUT FORMAT</th>
+                    <th>VERIFY</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Expert stance (optional)</td>
+                    <td>One-sentence goal</td>
+                    <td>Facts, input data</td>
+                    <td>Audience, length, tone</td>
+                    <td>Exact structure</td>
+                    <td>Quality gate</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>Claude prefers XML tags (<code>&lt;context&gt;</code>, <code>&lt;instructions&gt;</code>). OpenAI works with both XML and <code>LABEL:</code> sections.</p>
+
+        <h3>Direct instruction &amp; role prompting</h3>
+
+        <div class="content-card">
+            <h4>Direct Instruction</h4>
+            <p>The baseline. Clear, literal instructions for simple tasks.</p>
+            <pre><code class="language-text">Summarize for a VP:
+- exactly 5 bullets
+- include 1 risk + 1 recommendation
+Text: [paste]</code></pre>
+            <p><em>If output drifts, add an output clamp.</em></p>
+        </div>
+
+        <div class="content-card">
+            <h4>Role Prompting</h4>
+            <p>Shapes tone, vocabulary, depth. Does NOT improve factual correctness.</p>
+            <pre><code class="language-text">Act as a senior SRE.
+Return:
+1) Findings (major)
+2) Missing evidence
+3) Follow-ups (top 5)</code></pre>
+            <p><em>Gemini takes personas very seriously &mdash; test for conflicts.</em></p>
+        </div>
+
+        <h3>Scope &amp; structure</h3>
+
+        <div class="content-card">
+            <h4>Scope Discipline</h4>
+            <p>Set explicit boundaries. "Fix this function" without scope may trigger a full refactor.</p>
+            <p><em>Implement EXACTLY this and nothing else. If ambiguous, pick simplest valid interpretation.</em></p>
+        </div>
+
+        <div class="content-card">
+            <h4>Structured Formatting</h4>
+            <p>Delimiters prevent the model from confusing instructions with data. Separate instructions from data. Put long data first, instructions last.</p>
+            <table>
+                <thead>
+                    <tr><th>Format</th><th>Example</th><th>Best for</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>XML tags</td><td><code>&lt;context&gt;...&lt;/context&gt;</code></td><td>Claude, OpenAI</td></tr>
+                    <tr><td>LABEL: sections</td><td><code>ROLE: / CONSTRAINTS:</code></td><td>Quick UIs, Gemini 3</td></tr>
+                    <tr><td>Markdown</td><td><code>## Instructions</code></td><td>General readability</td></tr>
+                    <tr><td>Triple quotes</td><td><code>"""content"""</code></td><td>Data vs instructions</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Few-shot prompting</h3>
+
+        <p>Show the model what you want by providing examples in the prompt itself.</p>
+
+        <div class="content-card">
+            <h4>The technique</h4>
+            <ul>
+                <li><strong>Zero-shot:</strong> No examples. Relies entirely on the model's training.</li>
+                <li><strong>One-shot:</strong> One input&ndash;output pair shows the pattern.</li>
+                <li><strong>Few-shot (3&ndash;5):</strong> Multiple examples lock in format, tone, and edge cases.</li>
+            </ul>
+            <h4>Best practices</h4>
+            <ul>
+                <li><strong>Diverse examples:</strong> Cover typical cases AND edge cases.</li>
+                <li><strong>Consistent format:</strong> Use identical delimiters (Input: / Output:) in every example.</li>
+                <li><strong>Order matters:</strong> Place the most similar example last, closest to the actual task.</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Few-shot is the <strong>single most reliable way to control output format</strong> without fine-tuning.</p>
+        </div>
+
+        <h3>Chain of Thought (CoT)</h3>
+
+        <p>Force the model to show its work before giving a final answer.</p>
+
+        <div class="content-card">
+            <h4>Why it works</h4>
+            <p>LLMs generate tokens sequentially. When you force intermediate reasoning steps, each subsequent token is conditioned on better context.</p>
+            <p><strong>Key insight:</strong> The model "thinks" by writing. No writing = no thinking. CoT gives the model scratch space.</p>
+            <h4>CoT variants</h4>
+            <ul>
+                <li><strong>Zero-shot CoT:</strong> Add "Let's think step by step" to trigger reasoning.</li>
+                <li><strong>Structured CoT:</strong> Prescribe steps: "First analyze X, then evaluate Y, finally conclude Z."</li>
+                <li><strong>Few-shot CoT:</strong> Provide examples that include reasoning traces, not just answers.</li>
+            </ul>
+        </div>
+
+        <p><strong>CoT is most impactful for math, logic, multi-step reasoning, and complex decision-making tasks.</strong></p>
+
+        <h3>Long-context placement</h3>
+
+        <p>Where you place instructions relative to data significantly affects quality.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Poor Placement (maybe)</th>
+                    <th>Good Placement (maybe)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+<pre><code class="language-text">Answer these questions:
+1. Retention period?
+2. Backup procedures?
+
+Document:
+[15,000 words of policy...]</code></pre>
+                    </td>
+                    <td>
+<pre><code class="language-text">&lt;document&gt;
+[15,000 words of policy...]
+&lt;/document&gt;
+
+Based on the document above:
+1. Retention period?
+2. Backup procedures?
+Cite relevant section numbers.</code></pre>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="thesis-block">
+            <div class="label">The rule</div>
+            <p>Long data first &rarr; instructions last &rarr; <strong>query at the very end.</strong></p>
+        </div>
+    </section>
+
+    <!-- SECTION 5: STRUCTURED OUTPUT -->
+    <section id="structured">
+        <div class="section-number">05 / STRUCTURED OUTPUT</div>
+        <h2>Schema extraction &amp; reasoning depth</h2>
+
+        <h3>Schema extraction</h3>
+
+        <p>The biggest practical difference between UI and API.</p>
+
+        <div class="content-card">
+            <h4>UI: Best-Effort</h4>
+            <pre><code class="language-text">Extract into JSON with exactly these keys:
+party_name, jurisdiction,
+effective_date, termination_summary
+
+If unknown, set null.
+No extra keys.</code></pre>
+        </div>
+
+        <div class="content-card">
+            <h4>API: Enforced</h4>
+            <p><strong>OpenAI:</strong> <code>text.format</code> with <code>strict: true</code> &rarr; guaranteed shape</p>
+            <p><strong>Anthropic:</strong> Prefilling + tool-use schemas &rarr; enforced structure</p>
+        </div>
+
+        <p><em>If you're building a pipeline that parses model output, always use API-level enforcement.</em></p>
+
+        <h3>Reasoning depth</h3>
+
+        <p>Trade off latency/cost vs. correctness. Not all tasks need deep reasoning.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>OpenAI</th>
+                    <th>Anthropic</th>
+                    <th>Google</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Knob</strong></td>
+                    <td><code>reasoning.effort</code><br>(none/low/med/high)</td>
+                    <td><code>thinking.budget_tokens</code><br>(extended thinking)</td>
+                    <td>Model selection<br>(Flash vs Pro)</td>
+                </tr>
+                <tr>
+                    <td><strong>Best for</strong></td>
+                    <td>Granular effort tuning</td>
+                    <td>Complex multi-step; interleaved thinking</td>
+                    <td>Binary model choice</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- SECTION 6: QUALITY & PRODUCTION -->
+    <section id="quality">
+        <div class="section-number">06 / QUALITY &amp; PRODUCTION PATTERNS</div>
+        <h2>From prompts to production</h2>
+
+        <h3>Quality patterns</h3>
+
+        <div class="content-card">
+            <h4>Answer &rarr; Review &rarr; Re-answer</h4>
+            <p>A single-call self-critique: Draft your answer, critique it for errors and gaps, then revise. All three steps in one API call &mdash; no orchestration needed.</p>
+            <p>Especially powerful for factual tasks, math, and any output that can be objectively verified.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>Evaluation-First</h4>
+            <p>Define success before proposing solutions. The prompting equivalent of test-driven development.</p>
+            <p>Before proposing, do this:</p>
+            <ol>
+                <li>Define success metrics</li>
+                <li>Define baseline + thresholds</li>
+                <li>Propose 3 interventions</li>
+                <li>Predict impact + validation plan</li>
+            </ol>
+        </div>
+
+        <h3>Reflection loops</h3>
+
+        <p>Multi-turn self-improvement: ask the LLM to evaluate and iterate on its own output.</p>
+
+        <div class="content-card">
+            <h4>The loop</h4>
+            <ol>
+                <li><strong>Call 1:</strong> Generate initial answer.</li>
+                <li><strong>Call 2:</strong> "Here is your previous answer. Rate it 1&ndash;10 on [criteria]. What would you improve?"</li>
+                <li><strong>Call 3:</strong> "Apply those improvements and produce the final version."</li>
+            </ol>
+            <p>Repeat calls 2&ndash;3 until quality plateaus or budget is reached.</p>
+            <h4>When to use</h4>
+            <ul>
+                <li><strong>High-stakes output:</strong> Legal drafts, medical summaries, customer-facing content.</li>
+                <li><strong>Latency-tolerant:</strong> Batch processing, async workflows where extra calls are acceptable.</li>
+            </ul>
+        </div>
+
+        <p><strong>Set a max iteration count (2&ndash;3 rounds). Diminishing returns kick in fast.</strong></p>
+
+        <h3>Prompt chaining</h3>
+
+        <p>The bridge between "prompting" and "building an AI system."</p>
+
+        <div class="ascii-diagram">Call 1: EXTRACT              Call 2: ANALYZE              Call 3: GENERATE
+Read 5 paper abstracts.  &rarr;  Group by methodology.    &rarr;  Write a 500-word literature
+For each: research question,   Identify agreements,         review. Academic tone.
+methodology, key finding.      contradictions, and gaps.     Highlight the key gap.
+Return as JSON array.          Structured comparison.
+effort: low                    effort: medium               effort: high</div>
+
+        <p><strong>Why chain?</strong> Verify intermediate results. Different models/reasoning per step. Clear debugging surface. Prevent corner-cutting.</p>
+
+        <h3>Error handling &amp; retries</h3>
+
+        <p>Production LLM calls fail. Plan for it.</p>
+
+        <div class="content-card">
+            <h4>Common failures</h4>
+            <ul>
+                <li><strong>Rate limits (429):</strong> Back off exponentially. Use jitter to avoid thundering herds.</li>
+                <li><strong>Timeouts:</strong> Set aggressive timeouts (30&ndash;60s). Retry with the same prompt; non-determinism means a retry may succeed.</li>
+                <li><strong>Malformed output:</strong> JSON didn't parse? Retry once. If it fails again, fall back to a simpler prompt or model.</li>
+            </ul>
+            <h4>Robustness patterns</h4>
+            <ul>
+                <li><strong>Retry with backoff:</strong> 1s &rarr; 2s &rarr; 4s with random jitter. Max 3 retries for most use cases.</li>
+                <li><strong>Model fallback:</strong> If GPT-4o fails, fall back to GPT-4o-mini. Graceful degradation beats total failure.</li>
+                <li><strong>Validation layer:</strong> Always validate output before using it. Schema checks, length checks, safety checks.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- SECTION 7: STATELESS VS STATEFUL -->
+    <section id="stateful">
+        <div class="section-number">07 / STATELESS VS STATEFUL INTERACTIONS</div>
+        <h2>Managing conversation state</h2>
+
+        <p>The API is <strong>stateless</strong>: every call is independent. The model has no memory of previous interactions. To have a conversation, <em>you</em> manage the state.</p>
+
+        <div class="content-card">
+            <h4>Stateless agent</h4>
+            <p>Each call is self-contained. Send a system message + user message, get a response. No history, no context. Simple, cheap, predictable.</p>
+            <pre><code class="language-python"># Every call starts fresh
+response = client.chat.completions.create(
+    model="gpt-4.1-mini",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"},
+    ],
+)</code></pre>
+        </div>
+
+        <div class="content-card">
+            <h4>Stateful agent</h4>
+            <p>You maintain the conversation history and resend it with each call. The model sees the full context and can reference earlier turns.</p>
+            <pre><code class="language-python"># You manage the conversation history
+history = [
+    {"role": "system", "content": "You are a helpful assistant."},
+]
+
+def chat(user_message):
+    history.append({"role": "user", "content": user_message})
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=history,
+    )
+    assistant_msg = response.choices[0].message.content
+    history.append({"role": "assistant", "content": assistant_msg})
+    return assistant_msg</code></pre>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">The trade-off</div>
+            <p>More context = better responses, but also <strong>more tokens = more cost</strong>. You must decide what context is worth keeping and what to trim.</p>
+        </div>
+
+        <h3>Context management strategies</h3>
+
+        <ul>
+            <li><strong>Sliding window:</strong> Keep only the last N messages. Simple but loses early context.</li>
+            <li><strong>Summarization:</strong> Periodically summarize the conversation and replace older messages with the summary.</li>
+            <li><strong>Selective injection:</strong> Only include messages relevant to the current query (requires retrieval logic).</li>
+        </ul>
+    </section>
+
+    <!-- CLOSING -->
+    <section>
+        <div class="section-number">CLOSING</div>
+        <h2>Start simple. Escalate on failure. Measure everything.</h2>
+
+        <p><em>Patterns persist across model updates; knobs don't.</em></p>
+
+        <h3>Lab notebooks</h3>
+        <ul>
+            <li><a href="session3_singlecall.ipynb"><code>session3_singlecall.ipynb</code></a> &mdash; Single-call exercises: system messages, temperature, prompting techniques</li>
+            <li><a href="session3_stateful.ipynb"><code>session3_stateful.ipynb</code></a> &mdash; Stateful agent: conversation history, context management</li>
+            <li><a href="session3_exercises.ipynb"><code>session3_exercises.ipynb</code></a> &mdash; Practice exercises</li>
+            <li><a href="session3_testing.ipynb"><code>session3_testing.ipynb</code></a> &mdash; Testing and metrics for AI calls</li>
+        </ul>
+
+        <h3>Python scripts</h3>
+        <ul>
+            <li><code>1_stateless_agent.py</code> &mdash; Basic stateless agent implementation</li>
+            <li><code>2_stateful_agent.py</code> &mdash; Stateful agent with conversation history</li>
+            <li><code>3_agent_with_memory.py</code> &mdash; Agent with persistent memory</li>
+            <li><code>4_agent_with_long_term_memory.py</code> &mdash; Agent with long-term memory storage</li>
+        </ul>
+    </section>
+
+    <!-- REFERENCES -->
+    <section id="references">
+        <div class="section-number">REFERENCES</div>
+        <h2>Sources &amp; further reading</h2>
+
+        <h3>Prompting guides</h3>
+        <ul>
+            <li><a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview">Anthropic Prompting Best Practices</a></li>
+            <li><a href="https://platform.openai.com/docs/guides/text-generation">OpenAI Text Generation Guide</a></li>
+            <li><a href="https://ai.google.dev/gemini-api/docs/prompting-strategies">Google Gemini Prompting Guide</a></li>
+        </ul>
+
+        <h3>API documentation</h3>
+        <ul>
+            <li><a href="https://platform.openai.com/docs/api-reference/chat/create">OpenAI Chat Completions API</a></li>
+            <li><a href="https://docs.anthropic.com/en/api/messages">Anthropic Messages API</a></li>
+            <li><a href="https://platform.openai.com/docs/models">OpenAI Models Overview</a></li>
+        </ul>
+    </section>
+
+</main>
+
+<footer>
+    L2: Mastering Individual AI Calls &mdash; AI Design Course, University of Trento
+    <br><span style="font-size: 0.85em;">Content by Fabio Casati &middot; <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> &middot; <a href="https://x.com/sphoebs">X</a></span>
+</footer>
+
+<script>
+    hljs.highlightAll();
+
+    // Highlight current section in nav
+    const sections = document.querySelectorAll('section[id], .title-section');
+    const navLinks = document.querySelectorAll('nav a');
+
+    window.addEventListener('scroll', () => {
+        let current = 'intro';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (scrollY >= sectionTop - 200) {
+                current = section.getAttribute('id') || 'intro';
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 3: Better "Evals" Beats Better Dev</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 750px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        .series-title {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1em;
+            font-weight: 500;
+            color: #718096;
+            margin-bottom: 0.3em;
+            letter-spacing: 0.02em;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-top: 0.2em;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        img {
+            max-width: 85%;
+            height: auto;
+            margin: 2em auto;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        figure {
+            margin: 2em 0;
+            text-align: center;
+        }
+        figure img {
+            margin: 0 auto 0.8em;
+        }
+        figcaption {
+            font-size: 0.9em;
+            color: #718096;
+            font-style: italic;
+        }
+        blockquote {
+            border-left: 4px solid #38b2ac;
+            margin: 2em 0;
+            padding: 1em 1.5em;
+            color: #4a5568;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 12px 14px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        .highlight-box {
+            background: #fff;
+            border: 2px solid #38b2ac;
+            border-radius: 8px;
+            padding: 1.2em 1.5em;
+            margin: 1.5em 0;
+        }
+        .highlight-box p:first-child {
+            margin-top: 0;
+        }
+        .highlight-box p:last-child {
+            margin-bottom: 0;
+        }
+        .question-list {
+            background: #f0fff4;
+            border-radius: 8px;
+            padding: 1.2em 1.5em;
+            margin: 1.5em 0;
+        }
+        .question-list ol {
+            margin: 0;
+        }
+        .question-list li {
+            margin: 0.8em 0;
+        }
+        .aside {
+            font-size: 0.9em;
+            color: #718096;
+            margin: 1em 0;
+        }
+        sub {
+            font-size: 0.75em;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+        /* Boxed supplement styling */
+        .supplement-box {
+            background: #edf2f7;
+            border: 1px solid #cbd5e0;
+            border-radius: 12px;
+            padding: 1.5em 2em;
+            margin: 2.5em 0;
+        }
+        .supplement-box .box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0.5em;
+            margin-bottom: 1em;
+            padding-bottom: 0.8em;
+            border-bottom: 1px solid #cbd5e0;
+        }
+        .supplement-box .box-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #4a5568;
+            margin: 0;
+        }
+        .supplement-box .box-skip {
+            font-size: 0.9em;
+            color: #718096;
+        }
+        .supplement-box h3 {
+            color: #4a5568;
+            border-bottom: 1px dashed #cbd5e0;
+            padding-bottom: 0.3em;
+        }
+        .supplement-box table {
+            background: #fff;
+            font-size: 0.9em;
+        }
+        .supplement-box th {
+            background: #e2e8f0;
+        }
+        .supplement-box > *:last-child {
+            margin-bottom: 0;
+        }
+        .supplement-box hr {
+            border-top-color: #cbd5e0;
+            margin: 1.5em 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Better "Evals" Beats Better Dev</h1>
+<p class="series-title">Part 3 of <em>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</em></p>
+<p><em>The value of knowing what you're measuring</em></p>
+<p>← <a href="./part-2b-uncertainty-vs-variability.html">Part 2b: Uncertainty vs Variability</a> | <a href="./index.html">Series Index</a></p>
+<hr />
+
+<h2>Executive Summary</h2>
+
+<blockquote>
+<p style="font-size: 1.3em; color: #285e5e; margin-bottom: 0.5em;"><strong>Better eval improves customer value even if you never touch the system.</strong></p>
+<p>Through better deployment decisions alone—deploying what works, holding what's uncertain, avoiding what harms—you realize more value from the systems you already have.</p>
+</blockquote>
+
+<blockquote>
+<p style="font-size: 1.3em; color: #285e5e; margin-bottom: 0.5em;"><strong>If you have a team of 10 people working on AI, put 8 on evals and 2 on engineering, not the other way around.</strong></p>
+<p>The 2 engineers can iterate fast—AI helps them write code, test variants, try new approaches. But without reliable measurement, the engineers have no idea if their iterations are improvements. They're spinning. With reliable measures, AI can likely do the improvement by itself.</p>
+</blockquote>
+
+<hr />
+
+<h2>Two Ways to Improve Quality</h2>
+
+<p>You're pouring engineering effort into making your agents better. More prompt tuning. More fine-tuning. More RAG improvements. More guardrails.</p>
+
+<p><strong>STOP.</strong> Do not work on dev before you have a good eval in place.</p>
+
+<p>Consider this: <em>when you change from Prompt 1 to Prompt 2, do you actually know which one is better?</em></p>
+
+<p>Not "which one scored higher on your eval." Do you know which one is <em>actually</em> better? With enough confidence to ship it?</p>
+
+<p>Because that is the minimum bar: you must be able to reliably detect <em>directional</em>, meaningful improvement. If you can't confidently say "Prompt 2 is better than Prompt 1," then every iteration is a coin flip. You're not engineering. You are working at random hoping to get to a state where you can make a nice presentation to execs.</p>
+
+<p>Ideally, you'd also know the <em>absolute</em> value—how much is this system worth to customers? But that is hard and may come over time. At bare minimum, you need <em>relative</em> comparison. Without that, you cannot iterate. You're optimizing in the dark.
+And when you make your relative comparisons - there too you need to be aware of the uncertainty - even if it means being aware that you are no clue about it.</p>
+
+<p>Now, there are two ways to improve quality and customer value:</p>
+
+<ol>
+    <li><strong>Better agents</strong> — improve the system itself</li>
+    <li><strong>Better "eval"</strong> — improve your knowledge of the system</li>
+</ol>
+
+<p>Most companies focus exclusively on (1) and are not even aware that you can improve customer value just by having better evals.
+Path 1 - better systems - is almost trivial with AI—<em>if</em> you have reliable evals.
+But without reliable measurement, you don't even know if your dev cycles are going in the right direction.</p>
+
+<hr />
+
+<h2>Better Eval Leads to Better Quality (Even Without Touching the System)</h2>
+
+<p><strong>Better eval improves realized customer value even if you never touch the agent itself.</strong></p>
+
+<p>How? Through better <em>deployment decisions</em>.</p>
+
+<p>Think about your current portfolio. You have agents in production. You have agents you held back. <em>How confident are you that you got those decisions right?</em></p>
+
+<p>If your eval has high uncertainty, some of your deployed agents are probably hurting customers. And some of your held agents are probably valuable. You just can't tell which.</p>
+
+<p>Even without improving the agent, better eval lets you:</p>
+<ol>
+    <li><strong>Deploy where E[V] > 0 with confidence</strong> — more good deploys</li>
+    <li><strong>Avoid deploying where E[V] < 0</strong> — fewer harmful deploys</li>
+    <li><strong>Hold where uncertain until you know more</strong> — avoid premature decisions</li>
+</ol>
+
+<div class="supplement-box">
+
+<div class="box-header">
+    <p class="box-title">📐 Deep Dive: A Worked Example</p>
+    <span class="box-skip"><em>Optional.</em> <a href="#pipeline">Skip to the pipeline →</a></span>
+</div>
+
+<p>Suppose you have 10 agents and current eval quality. With your current measurements, you decide to deploy 8 of them.</p>
+
+<p><strong>Reality (which you discover later):</strong></p>
+<ul>
+    <li>6 of the 8 deployed agents are genuinely valuable (✓)</li>
+    <li>2 of the 8 deployed agents are actually harmful (✗)</li>
+    <li>1 of the 2 held agents was actually valuable (missed opportunity)</li>
+    <li>1 of the 2 held agents was correctly held (✓)</li>
+</ul>
+
+<p>Now suppose you invest in better eval. With improved measurement:</p>
+<ul>
+    <li>You correctly identify and avoid the 2 harmful deploys</li>
+    <li>You hold 1 uncertain agent for more data (turns out to be good, but you defer the decision)</li>
+    <li>You deploy 1 agent that was being held back (turns out to be valuable)</li>
+</ul>
+
+<p><strong>Let's quantify:</strong></p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Outcome</th>
+            <th>Before (Poor Eval)</th>
+            <th>After (Better Eval)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Good deploys</td>
+            <td>6 × $10 = $60</td>
+            <td>7 × $10 = $70</td>
+        </tr>
+        <tr>
+            <td>Harmful deploys</td>
+            <td>2 × -$50 = -$100</td>
+            <td>0 × -$50 = $0</td>
+        </tr>
+        <tr>
+            <td>Held (good)</td>
+            <td>1 × $0 = $0</td>
+            <td>1 × $0 = $0</td>
+        </tr>
+        <tr>
+            <td>Held (bad)</td>
+            <td>1 × $0 = $0</td>
+            <td>1 × $0 = $0</td>
+        </tr>
+        <tr style="background: #e6fffa; font-weight: 600;">
+            <td>Net value</td>
+            <td style="color: #c53030;">-$40</td>
+            <td style="color: #276749;">+$70</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>The <strong>$110 improvement</strong> came entirely from better <em>decisions</em>, not better <em>agents</em>. The agents didn't change at all.</p>
+
+<p><strong>Notice the asymmetry:</strong> harmful deploys cost 5× more than the value of good deploys. This is typical in enterprise settings where trust, once lost, is hard to regain. This asymmetry makes the value of better eval even higher—avoiding one harmful deploy is worth more than making five good ones.</p>
+
+<hr />
+
+<h2>The Value of Reducing Uncertainty</h2>
+
+<p>In Part 2, we saw the value of <em>awareness</em>—knowing that uncertainty exists. But what happens when you invest in <em>reducing</em> that uncertainty?</p>
+
+<p><strong>Continuing the example from Part 2:</strong></p>
+
+<p>You held agents B, D, and G because their uncertainty was too high. Now you invest in better evaluation—more test cases, better judges, more representative data.</p>
+
+<p>The systems don't change. But your knowledge improves:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Agent</th>
+            <th>Before</th>
+            <th>After better measurement</th>
+            <th>True E[V]</th>
+            <th>Decision</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>B</td><td>+3 [−8, +14]</td><td>−2 [−5, +1]</td><td>−4</td><td>Don't deploy ✓</td></tr>
+        <tr><td>D</td><td>+6 [−15, +27]</td><td>+9 [+6, +12]</td><td>+8</td><td>Deploy ✓</td></tr>
+        <tr><td>G</td><td>+1 [−12, +14]</td><td>−4 [−7, −1]</td><td>−6</td><td>Don't deploy ✓</td></tr>
+    </tbody>
+</table>
+
+<p>With better measurement:</p>
+<ul>
+    <li><strong>Agent B:</strong> The range narrowed and shifted. You now see it's likely negative. You confirm the hold—correct decision.</li>
+    <li><strong>Agent D:</strong> The range narrowed dramatically. You now see it's confidently positive. You can deploy—you've unlocked value that was always there.</li>
+    <li><strong>Agent G:</strong> The range narrowed and you see it's clearly negative. You confirm the hold—correct decision.</li>
+</ul>
+
+<p><strong>What reducing uncertainty gives you:</strong></p>
+
+<ol>
+    <li><strong>Confident deploys:</strong> Agent D was a good system all along. You just didn't know it. Better measurement gave you the confidence to ship.</li>
+    <li><strong>Confident rejects:</strong> Agents B and G were bad systems. Better measurement confirmed you should hold back, and now you can stop investigating them.</li>
+    <li><strong>No wasted effort:</strong> Without better measurement, you might have kept investigating all three forever—or eventually deployed them out of impatience.</li>
+</ol>
+
+<p>The system didn't improve. Your <em>knowledge</em> improved. And that knowledge has direct business value: you shipped a good agent you were holding back, and you stopped wasting effort on bad ones.</p>
+
+<p><strong>The investment case for better measurement:</strong></p>
+
+<p>Traditional framing: "We need better evals to improve our systems."</p>
+
+<p>Better framing: "We need better evals to <em>know which systems are already good enough to ship</em>—and which ones aren't worth further investment."</p>
+
+<p>Reducing uncertainty doesn't just help you improve. It helps you <em>decide</em>—faster, with more confidence, and with fewer mistakes.</p>
+
+</div>
+
+<hr />
+
+<p><strong>Next: <a href="./part-3b-from-value-to-scorecard.html">Part 3b: From Value to Scorecards</a></strong> — Knowing where to improve</p>
+
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+</body>
+</html>

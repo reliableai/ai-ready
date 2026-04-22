@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Key Abstractions for Mastering Complex Agentic Systems</title>
+  <link rel="stylesheet" href="../../../style.css">
+</head>
+<body>
+  <main>
+    <div class="session-header">
+      <div class="number">Lesson 14 · Week 7</div>
+      <h1>Key Abstractions for Mastering Complex Agentic Systems</h1>
+    </div>
+
+    <section>
+      <h2>Coming Soon</h2>
+      <p>More content will be available before the lecture.</p>
+    </section>
+
+    <section>
+      <h2>The Agent Skills Standard</h2>
+      <p>
+        As agentic systems grow more complex, a key question emerges:
+        <strong>how do we package and share reusable capabilities across agents, tools, and platforms?</strong>
+      </p>
+      <p>
+        The <strong>Agent Skills Standard</strong> is an open specification (introduced by Anthropic in December 2025)
+        that defines a portable format for agent capabilities. It has been adopted by 30+ tools including
+        Claude Code, GitHub Copilot, Cursor, OpenAI Codex, VS Code, Gemini CLI, and others.
+      </p>
+
+      <h3>The Core Idea: SKILL.md</h3>
+      <p>
+        A skill is defined by a single <code>SKILL.md</code> file — a Markdown document with YAML frontmatter.
+        It lives alongside the resources it describes (scripts, templates, reference docs).
+      </p>
+      <div class="card">
+<pre><code>my-skill/
+├── SKILL.md              # Skill definition (required)
+├── scripts/              # Helper scripts
+│   └── deploy.sh
+├── templates/            # Prompt or code templates
+│   └── review.j2
+└── reference/            # Supporting documentation
+    └── style-guide.md</code></pre>
+      </div>
+
+      <h3>Anatomy of a SKILL.md</h3>
+      <div class="card">
+<pre><code>---
+name: code-review
+description: Reviews pull requests for style, correctness, and security issues
+version: 1.0.0
+---
+
+# Code Review Skill
+
+## When to use
+Use this skill when the user asks you to review code changes,
+pull requests, or diffs.
+
+## Instructions
+1. Read the changed files
+2. Check for common issues: ...
+3. Provide feedback grouped by severity
+
+## Resources
+- `templates/review.j2` — output format template
+- `reference/style-guide.md` — project style conventions</code></pre>
+      </div>
+
+      <h3>Progressive Disclosure</h3>
+      <p>
+        A critical design principle. Not all skill content needs to be loaded into the agent's context at once.
+        The standard defines <strong>three levels</strong>:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>What's loaded</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. Metadata</strong></td>
+            <td>Name + description (from YAML frontmatter)</td>
+            <td>Always — the agent sees all available skills at startup</td>
+          </tr>
+          <tr>
+            <td><strong>2. Instructions</strong></td>
+            <td>Full SKILL.md body</td>
+            <td>When the skill is triggered (by user request or matching context)</td>
+          </tr>
+          <tr>
+            <td><strong>3. Resources</strong></td>
+            <td>Referenced files (scripts, templates, docs)</td>
+            <td>On demand — only when the agent actually needs them</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        This mirrors how humans work: you know <em>what</em> your colleagues can do (Level 1),
+        you ask them <em>how</em> when you need to collaborate (Level 2),
+        and you pull up reference material only when actively working (Level 3).
+      </p>
+      <p>
+        <strong>Why it matters:</strong> context windows are finite and expensive.
+        Loading every skill's full instructions and resources into every conversation would waste tokens
+        and degrade performance. Progressive disclosure keeps the agent focused.
+      </p>
+
+      <h3>Why Is This a "Key Abstraction"?</h3>
+      <p>The Agent Skills Standard addresses several fundamental challenges in complex agentic systems:</p>
+      <ul>
+        <li><strong>Portability:</strong> A skill written once works across Claude Code, Copilot, Cursor, and any other compliant agent. No vendor lock-in.</li>
+        <li><strong>Composability:</strong> Skills can be combined — a "deploy" skill can reference a "test" skill. Complex behaviors emerge from simple, well-defined building blocks.</li>
+        <li><strong>Discoverability:</strong> Agents can scan a project's skill definitions to understand what capabilities are available, without loading everything into context.</li>
+        <li><strong>Human-readable:</strong> Skills are Markdown files — developers can read, write, review, and version-control them with existing tools.</li>
+      </ul>
+
+      <h3>Security Considerations</h3>
+      <p>
+        Skills from untrusted sources can contain prompt injections or malicious instructions.
+        Production systems should treat third-party skills like untrusted code:
+        review before enabling, sandbox execution, and limit access to sensitive resources.
+      </p>
+
+      <details>
+        <summary><strong>Discussion: What other abstractions would you standardize?</strong></summary>
+        <div class="details-content">
+          <p>Consider the agentic systems you've built in this course. What other capabilities would benefit from a portable, shareable format?</p>
+          <ul>
+            <li>Evaluation harnesses?</li>
+            <li>Prompt templates and strategies?</li>
+            <li>Tool definitions and schemas?</li>
+            <li>Memory and context management patterns?</li>
+          </ul>
+          <p>What would the tradeoffs be between standardization and flexibility?</p>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    <p>Designing Large Scale AI Systems &middot; Spring 2026</p>
+  </footer>
+
+  <script src="../../../scripts.js"></script>
+</body>
+</html>

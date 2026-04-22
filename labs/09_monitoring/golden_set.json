@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "description": "Tiny golden set for L10 monitoring lab. Each case has a question and an expected substring in the final answer.",
+  "cases": [
+    {"id": "c1", "question": "What is the capital of France?", "expect_substring": "Paris"},
+    {"id": "c2", "question": "Who is the author of 1984?",     "expect_substring": "Orwell"},
+    {"id": "c3", "question": "Boiling point of water?",        "expect_substring": "100"},
+    {"id": "c4", "question": "What is the tallest mountain?",  "expect_substring": "Everest"},
+    {"id": "c5", "question": "Who wrote Hamlet?",              "expect_substring": "no results"},
+    {"id": "c6", "question": "Capital of Mars?",               "expect_substring": "no results"}
+  ]
+}

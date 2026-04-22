@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<!--
+  Interactive Portfolio Simulator
+  Companion to "Iterating in the Dark - Part 2: The Cost of Ignorance"
+  Content by Fabio Casati
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Decision Simulator | Cost of Ignorance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0;
+            padding: 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.8em;
+            font-weight: 600;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #2d3748;
+        }
+        .subtitle {
+            color: #718096;
+            margin-bottom: 2em;
+        }
+        .controls {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .control-group label {
+            font-size: 0.85em;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        .control-group input[type="range"] {
+            width: 200px;
+            accent-color: #38b2ac;
+        }
+        .control-value {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.9em;
+            color: #319795;
+            font-weight: 500;
+        }
+        .buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        button {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95em;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button.primary {
+            background: #319795;
+            color: white;
+        }
+        button.primary:hover {
+            background: #2c7a7b;
+        }
+        button.secondary {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+        button.secondary:hover {
+            background: #e2e8f0;
+        }
+        button.reveal {
+            background: #ed8936;
+            color: white;
+        }
+        button.reveal:hover {
+            background: #dd6b20;
+        }
+        button.invest {
+            background: #805ad5;
+            color: white;
+        }
+        button.invest:hover {
+            background: #6b46c1;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 900px) {
+            .panels {
+                grid-template-columns: 1fr;
+            }
+        }
+        .panel {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 16px 20px;
+            background: #edf2f7;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .panel-header h2 {
+            margin: 0;
+            font-size: 1.1em;
+        }
+        .panel-header p {
+            margin: 4px 0 0 0;
+            font-size: 0.85em;
+            color: #718096;
+        }
+        .panel-body {
+            padding: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        th, td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .agent-name {
+            font-weight: 500;
+        }
+        .belief {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.85em;
+        }
+        .decision {
+            font-weight: 500;
+        }
+        .decision.deploy {
+            color: #38a169;
+        }
+        .decision.dont-deploy {
+            color: #718096;
+        }
+        .decision.hold {
+            color: #d69e2e;
+        }
+        .outcome {
+            font-size: 0.85em;
+        }
+        .outcome.correct {
+            color: #38a169;
+        }
+        .outcome.harmful {
+            color: #e53e3e;
+        }
+        .outcome.missed {
+            color: #d69e2e;
+        }
+        .outcome.pending {
+            color: #805ad5;
+        }
+        .outcome.hidden {
+            color: #cbd5e0;
+        }
+
+        /* Range visualization */
+        .range-viz {
+            position: relative;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin: 2px 0;
+            min-width: 120px;
+        }
+        .range-bar {
+            position: absolute;
+            height: 100%;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .range-bar.belief {
+            background: #319795;
+            opacity: 0.5;
+        }
+        .range-bar.truth {
+            background: #e53e3e;
+            opacity: 0.5;
+            top: 0;
+        }
+        .threshold-line {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: #1a202c;
+            top: 0;
+            z-index: 10;
+        }
+        .threshold-label {
+            position: absolute;
+            top: -18px;
+            font-size: 0.7em;
+            color: #1a202c;
+            transform: translateX(-50%);
+        }
+        .point-marker {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #1a202c;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+
+        .summary {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-top: 24px;
+        }
+        .summary h2 {
+            margin-top: 0;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+        .summary-item .value {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+        .summary-item .label {
+            font-size: 0.8em;
+            color: #718096;
+            margin-top: 4px;
+        }
+        .summary-item.correct .value { color: #38a169; }
+        .summary-item.harmful .value { color: #e53e3e; }
+        .summary-item.missed .value { color: #d69e2e; }
+        .summary-item.held .value { color: #805ad5; }
+        .summary-item.avoided .value { color: #4a5568; }
+
+        .cost-box {
+            margin-top: 16px;
+            padding: 16px;
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 8px;
+        }
+        .cost-box.good {
+            background: #f0fff4;
+            border-color: #9ae6b4;
+        }
+        .cost-box h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.95em;
+            color: #742a2a;
+        }
+        .cost-box.good h4 {
+            color: #22543d;
+        }
+        .cost-box .cost-value {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        .cost-box .cost-breakdown {
+            font-size: 0.85em;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .explanation {
+            background: #fffaf0;
+            border: 1px solid #fbd38d;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 24px;
+        }
+        .explanation h3 {
+            margin: 0 0 8px 0;
+            font-size: 1em;
+            color: #744210;
+        }
+        .explanation p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #744210;
+        }
+
+        .link-back {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+        }
+        .link-back a {
+            color: #319795;
+            text-decoration: underline;
+        }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            font-size: 0.8em;
+            color: #718096;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .legend-color {
+            width: 16px;
+            height: 10px;
+            border-radius: 2px;
+        }
+        .legend-color.belief { background: #319795; opacity: 0.5; }
+        .legend-color.truth { background: #e53e3e; opacity: 0.5; }
+        .legend-color.threshold { background: #1a202c; width: 2px; height: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Portfolio Decision Simulator</h1>
+        <p class="subtitle">Experience how uncertainty awareness and better measurement affect decisions</p>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Confidence Threshold: P(E[V] > 0) ></label>
+                    <input type="range" id="threshold" min="70" max="95" value="90">
+                    <span class="control-value"><span id="threshold-value">90</span>%</span>
+                </div>
+                <div class="control-group">
+                    <label>Systematic Bias (hidden from you)</label>
+                    <input type="range" id="bias" min="0" max="10" value="0">
+                    <span class="control-value">+<span id="bias-value">0</span> points</span>
+                </div>
+            </div>
+            <div class="buttons">
+                <button class="primary" onclick="generateAgents()">Generate 10 Agents</button>
+                <button class="invest" id="invest-btn" onclick="investInMeasurement()" disabled>Reduce Uncertainty (Held Agents)</button>
+                <button class="reveal" onclick="revealTruth()">Reveal Truth</button>
+                <button class="secondary" onclick="resetSimulator()">Reset</button>
+            </div>
+        </div>
+
+        <div class="panels">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Panel A: Point Estimates Only</h2>
+                    <p>Teams report single E[V] values. No uncertainty visible.</p>
+                </div>
+                <div class="panel-body">
+                    <table id="table-point">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Reported E[V]</th>
+                                <th>Decision</th>
+                                <th>Outcome</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Panel B: With Uncertainty Ranges</h2>
+                    <p>Teams report E[V] with confidence intervals.</p>
+                </div>
+                <div class="panel-body">
+                    <table id="table-range">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Belief (E[V] range)</th>
+                                <th>P(E[V]>0)</th>
+                                <th>Decision</th>
+                                <th>Outcome</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-color belief"></div> Believed range</div>
+                        <div class="legend-item"><div class="legend-color truth"></div> True range (after reveal)</div>
+                        <div class="legend-item"><div class="legend-color threshold"></div> Zero line (E[V]=0)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary">
+            <h2>Summary Comparison</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div>
+                    <h3 style="margin: 0 0 12px 0; font-size: 1em; color: #4a5568;">Panel A: Point Estimates</h3>
+                    <div class="summary-grid" id="summary-point">
+                        <div class="summary-item correct">
+                            <div class="value" id="point-correct">-</div>
+                            <div class="label">✓ Good Deploys</div>
+                        </div>
+                        <div class="summary-item harmful">
+                            <div class="value" id="point-harmful">-</div>
+                            <div class="label">✗ Harmful Deploys</div>
+                        </div>
+                        <div class="summary-item avoided">
+                            <div class="value" id="point-avoided">-</div>
+                            <div class="label">✓ Avoided Harm</div>
+                        </div>
+                        <div class="summary-item missed">
+                            <div class="value" id="point-missed">-</div>
+                            <div class="label">✗ Missed Good</div>
+                        </div>
+                    </div>
+                    <div class="cost-box" id="cost-point">
+                        <h4>Portfolio Cost</h4>
+                        <div class="cost-value" id="cost-point-value">-</div>
+                        <div class="cost-breakdown" id="cost-point-breakdown"></div>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin: 0 0 12px 0; font-size: 1em; color: #4a5568;">Panel B: With Uncertainty</h3>
+                    <div class="summary-grid" id="summary-range">
+                        <div class="summary-item correct">
+                            <div class="value" id="range-correct">-</div>
+                            <div class="label">✓ Good Deploys</div>
+                        </div>
+                        <div class="summary-item harmful">
+                            <div class="value" id="range-harmful">-</div>
+                            <div class="label">✗ Harmful Deploys</div>
+                        </div>
+                        <div class="summary-item held">
+                            <div class="value" id="range-held">-</div>
+                            <div class="label">⏸ Held for Data</div>
+                        </div>
+                        <div class="summary-item avoided">
+                            <div class="value" id="range-avoided">-</div>
+                            <div class="label">✓ Avoided Harm</div>
+                        </div>
+                        <div class="summary-item missed">
+                            <div class="value" id="range-missed">-</div>
+                            <div class="label">✗ Missed Good</div>
+                        </div>
+                    </div>
+                    <div class="cost-box" id="cost-range">
+                        <h4>Portfolio Cost</h4>
+                        <div class="cost-value" id="cost-range-value">-</div>
+                        <div class="cost-breakdown" id="cost-range-breakdown"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="explanation" id="explanation">
+            <h3>How to use this simulator</h3>
+            <p>1. Click "Generate 10 Agents" to create agents with different E[V] distributions.<br>
+            2. <strong>Panel A</strong> sees only point estimates — deploy if E[V] > 0.<br>
+            3. <strong>Panel B</strong> sees uncertainty ranges — deploy only if P(E[V] > 0) > threshold (default 90%).<br>
+            4. Use "Reduce Uncertainty" to simulate better measurement on held agents.<br>
+            5. Click "Reveal Truth" to see actual values and outcomes. Try adding bias to see its effect.</p>
+        </div>
+
+        <div class="link-back">
+            <a href="./part-2-cost-of-ignorance.html">← Back to Part 2: The Cost of Ignorance</a>
+        </div>
+    </div>
+
+    <script>
+        let agents = [];
+        let truthRevealed = false;
+        let measurementInvested = false;
+
+        const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+
+        // Cost weights: harm is 5x worse than missed opportunity
+        const HARM_COST = 5;
+        const MISSED_COST = 1;
+
+        // Initialize
+        document.getElementById('threshold').addEventListener('input', function() {
+            document.getElementById('threshold-value').textContent = this.value;
+            if (agents.length > 0) updateDecisions();
+        });
+
+        document.getElementById('bias').addEventListener('input', function() {
+            document.getElementById('bias-value').textContent = this.value;
+            if (agents.length > 0 && truthRevealed) updateOutcomes();
+        });
+
+        function generateAgents() {
+            agents = [];
+            truthRevealed = false;
+            measurementInvested = false;
+
+            for (let i = 0; i < 10; i++) {
+                // Generate E[V] centered around small positive values with varied uncertainty
+                // True E[V] ranges roughly from -10 to +20
+                const trueEV = -8 + Math.random() * 26; // -8 to +18
+                const uncertainty = 4 + Math.random() * 14; // half-width 4-18
+
+                agents.push({
+                    name: names[i],
+                    trueEV: trueEV,
+                    // Believed values (before bias is applied, these equal true values)
+                    believedEV: trueEV,
+                    believedLow: trueEV - uncertainty,
+                    believedHigh: trueEV + uncertainty,
+                    uncertainty: uncertainty,
+                    improved: false // tracks if measurement was improved
+                });
+            }
+
+            document.getElementById('invest-btn').disabled = false;
+            updateDecisions();
+            updateExplanation('generated');
+        }
+
+        function calculateProbPositive(low, high) {
+            // Simplified: assume uniform distribution, calculate P(E[V] > 0)
+            if (low >= 0) return 99;
+            if (high <= 0) return 1;
+            const prob = (high / (high - low)) * 100;
+            return Math.round(Math.max(1, Math.min(99, prob)));
+        }
+
+        function updateDecisions() {
+            const confidenceThreshold = parseInt(document.getElementById('threshold').value);
+            const bias = parseInt(document.getElementById('bias').value);
+
+            // Apply bias to believed values
+            agents.forEach(a => {
+                a.believedEV = a.trueEV + bias;
+                a.believedLow = a.trueEV - a.uncertainty + bias;
+                a.believedHigh = a.trueEV + a.uncertainty + bias;
+            });
+
+            // Update Panel A (point estimates)
+            const tbodyPoint = document.querySelector('#table-point tbody');
+            tbodyPoint.innerHTML = '';
+
+            agents.forEach(a => {
+                const decision = a.believedEV > 0 ? 'Deploy' : "Don't deploy";
+                const decisionClass = a.believedEV > 0 ? 'deploy' : 'dont-deploy';
+                a.pointDecision = decision;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="agent-name">${a.name}</td>
+                    <td class="belief">${a.believedEV > 0 ? '+' : ''}${a.believedEV.toFixed(1)}</td>
+                    <td class="decision ${decisionClass}">${decision}</td>
+                    <td class="outcome ${truthRevealed ? '' : 'hidden'}">${truthRevealed ? getOutcome(a, 'point') : '?'}</td>
+                `;
+                tbodyPoint.appendChild(tr);
+            });
+
+            // Update Panel B (ranges with visualization)
+            const tbodyRange = document.querySelector('#table-range tbody');
+            tbodyRange.innerHTML = '';
+
+            agents.forEach(a => {
+                const probPositive = calculateProbPositive(a.believedLow, a.believedHigh);
+                let decision, decisionClass;
+
+                if (probPositive >= confidenceThreshold) {
+                    decision = 'Deploy';
+                    decisionClass = 'deploy';
+                } else if (probPositive <= (100 - confidenceThreshold)) {
+                    decision = "Don't deploy";
+                    decisionClass = 'dont-deploy';
+                } else {
+                    decision = 'Hold';
+                    decisionClass = 'hold';
+                }
+
+                a.rangeDecision = decision;
+                a.probPositive = probPositive;
+
+                // Create range visualization
+                const vizMin = -20;
+                const vizMax = 30;
+                const vizRange = vizMax - vizMin;
+                const believedLeftPct = ((a.believedLow - vizMin) / vizRange) * 100;
+                const believedWidthPct = ((a.believedHigh - a.believedLow) / vizRange) * 100;
+                const zeroLinePct = ((0 - vizMin) / vizRange) * 100;
+
+                let rangeVizHTML = `
+                    <div class="range-viz">
+                        <div class="range-bar belief" style="left: ${Math.max(0, believedLeftPct)}%; width: ${Math.min(100 - Math.max(0, believedLeftPct), believedWidthPct)}%;"></div>
+                        <div class="threshold-line" style="left: ${zeroLinePct}%;"></div>
+                `;
+
+                if (truthRevealed) {
+                    const trueLow = a.trueEV - a.uncertainty;
+                    const trueHigh = a.trueEV + a.uncertainty;
+                    const trueLeftPct = ((trueLow - vizMin) / vizRange) * 100;
+                    const trueWidthPct = ((trueHigh - trueLow) / vizRange) * 100;
+                    rangeVizHTML += `<div class="range-bar truth" style="left: ${Math.max(0, trueLeftPct)}%; width: ${Math.min(100 - Math.max(0, trueLeftPct), trueWidthPct)}%;"></div>`;
+                }
+
+                rangeVizHTML += `</div>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="agent-name">${a.name}${a.improved ? ' 📊' : ''}</td>
+                    <td class="belief">
+                        ${rangeVizHTML}
+                        <span style="font-size: 0.8em;">[${a.believedLow.toFixed(0)}, ${a.believedHigh.toFixed(0)}]</span>
+                    </td>
+                    <td class="belief">${probPositive}%</td>
+                    <td class="decision ${decisionClass}">${decision}</td>
+                    <td class="outcome ${truthRevealed ? '' : 'hidden'}">${truthRevealed ? getOutcome(a, 'range') : '?'}</td>
+                `;
+                tbodyRange.appendChild(tr);
+            });
+
+            // Enable/disable invest button based on held agents
+            const heldAgents = agents.filter(a => a.rangeDecision === 'Hold' && !a.improved);
+            document.getElementById('invest-btn').disabled = heldAgents.length === 0 || measurementInvested;
+
+            if (truthRevealed) {
+                updateSummary();
+            } else {
+                clearSummary();
+            }
+        }
+
+        function investInMeasurement() {
+            if (measurementInvested) return;
+            measurementInvested = true;
+
+            // For held agents, reduce uncertainty (narrow the range)
+            agents.forEach(a => {
+                if (a.rangeDecision === 'Hold') {
+                    // Reduce uncertainty by ~60%
+                    a.uncertainty = a.uncertainty * 0.4;
+                    a.improved = true;
+                }
+            });
+
+            updateDecisions();
+            updateExplanation('invested');
+        }
+
+        function revealTruth() {
+            if (agents.length === 0) {
+                alert('Generate agents first!');
+                return;
+            }
+
+            truthRevealed = true;
+            updateDecisions();
+            updateExplanation('revealed');
+        }
+
+        function updateOutcomes() {
+            if (!truthRevealed) return;
+            updateDecisions();
+        }
+
+        function getOutcome(a, type) {
+            if (!truthRevealed) return '?';
+
+            const decision = type === 'point' ? a.pointDecision : a.rangeDecision;
+            const isDeploying = decision === 'Deploy';
+            const isHolding = decision === 'Hold';
+            const actuallyGood = a.trueEV > 0;
+
+            if (isHolding) {
+                if (actuallyGood) {
+                    return `<span class="outcome pending">⏸ Good (true: ${a.trueEV > 0 ? '+' : ''}${a.trueEV.toFixed(1)})</span>`;
+                } else {
+                    return `<span class="outcome pending">⏸ Bad avoided (true: ${a.trueEV.toFixed(1)})</span>`;
+                }
+            }
+
+            if (isDeploying && actuallyGood) {
+                return `<span class="outcome correct">✓ Good (true: +${a.trueEV.toFixed(1)})</span>`;
+            } else if (isDeploying && !actuallyGood) {
+                return `<span class="outcome harmful">✗ HARM (true: ${a.trueEV.toFixed(1)})</span>`;
+            } else if (!isDeploying && !actuallyGood) {
+                return `<span class="outcome correct">✓ Avoided (true: ${a.trueEV.toFixed(1)})</span>`;
+            } else {
+                return `<span class="outcome missed">✗ Missed (true: +${a.trueEV.toFixed(1)})</span>`;
+            }
+        }
+
+        function updateSummary() {
+            let pointCorrect = 0, pointHarmful = 0, pointAvoided = 0, pointMissed = 0;
+            let rangeCorrect = 0, rangeHarmful = 0, rangeHeld = 0, rangeAvoided = 0, rangeMissed = 0;
+
+            agents.forEach(a => {
+                const actuallyGood = a.trueEV > 0;
+
+                // Point estimates
+                const pointDeploying = a.pointDecision === 'Deploy';
+                if (pointDeploying && actuallyGood) pointCorrect++;
+                else if (pointDeploying && !actuallyGood) pointHarmful++;
+                else if (!pointDeploying && !actuallyGood) pointAvoided++;
+                else pointMissed++;
+
+                // Range estimates
+                const rangeDeploying = a.rangeDecision === 'Deploy';
+                const rangeHolding = a.rangeDecision === 'Hold';
+
+                if (rangeHolding) {
+                    rangeHeld++;
+                } else if (rangeDeploying && actuallyGood) {
+                    rangeCorrect++;
+                } else if (rangeDeploying && !actuallyGood) {
+                    rangeHarmful++;
+                } else if (!rangeDeploying && !actuallyGood) {
+                    rangeAvoided++;
+                } else {
+                    rangeMissed++;
+                }
+            });
+
+            document.getElementById('point-correct').textContent = pointCorrect;
+            document.getElementById('point-harmful').textContent = pointHarmful;
+            document.getElementById('point-avoided').textContent = pointAvoided;
+            document.getElementById('point-missed').textContent = pointMissed;
+
+            document.getElementById('range-correct').textContent = rangeCorrect;
+            document.getElementById('range-harmful').textContent = rangeHarmful;
+            document.getElementById('range-held').textContent = rangeHeld;
+            document.getElementById('range-avoided').textContent = rangeAvoided;
+            document.getElementById('range-missed').textContent = rangeMissed;
+
+            // Calculate costs
+            const pointCost = pointHarmful * HARM_COST + pointMissed * MISSED_COST;
+            const rangeCost = rangeHarmful * HARM_COST + rangeMissed * MISSED_COST;
+
+            const pointBox = document.getElementById('cost-point');
+            const rangeBox = document.getElementById('cost-range');
+
+            document.getElementById('cost-point-value').textContent = pointCost;
+            document.getElementById('cost-point-breakdown').textContent =
+                `${pointHarmful} harmful × ${HARM_COST} + ${pointMissed} missed × ${MISSED_COST}`;
+
+            document.getElementById('cost-range-value').textContent = rangeCost;
+            document.getElementById('cost-range-breakdown').textContent =
+                `${rangeHarmful} harmful × ${HARM_COST} + ${rangeMissed} missed × ${MISSED_COST}` +
+                (rangeHeld > 0 ? ` (${rangeHeld} held for more data)` : '');
+
+            pointBox.className = 'cost-box' + (pointCost <= rangeCost ? ' good' : '');
+            rangeBox.className = 'cost-box' + (rangeCost <= pointCost ? ' good' : '');
+        }
+
+        function clearSummary() {
+            ['point-correct', 'point-harmful', 'point-avoided', 'point-missed',
+             'range-correct', 'range-harmful', 'range-held', 'range-avoided', 'range-missed'].forEach(id => {
+                document.getElementById(id).textContent = '-';
+            });
+            document.getElementById('cost-point-value').textContent = '-';
+            document.getElementById('cost-range-value').textContent = '-';
+            document.getElementById('cost-point-breakdown').textContent = '';
+            document.getElementById('cost-range-breakdown').textContent = '';
+            document.getElementById('cost-point').className = 'cost-box';
+            document.getElementById('cost-range').className = 'cost-box';
+        }
+
+        function resetSimulator() {
+            agents = [];
+            truthRevealed = false;
+            measurementInvested = false;
+            document.getElementById('threshold').value = 90;
+            document.getElementById('threshold-value').textContent = '90';
+            document.getElementById('bias').value = 0;
+            document.getElementById('bias-value').textContent = '0';
+            document.getElementById('invest-btn').disabled = true;
+
+            document.querySelector('#table-point tbody').innerHTML = '';
+            document.querySelector('#table-range tbody').innerHTML = '';
+            clearSummary();
+            updateExplanation('initial');
+        }
+
+        function updateExplanation(state) {
+            const el = document.getElementById('explanation');
+            const bias = parseInt(document.getElementById('bias').value);
+
+            if (state === 'initial') {
+                el.innerHTML = `
+                    <h3>How to use this simulator</h3>
+                    <p>1. Click "Generate 10 Agents" to create agents with different E[V] distributions.<br>
+                    2. <strong>Panel A</strong> sees only point estimates — deploy if E[V] > 0.<br>
+                    3. <strong>Panel B</strong> sees uncertainty ranges — deploy only if P(E[V] > 0) > threshold.<br>
+                    4. Use "Reduce Uncertainty" to simulate better measurement on held agents.<br>
+                    5. Click "Reveal Truth" to see actual values and outcomes. Try adding bias to see its effect.</p>
+                `;
+            } else if (state === 'generated') {
+                el.innerHTML = `
+                    <h3>Agents generated</h3>
+                    <p><strong>Panel A</strong> sees only point estimates and must decide: deploy if E[V] > 0, don't deploy otherwise.<br>
+                    <strong>Panel B</strong> sees uncertainty ranges and uses a confidence threshold: deploy only when P(E[V] > 0) > ${document.getElementById('threshold').value}%.<br><br>
+                    Notice agents marked <strong>"Hold"</strong> — these have too much uncertainty to decide confidently. Try clicking <strong>"Reduce Uncertainty"</strong> to see what better measurement reveals.<br><br>
+                    When ready, click <strong>"Reveal Truth"</strong> to see which decisions were correct.</p>
+                `;
+            } else if (state === 'invested') {
+                el.innerHTML = `
+                    <h3>Better measurement applied to held agents 📊</h3>
+                    <p>You invested in better evaluation for the uncertain agents. Their ranges have narrowed — same true system, better knowledge.<br><br>
+                    Look for agents that:<br>
+                    • <strong>Moved to Deploy</strong> — good systems you can now ship with confidence<br>
+                    • <strong>Moved to Don't Deploy</strong> — bad systems you can now reject with confidence<br><br>
+                    This is the value of reducing uncertainty: <em>unlocking good systems and avoiding wasted effort on bad ones</em>.<br><br>
+                    Click <strong>"Reveal Truth"</strong> to see the outcomes.</p>
+                `;
+            } else if (state === 'revealed') {
+                const heldCount = agents.filter(a => a.rangeDecision === 'Hold').length;
+
+                if (bias === 0) {
+                    el.innerHTML = `
+                        <h3>Truth revealed — no systematic bias</h3>
+                        <p>Compare the <strong>Portfolio Cost</strong> (harm costs ${HARM_COST}×, missed opportunity costs ${MISSED_COST}×).<br><br>
+                        With uncertainty awareness (Panel B), you likely have fewer harmful deployments at the cost of some missed opportunities or held agents.
+                        ${heldCount > 0 ? `<br><br><strong>${heldCount} agent(s) still held</strong> — in practice, you'd continue investigating these.` : ''}<br><br>
+                        <strong>Now try adding bias</strong> using the slider. This simulates systematically optimistic evaluation (easy test sets, lenient judges, overfitting).</p>
+                    `;
+                } else {
+                    el.innerHTML = `
+                        <h3>Truth revealed — with ${bias} points of systematic bias</h3>
+                        <p>Your believed E[V] values were systematically optimistic by ${bias} points.<br><br>
+                        <strong>Key insight:</strong> Bias shifts <em>all</em> your beliefs in the same direction. Even Panel B's honest uncertainty ranges don't help — they're all shifted.<br><br>
+                        This is why bias is more dangerous than variance: it doesn't show up as run-to-run variability, but it tilts every decision the same way.<br><br>
+                        Both panels suffer from the same systematic over-optimism, though Panel B's "Hold" decisions may have accidentally saved you from some harmful deploys.</p>
+                    `;
+                }
+            }
+        }
+
+        // Generate initial agents on load
+        generateAgents();
+    </script>
+</body>
+</html>

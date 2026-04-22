@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterating in the Dark: The Cost of Inaction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        img {
+            max-width: 70%;
+            height: auto;
+            margin: 2em auto;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        blockquote {
+            border-left: 4px solid #38b2ac;
+            margin: 2em 0;
+            padding: 1em 1.5em;
+            color: #4a5568;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.6em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+<h1>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</h1>
+
+<h2>Part 2: The Cost of Inaction</h2>
+<p><em>Why ignoring uncertainty is expensive</em></p>
+<hr />
+
+<p>It's easy to talk about noise as an abstract annoyance—"sure, the metric is a bit noisy, but directionally it's fine."</p>
+
+<p>Every score is the output of a measurement pipeline—and that pipeline injects both <strong>uncertainty</strong> and <strong>bias</strong>. Whether we can wash away current eval imperfection as "engineering approximation" depends on how large they are.</p>
+
+<hr />
+
+<h2>Every Score Has Two Error Terms: Bias and Uncertainty</h2>
+
+<p>For a given use case <strong><em>i</em></strong>, the reported score is not just a function of system quality. It is an estimate:</p>
+
+<blockquote>
+<p><strong>reported_scoreᵢ = true_scoreᵢ + Bᵢ + εᵢ</strong></p>
+</blockquote>
+
+<p>Where:</p>
+
+<ul>
+<li><p><strong>εᵢ</strong> is <strong><em>noise</em></strong> (random error): sampling variance, stochastic judge variance, rater inconsistency, prompt sensitivity, rubric interpretation variance, etc. This is what produces <strong>uncertainty (UNᵢ)</strong>, typically visible as a confidence interval or run-to-run variability.</p></li>
+<li><p><strong>Bᵢ</strong> is <strong><em>bias</em></strong> (systematic error): non-representative test sets, rubric misalignment with user value, proxy metrics that reward the wrong behavior, judge preference artifacts, contamination/leakage, over-representation of "easy" cases, and other consistent measurement distortions.</p></li>
+</ul>
+
+<p>Two implications matter operationally:</p>
+
+<ol>
+<li><p><strong>Uncertainty is often measurable. Bias often isn't.</strong> You can estimate run-to-run variance. You can compute confidence intervals. But bias can hide behind stability. The most dangerous situation is a <strong>tight error bar around the wrong number</strong>.</p></li>
+<li><p><strong>Bᵢ and UNᵢ vary by use case.</strong> Some use cases are "measurement-friendly" (their eval pipeline is optimistic). Others are "measurement-hostile" (their eval pipeline is pessimistic). A portfolio that treats all scorecards as equally valid is not making a ranking—it's making a decision using unknown and uneven measurement error.</p></li>
+</ol>
+
+<hr />
+
+<h2>Two Kinds of Cost: Random Mistakes and Systematic Mistakes</h2>
+
+<p>At scale, both noise and bias hurt—but they hurt differently.</p>
+
+<ul>
+<li><p><strong>Noise (variance)</strong> creates <strong><em>random wrong turns</em></strong>: you invest in the wrong variant, pause the wrong project, chase an improvement that wasn't real.</p></li>
+<li><p><strong>Bias</strong> creates <strong><em>systematic wrong turns</em></strong>: you consistently overestimate what's ready, consistently favor what's easy to score, consistently "prove" progress on the slide deck that won't show up in production.</p></li>
+</ul>
+
+<p><strong>Selection turns noise into bias.</strong></p>
+
+<p>Even if each individual evaluation were unbiased, the act of picking winners creates systematic optimism. The measurement process starts neutral. The decision process makes it lopsided. The math is real.</p>
+
+<hr />
+
+<h2>The Single-Use-Case Cost: When One Scorecard Misleads You</h2>
+
+<p>A portfolio problem is made of many local problems. Even inside a single use case, bias and uncertainty create expensive failure modes.</p>
+
+<h3>The Threshold Trap</h3>
+
+<p>Most decisions are threshold decisions: ship if score ≥ <strong>T</strong>.</p>
+
+<p>But if <strong>reported_score = true_score + B + ε</strong>, then a small positive bias can dramatically increase the chance that an unready system crosses the threshold.</p>
+
+<p><strong>Example:</strong> T = 85, σ = 4 points, true = 80</p>
+
+<table>
+<tr><th>Bias B</th><th>What you're effectively measuring</th><th>Probability you ship even though true &lt; T</th></tr>
+<tr><td>0</td><td>80 + noise</td><td>~11%</td></tr>
+<tr><td>+3</td><td>83 + noise</td><td>~31%</td></tr>
+<tr><td>+5</td><td>85 + noise</td><td>~50%</td></tr>
+</table>
+
+<p>A few points of bias does not "nudge" the decision—it can <strong>double or triple</strong> the false-positive rate.</p>
+
+<h3>The Directional Illusion</h3>
+
+<p>Within one use case, teams iterate quickly and celebrate small gains: +1, +2, +3 points.</p>
+
+<p>But if those changes are within <strong>UN</strong>, what looks like progress is often just noise. That creates predictable waste:</p>
+
+<ul>
+<li>false wins ("we improved!"),</li>
+<li>false regressions ("we broke it!"),</li>
+<li>thrash between variants, and</li>
+<li>over-engineering to chase a moving number.</li>
+</ul>
+
+<p>The waste is invisible because the work feels productive. Metrics fluctuate. Experiments complete. Sprints close. But a meaningful fraction of effort is spent climbing hills that don't exist.</p>
+
+<h3>Bias Lock-In</h3>
+
+<p>Early evaluations are typically the most biased: weak rubrics, small or unrepresentative datasets, uncalibrated judge prompts, missing edge-case coverage.</p>
+
+<p>Yet early evaluations drive the most irreversible choices: architecture, approach, tooling, and definitions of "good."</p>
+
+<p>If early measurement is biased, you don't just waste one sprint—you build a system that is locally optimal for a flawed measurement process.</p>
+
+<hr />
+
+<h2>The Portfolio Winner's Curse</h2>
+
+<p>Now scale up.</p>
+
+<p>Suppose you have <strong>U</strong> use cases, each with a reported score:</p>
+
+<blockquote>
+<p><strong>reported_scoreᵢ = true_scoreᵢ + Bᵢ + εᵢ</strong></p>
+</blockquote>
+
+<p>Even if εᵢ averages to zero across evaluations, the best-looking score among many will be "lucky." This is the same phenomenon as best-of-K selection inside one use case—except now it operates across your entire portfolio.</p>
+
+<h3>Winner's curse from noise (ε): extremes are disproportionately luck</h3>
+
+<p><strong>Expected optimism from picking the best-looking item among many:</strong></p>
+
+<table>
+<tr><th>Candidates compared</th><th>Expected "winner's bonus" (E[max]/σ)</th><th>If σ = 4 points</th></tr>
+<tr><td>10</td><td>~1.54σ</td><td>+6.2 points</td></tr>
+<tr><td>50</td><td>~2.25σ</td><td>+9.0 points</td></tr>
+<tr><td>100</td><td>~2.51σ</td><td>+10.0 points</td></tr>
+<tr><td>500</td><td>~3.04σ</td><td>+12.1 points</td></tr>
+</table>
+
+<p>Interpretation: if your evaluation pipeline has <strong>σ ≈ 4 points</strong> (not unusual once you include sampling noise, judge noise, and rubric mapping), then in a portfolio of ~50 use cases, the "top" use case is expected to look ~9 points better than it truly is—even if all use cases had identical true quality.</p>
+
+<h3>Winner's curse from bias (B): the portfolio selects measurement-friendly use cases</h3>
+
+<p>Noise is only half the story. In real portfolios, <strong>Bᵢ varies</strong>.</p>
+
+<p>That means portfolio selection doesn't just surface the best <em>systems</em>. It systematically surfaces:</p>
+
+<ul>
+<li>use cases whose measurement pipeline is <strong>optimistic</strong> (high Bᵢ), and</li>
+<li>use cases with higher variance (high σᵢ), because they generate more extreme "wins."</li>
+</ul>
+
+<p>This is how organizations drift toward "demo-friendly" and "metric-friendly" work. It's not because people are dishonest. It's because the system rewards what measures well.</p>
+
+<h3>Selection happens repeatedly, so optimism accumulates</h3>
+
+<p>Organizations don't select once. They select repeatedly:</p>
+
+<ul>
+<li>Each team selects the best prompt or pipeline variant for their use case</li>
+<li>Leadership selects the best use cases across teams</li>
+<li>PMs select the best demos for executive review</li>
+<li>The organization selects the "reference implementation" everyone copies</li>
+</ul>
+
+<p>Each selection step preferentially surfaces outcomes inflated by ε (luck) and, over time, biased toward use cases with favorable B.</p>
+
+<p>By the time something becomes a showcase or a standard, it has survived multiple rounds of selection—which means it has accumulated multiple rounds of optimism.</p>
+
+<hr />
+
+<h2>Misranking Is Not Rare—It's the Default When Differences Are Small</h2>
+
+<p>Portfolio decisions often hinge on small score differences: "Use case A is 84%, B is 88%—let's invest in B."</p>
+
+<p>But if measurement noise is comparable to those differences, you are ranking with a randomizer.</p>
+
+<p>If two use cases differ in true quality by Δ points, and evaluation noise has standard deviation σ, the probability you rank them incorrectly (due to noise alone) is approximately:</p>
+
+<blockquote>
+<p><strong>P(misrank) ≈ Φ( −Δ / (√2 · σ) )</strong></p>
+</blockquote>
+
+<p><strong>Example (σ = 4 points):</strong></p>
+
+<table>
+<tr><th>True gap Δ</th><th>Chance you pick the wrong one</th></tr>
+<tr><td>4 points</td><td>~24%</td></tr>
+<tr><td>6 points</td><td>~14%</td></tr>
+<tr><td>8 points</td><td>~8%</td></tr>
+</table>
+
+<p>And this is the optimistic case—because it ignores Bᵢ. If the two use cases have different bias terms (Bᵢ ≠ Bⱼ), then even "large" observed gaps can be artifacts of measurement. The ranking can be systematically wrong, not just occasionally wrong.</p>
+
+<hr />
+
+<h2>What the Cost Looks Like in the Real Organization</h2>
+
+<h3>Wasted Engineering Cycles</h3>
+
+<p>Inside a single use case, noisy metrics cause false wins, false regressions, thrash, and over-engineering. Bias makes it worse: the team optimizes for what the measurement rewards, even when it doesn't translate to user value.</p>
+
+<p>Multiply that by dozens of use cases, each running weekly evaluations, each making local optimizations. The organization pays a continuous tax: iteration budget spent on measurement artifacts rather than customer outcomes.</p>
+
+<h3>Portfolio Misallocation</h3>
+
+<p>The largest cost isn't a wrong prompt tweak. It's when noisy or bias-inflated numbers determine which use cases get funded, which teams grow, and which product bets become strategic priorities.</p>
+
+<p>When evaluation uncertainty is comparable to the actual differences between use cases, portfolio allocation becomes partly random. When bias differs across use cases, allocation becomes systematically distorted toward measurement-friendly work.</p>
+
+<p>This is where measurement error becomes capital allocation error—the kind that burns quarters, not days.</p>
+
+<h3>Incentive Distortion</h3>
+
+<p>Bias from selection means teams who run more experiments often report better numbers—not necessarily because they built better systems, but because they had more chances to get lucky and more opportunities to overfit the measurement.</p>
+
+<p>Portfolio leadership then rewards the behavior that increases bias: more variants, more tuning on the same evaluation set, more aggressive metric chasing. The incentive structure selects for practices that make measurements less reliable, not more.</p>
+
+<h3>Production Failures Are Predictable, Not Random</h3>
+
+<p>A false negative—delaying a feature that was actually ready—is expensive.</p>
+
+<p>A false positive—shipping a feature that looked green but fails in production—is often catastrophic: customer trust erodes, escalations consume executive attention, emergency patches add complexity, and the narrative that "this AI thing is unreliable" damages unrelated use cases.</p>
+
+<p>Here is the connection that matters: <strong>false positives are not bad luck.</strong> They are a predictable consequence of biased and uncertain measurement combined with selection. The systems that cross your "ready to ship" threshold are disproportionately the ones measured better than they truly are.</p>
+
+<h3>Coordination Overhead and Argument Inflation</h3>
+
+<p>When metrics are unstable or non-comparable, the organization spends time arguing:</p>
+
+<ul>
+<li>which metric "counts,"</li>
+<li>whose judge prompt is correct,</li>
+<li>why two teams' numbers disagree,</li>
+<li>whether any dashboard can be trusted.</li>
+</ul>
+
+<p>That debate is rational—but it is pure overhead created by non-credible measurement.</p>
+
+<hr />
+
+<h2>The Compounding Problem</h2>
+
+<p>These costs compound over time.</p>
+
+<p>Early evaluations—which are typically the noisiest and most biased, because you have the least data and the least-calibrated methodology—shape architectural choices, approach selection, and resource allocation. If those early evaluations mislead, you build on a flawed foundation.</p>
+
+<p>Later iterations optimize within a suboptimal design space. You climb the wrong hill efficiently. By the time production feedback reveals the gap, you've invested months of engineering effort in the wrong direction.</p>
+
+<p>The sunk cost creates pressure to explain away the gap rather than question the trajectory. "Production data is different." "Users behave unexpectedly." "Edge cases we didn't anticipate." The possibility that the evaluation was simply unreliable—that the direction was never right—is rarely the first hypothesis.</p>
+
+<hr />
+
+<p>Noise is not just a statistical property of an evaluation. Bias is not just a theoretical concern.</p>
+
+<p>In a portfolio organization, they become operating costs and strategy risks.</p>
+
+<p>A single biased or noisy scorecard can waste a sprint. A portfolio of biased and noisy scorecards can waste a quarter—and systematically steer the organization toward the luckiest-looking, measurement-friendly bets rather than the truly best ones.</p>
+
+<hr />
+
+<p><em>Next: <a href="./part-3-value-of-better-measurement.html">Part 3: Better "Evals" Beats Better Dev</a> — The value of better measurement</em></p>
+
+<hr />
+
+<p><strong>Tags:</strong> <code>AI</code> <code>Machine Learning</code> <code>Evaluation</code> <code>MLOps</code> <code>AI Engineering</code></p>
+
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+</body>
+</html>

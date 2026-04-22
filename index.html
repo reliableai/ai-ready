@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Ready Engineers - Spring 2026</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header loaded dynamically -->
+
+  <main>
+    <div class="hero">
+      <h1>AI-Ready Engineers</h1>
+      <p class="subtitle">For engineers and practitioners building with AI, for AI · Spring 2026</p>
+      <p class="hero-meta">17 sessions · 4 skillsets</p>
+    </div>
+
+    <section>
+      <h2>About This Course</h2>
+      <p>
+        <strong>AI-Ready Engineers is dedicated to engineers and practitioners who want to be ready
+        to build complex systems with AI — and for AI.</strong> It lays the foundations for building
+        reliable systems efficiently, and for mastering the evaluation and improvement process that
+        keeps them reliable as they grow.
+      </p>
+      <p>
+        Participants gain hands-on experience designing, building, and evaluating AI-powered
+        applications, and learn the rigorous methodologies essential for deploying AI systems in
+        production.
+      </p>
+      <p>
+        <strong>Prerequisite:</strong> Basic software engineering experience is preferred — but not a must.
+        Basics of python programming are useful to follow the exercises. Prior knowledge in statistics is
+        also helpful — but not necessary: we will review "just enough" for you to learn what you need to
+        understand AI systems assessment.
+      </p>
+    </section>
+
+    <section>
+      <details open>
+        <summary><h2 style="display:inline; margin:0; padding-bottom:0; margin-left:0.5rem;">Learning Objectives</h2></summary>
+        <div class="details-content">
+          <p>By the end of this course, you will:</p>
+
+          <h3>1. Understand how AI works and how to build AI-powered applications</h3>
+          <p>From hello world to mastering the development of AI agents with context, memory, tools.</p>
+
+          <h3>2. Build Effective, Reliable AI Systems at Scale</h3>
+          <p>Go beyond PoCs and small systems. Manage complexity. Build for reliability, consistency, manageability. Build observability, cost controls, and incident-ready guardrails.</p>
+
+          <h3>3. Identify and Master the Key Abstractions</h3>
+          <p>Learn which are the fundamental abstractions you need to manage the complexity of a distributed, large scale probabilistic system. Understand which engineering principles carry forward from traditional software and which are the new abstractions we need.</p>
+
+          <h3>4. Use AI to Build AI, and iterate towards success</h3>
+          <p>Master the science of monitoring, analysis, and estimation. Stand up an evaluation harness you can run in CI. Leverage AI for development, evaluation, and system management. Understand what this unlocks and where the limits are.</p>
+        </div>
+      </details>
+    </section>
+
+    <section>
+      <h2>Sessions</h2>
+
+      <h3><span class="phase phase-1">Skillset 1</span> Building AI Agents</h3>
+      <div class="modules-grid">
+        <div class="module-card">
+          <a class="module-link" href="labs/01_hello_world/session1_index.html">
+            <div class="number">S1</div>
+            <div class="title">Hello AI World</div>
+            <p class="description">Connecting to AI via API: chat, streaming, voice, and image.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Differences between non-AI software, ML based software and gen AI</li>
+              <li>Understand what are the different roles AI can play in software engineering</li>
+              <li>Create an "hello world" AI-powered application</li>
+              <li>Create an "hello world' application where AI is the user</li>
+              <li>Create an "hello world" application using AI</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/01b_llm_basics/session2_index.html">
+            <div class="number">S2</div>
+            <div class="title">Gen AI Basics: How LLMs Work</div>
+            <p class="description">How an LLM is built, tokens and context, fine-tuned vs bare models, the mental model engineers need to build on top.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Explain how an LLM is built (pre-training vs. post-training) and what distinguishes base models from instruction-tuned and "reasoning" variants</li>
+              <li>Understand tokens and context windows — and why <em>effective</em> context is typically smaller than the nominal window</li>
+              <li>Know the practical implications for engineers building on top: latency, cost, reliability, and model-choice tradeoffs</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/02_standalone_agents/session3_index.html">
+            <div class="number">S3</div>
+            <div class="title">Mastering Individual AI Calls</div>
+            <p class="description">Prompt engineering, structured outputs, best practices for reliable single calls.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Build an AI-powered application</li>
+              <li>Master prompt engineering</li>
+              <li>Understand how to separate feature of the model from addional bells and whistles offered by individual providers</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/03_context/session4_index.html">
+            <div class="number">S4</div>
+            <div class="title">Managing Context and Memory</div>
+            <p class="description">Stateless &amp; stateful agents, conversation history, cost &amp; latency tradeoffs, memory strategies.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Understand the distinction between stateless and stateful interactions with AI</li>
+              <li>Learn how to understand the limit of actual vs effective context for a given tast</li>
+              <li>Manage state across interactions</li>
+              <li>How to handle short and long term memory for effective stateful interactions</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/04_tool_calling/session5_index.html">
+            <div class="number">S5</div>
+            <div class="title">Tools &amp; Agentic Loops</div>
+            <p class="description">Tool calling, function schemas, orchestration loops, when to call another tool vs. stop.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Design clear function schemas and tool descriptions that an LLM can reliably call</li>
+              <li>Build an agentic loop: decide when to call a tool, when to call another, and when to stop</li>
+              <li>Recognize the failure modes of agentic loops (infinite tools, silent failures, drift) and the control patterns that mitigate them</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+
+      <h3><span class="phase phase-2">Skillset 2</span> Understanding Your System Through Observation and Experimentation</h3>
+      <div class="modules-grid">
+        <div class="module-card">
+          <a class="module-link" href="labs/09_monitoring/session6_index.html">
+            <div class="number">S6</div>
+            <div class="title">Observing and Diagnosing your Agents</div>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Learn what and how to monitor</li>
+              <li>Diagnose individual calls, monitor sessions, monitor systems</li>
+              <li>Understand traces and statistical assertions</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/05_eval_fundamentals/session7_index.html">
+            <div class="number">S7</div>
+            <div class="title">Evals: From Traditional Software, to ML, to Gen AI</div>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Understand why "eval" in AI systems is different from eval in non-AI software</li>
+              <li>Review of eval in software engineering</li>
+              <li>Understand metrics and measurement for ML models</li>
+              <li>Learn basic methods for evaluating unstructured output</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/08_automating_improvement/session8_index.html">
+            <div class="number">S8</div>
+            <div class="title">Approaching "AI Evals" as Estimation of Random Variables</div>
+            <p class="description">Apply the uncertainty toolkit to real AI systems — design experiments, quantify what you don't know, report it honestly, and reduce it where it matters.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Frame an AI eval as an <em>estimator</em> of a random variable (the system's true behaviour on a population of inputs) — not a point measurement</li>
+              <li>Design experiments that separate signal from noise, and quantify uncertainty in the estimate (confidence intervals, bootstrapping, Beta posteriors)</li>
+              <li>Choose metrics and reporting formats that expose variance rather than hide it, and decide which uncertainty is worth reducing vs. accepting</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/06_mastering_uncertainty/session9_index.html">
+            <div class="number">S9</div>
+            <div class="title">Understanding Uncertainty and how to Manage it</div>
+            <p class="description">"Every measure, without knowledge of its uncertainty, is meaningless"</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li><em>Understand the sources of uncertainty</em></li>
+              <li><em>Measure their impact: are they a real concerns or a theoretical and remote risk?</em></li>
+              <li><em>Recognize organizational patterns that produce blind spots (incentive misalignment, reporting, metric ownership);</em></li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/06_mastering_uncertainty/optimizing-in-the-dark/session10_index.html">
+            <div class="number">S10</div>
+            <div class="title">Designing Reliable Experiments and Reporting Results</div>
+            <p class="description">Structural flaws, uncertainty vs. variability confusion, and the cost of ignorance — how well-intentioned eval pipelines go wrong.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Recognize the most common structural flaws in AI evals (leakage, selection bias, confounding with prompt changes, scorecard gaming)</li>
+              <li>Distinguish <em>uncertainty</em> from <em>variability</em> — and know which tools address each</li>
+              <li>Diagnose eval failures in your own pipelines and design processes that make blind spots visible before they ship</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+
+      <h3><span class="phase phase-3">Skillset 3</span> Building and Managing Complex Systems</h3>
+      <div class="modules-grid">
+        <div class="module-card">
+          <a class="module-link" href="labs/10_complex_systems/1_councils/session11_index.html">
+            <div class="number">S11</div>
+            <div class="title">Agentic Patterns</div>
+            <p class="description">Council of Agents and Other Agentic Patterns.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Recognize the main council/ensemble patterns — self-consistency, role-based panels, multi-model ensembles, diverse-judge — and what each buys you</li>
+              <li>Understand when disagreement is a <em>feature</em> (calibrated uncertainty from independent errors) vs. a <em>failure mode</em> (correlated errors)</li>
+              <li>Reason about the core design questions of multi-agent systems: diversity, aggregation, cost, and evaluation</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/10_complex_systems/2_abstractions/session12_index.html">
+            <div class="number">S12</div>
+            <div class="title">Foundational Programming Abstractions</div>
+            <p class="description">Foundational programming abstractions for AI systems — agentic loops, autonomy sliders, context/memory, tool integration surfaces, and MCP.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Identify the foundational abstractions for AI systems — agentic loops, autonomy sliders, context/memory, tool-integration surfaces — and know when to reach for each</li>
+              <li>Understand what MCP is, what problem it solves, and how agent-system integration is standardizing</li>
+              <li>Map a concrete AI feature to the right abstractions, so code stays manageable as the system grows</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/10_complex_systems/3_architectures/session13_index.html">
+            <div class="number">S13</div>
+            <div class="title">Reliable Architectures and Structuring for Production</div>
+            <p class="description">Reliable architectures + shipping into existing products, maintaining large AI systems, multi-version considerations.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Apply architecture patterns that keep AI systems reliable under real traffic (timeouts, fallbacks, budgets, graceful degradation)</li>
+              <li>Structure projects for shipping into existing products and maintaining them across model and prompt versions</li>
+              <li>Plan for multi-version considerations — prompts, tools, schemas, datasets — so upgrades don't silently regress behaviour</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/13_safety/session14_index.html">
+            <div class="number">S14</div>
+            <div class="title">Safety, Security, and Guardrails</div>
+            <p class="description">End-to-end threat model for AI systems — content safety, system security, and operational guardrails that keep agents useful without letting them become liabilities.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Distinguish the three layers of AI safety: <em>content safety</em> (harmful, biased, or dangerously wrong outputs), <em>system security</em> (prompt injection, data exfiltration, tool abuse, supply-chain risk), and <em>operational guardrails</em> (rate limits, human-in-the-loop gates, blast-radius control, auditability)</li>
+              <li>Apply a threat model to an agentic system — what can a malicious input, a compromised tool, or a confused agent do, and which defenses are worth their cost</li>
+              <li>Implement practical defenses: input/output filters, tool allow-lists and scoping, sandboxing, approval gates for high-impact actions, anomaly detection and auditing</li>
+              <li>Red-team your own system: design attack scenarios, run them, and harden the system against what you find</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/14_frameworks/session15_index.html">
+            <div class="number">S15</div>
+            <div class="title">Using AI Frameworks</div>
+            <p class="description">When and why to use frameworks; LangChain as a case study.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Explain what frameworks actually provide beyond "less code" — integrations, standard patterns, observability hooks, and ecosystem — and what they don't</li>
+              <li>Compare LangChain, LlamaIndex, and LangGraph along three axes (orchestration, data/retrieval, state) and pick an appropriate tool for a given problem</li>
+              <li>Apply a decision rule for when a framework is a net positive vs. a net negative — and what the "framework tax" looks like for your system</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+
+      <h3><span class="phase phase-4">Skillset 4</span> Building <u><em>with</em></u> AI and <u><em>for</em></u> AI</h3>
+      <div class="modules-grid">
+        <div class="module-card">
+          <a class="module-link" href="labs/13_programming_in_english/session16_index.html">
+            <div class="number">S16</div>
+            <div class="title">Programming in English (and why it is tough)</div>
+            <p class="description">Without Losing Control (and Mental Health) — using AI to build software, without ceding the engineering judgment that keeps systems sane.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Use AI to accelerate software development (code generation, review, refactoring) without losing the engineering judgment that keeps systems sane</li>
+              <li>Understand why natural language is a lossy specification medium — and what that means for correctness, control, and debuggability</li>
+              <li>Establish a sustainable working style for AI-assisted development: when to trust, when to verify, when to step in</li>
+            </ul>
+          </details>
+        </div>
+        <div class="module-card">
+          <a class="module-link" href="labs/15_ai_as_user/session17_index.html">
+            <div class="number">S17</div>
+            <div class="title">When AI is the User of Our System</div>
+            <p class="description">Designing systems for AI consumers — what changes when the user is an agent, not a human: API ergonomics for agents, failure modes unique to agent consumers, and the shift from human-centred to agent-centred system design.</p>
+          </a>
+          <details class="objectives" open>
+            <summary>Learning objectives</summary>
+            <ul>
+              <li>Recognize how API and UX design shift when the consumer is an AI agent, not a human</li>
+              <li>Design tool schemas, error messages, and interfaces that agents can reliably use and recover from</li>
+              <li>Anticipate failure modes unique to agent consumers (prompt injection, tool misuse, runaway loops) and design for graceful degradation</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+
+    </section>
+
+    <section>
+      <h2>Office Hours</h2>
+      <p>
+        Office hours are held right after each class. Additional appointments can be
+        scheduled via email.
+      </p>
+      <p><a href="about.html" class="btn-secondary btn">Contact Information</a></p>
+    </section>
+
+    <section id="feedback" class="quick-feedback">
+      <h3>Have 20 seconds?</h3>
+      <p>
+        What's the <em>one thing</em> you'd want to learn about
+        <strong>building AI systems at scale</strong>?
+      </p>
+      <form action="https://formsubmit.co/adaa0c88245095dc975bd57f5b3d0f43" method="POST">
+        <input type="hidden" name="_subject" value="AI Design Course Feedback">
+        <input type="hidden" name="_captcha" value="false">
+        <textarea
+          name="feedback"
+          rows="4"
+          placeholder="One sentence is perfect."
+          required></textarea>
+        <br>
+        <button type="submit">Submit</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>AI-Ready Engineers &middot; Spring 2026</p>
+    <p class="text-small">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></p>
+  </footer>
+
+  <script src="scripts.js"></script>
+</body>
+</html>

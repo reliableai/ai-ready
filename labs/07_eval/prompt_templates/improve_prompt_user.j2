@@ -1,0 +1,18 @@
+## Current Prompt Template
+
+{{ current_prompt }}
+
+## Best Practices Catalog
+
+{{ best_practices_yaml }}
+
+## Performance Summary
+
+Average rating: {{ avg_rating }} / 5.0
+Number of items judged: {{ n_items }}
+
+## Sample Judge Rationales
+
+{% for r in rationales -%}
+- {{ r }}
+{% endfor %}

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L1: Hello Software 3.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../index.html" style="color: var(--accent); text-decoration: none;">← Home</a> · L1: Hello Software 3.0</div>
+    <ul>
+        <li><a href="#intro">Intro</a></li>
+        <li><a href="#chat">1. Chat</a></li>
+        <li><a href="#streaming">2. Streaming</a></li>
+        <li><a href="#voice">3. Voice</a></li>
+        <li><a href="#image">4. Image</a></li>
+        <li><a href="#testing">5. Testing</a></li>
+        <li><a href="#homework">Homework</a></li>
+        <li><a href="#references">References</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="intro">
+        <h1>Hello Software 3.0</h1>
+        <p class="subtitle">Your first LLM API calls: text, streaming, voice, and images</p>
+    </div>
+
+    <!-- INTRO -->
+    <section>
+        <h3>Learning objectives</h3>
+        <p>By the end of this lesson, you will be able to:</p>
+        <ol>
+            <li>Make a basic chat completion API call and understand its parameters</li>
+            <li>Stream responses token-by-token for better user experience</li>
+            <li>Build a voice pipeline using Whisper (STT) and TTS APIs</li>
+            <li>Generate images with DALL-E and understand prompt revision</li>
+            <li>Understand why testing AI systems is fundamentally different from testing traditional software</li>
+        </ol>
+
+        <h3>What is "Software 3.0"?</h3>
+
+        <p>The term comes from <a href="https://karpathy.medium.com/software-2-0-a26f6ef4538">Andrej Karpathy</a>, who described an evolution in how we write software:</p>
+
+        <ul>
+            <li><strong>Software 1.0</strong> — explicit rules written by programmers (if/else, loops)</li>
+            <li><strong>Software 2.0</strong> — behavior learned from data (neural networks trained on examples)</li>
+            <li><strong>Software 3.0</strong> — behavior specified in natural language (LLMs following prompts)</li>
+        </ul>
+
+        <p>In Software 3.0, the "code" is the prompt. You're about to write your first lines.</p>
+
+        <div class="thesis-block">
+            <div class="label">Why start here?</div>
+            <p>Before you can build agents, orchestrate tools, or design evaluation frameworks, you need to understand the primitive: <strong>the API call</strong>. Everything else is layers on top of this.</p>
+        </div>
+
+        <h3>Setup</h3>
+
+        <p>If you haven't already, set up the repository:</p>
+
+        <pre><code class="language-bash"># Clone and enter the repo
+git clone https://github.com/reliableai/ai-design-2026-pub.git
+cd ai-design-2026-pub
+
+# Install uv (Python package manager) if needed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies (this creates a .venv and installs everything)
+uv sync
+
+# macOS only: portaudio is needed for the voice demo (script 3)
+brew install portaudio
+
+# Set up your API keys (one-time)
+cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY</code></pre>
+
+        <p>A shared API key will be provided during the lab. Add it to your <code>.env</code> file. All scripts automatically load keys from <code>.env</code> via <a href="https://pypi.org/project/python-dotenv/">python-dotenv</a>.</p>
+
+        <h3>Cost awareness</h3>
+
+        <p>API calls cost real money. Even though you're using a shared key, it's good practice to understand what things cost. See <a href="https://openai.com/pricing">OpenAI pricing</a> for current rates.</p>
+
+        <h3>Alternative: OpenRouter</h3>
+
+        <p>For text-based examples (chat, streaming), you can use <a href="https://openrouter.ai">OpenRouter</a> instead of OpenAI. OpenRouter provides a unified API to access models from OpenAI, Anthropic, Meta, Google, and others—often at lower prices.</p>
+
+        <pre><code class="language-python">from openai import OpenAI  # Same SDK!
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
+
+response = client.chat.completions.create(
+    model="openai/gpt-4.1-mini",       # Or "anthropic/claude-sonnet-4"
+    messages=[...],                     # Or "meta-llama/llama-4-scout"
+)</code></pre>
+
+        <p>The OpenAI Python SDK works with OpenRouter—just change the <code>base_url</code> and use an OpenRouter API key. This lets you easily try models from different providers. Get yours at <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>.</p>
+
+        <div class="content-card">
+            <h4>When to use which</h4>
+            <ul>
+                <li><strong>OpenAI direct</strong> — required for voice (Whisper, TTS) and images (DALL-E)</li>
+                <li><strong>OpenRouter</strong> — great for text generation, lets you compare models easily, often cheaper</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- SECTION 1: CHAT -->
+    <section id="chat">
+        <div class="section-number">01 / CHAT COMPLETION</div>
+        <h2>Text in, text out</h2>
+
+        <p>The <a href="https://platform.openai.com/docs/api-reference/chat/create">Chat Completions API</a> is the foundation. Send messages, get a response.</p>
+
+        <pre><code class="language-python">from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()  # Load OPENAI_API_KEY from .env
+client = OpenAI()
+
+response = client.chat.completions.create(
+    model="gpt-4.1-mini",
+    messages=[
+        {"role": "user", "content": "Explain Software 3.0 in one sentence."}
+    ],
+    temperature=0.7,
+)
+
+print(response.choices[0].message.content)</code></pre>
+
+        <p><strong>Run it:</strong></p>
+        <pre><code class="language-bash">uv run python labs/01_hello_world/1_chat.py</code></pre>
+
+        <div class="content-card">
+            <h4>Key parameters</h4>
+            <ul>
+                <li><strong>model</strong> — which LLM to use. We use <code>gpt-4.1-mini</code>: a small, fast, and inexpensive model well-suited for learning. As of early 2026, OpenAI's model families include:
+                    <ul>
+                        <li><strong>GPT-5 series</strong> (current flagship) — <code>gpt-5.2</code> (best quality), <code>gpt-5-mini</code> ($0.25/M input tokens), <code>gpt-5-nano</code> (cheapest at ~$0.05/M input tokens)</li>
+                        <li><strong>GPT-4.1 series</strong> (previous generation, still available) — <code>gpt-4.1-mini</code> ($0.40/M input tokens) is what we use here</li>
+                    </ul>
+                    Models evolve fast — see <a href="https://platform.openai.com/docs/models">available models</a> and <a href="https://openai.com/api/pricing/">pricing</a> for the latest.
+                </li>
+                <li><strong>messages</strong> — the conversation history, as a list of message objects. Each has a <code>role</code> and <code>content</code>:
+                    <ul>
+                        <li><code>system</code> — sets the model's behavior and persona (e.g., "You are a helpful tutor"). Processed first, shapes all subsequent responses.</li>
+                        <li><code>user</code> — the human's input</li>
+                        <li><code>assistant</code> — the model's previous responses (include these to give the model memory of the conversation)</li>
+                    </ul>
+                    The API is <strong>stateless</strong>: the model has no memory between calls. To have a multi-turn conversation, you must send the full history each time.
+                </li>
+                <li><strong>temperature</strong> — controls randomness in token selection (range 0–2):
+                    <ul>
+                        <li><strong>0</strong> — nearly deterministic; picks the most likely token every time. Good for factual Q&A and structured output.</li>
+                        <li><strong>0.7</strong> (our default) — balanced creativity and coherence. Good starting point for most tasks.</li>
+                        <li><strong>1.0</strong> (OpenAI's default) — more varied outputs.</li>
+                        <li><strong>1.5+</strong> — high randomness; useful for brainstorming but may produce incoherent text.</li>
+                    </ul>
+                    Related: <code>top_p</code> (nucleus sampling) is an alternative way to control diversity. OpenAI recommends using one or the other, not both.
+                </li>
+            </ul>
+        </div>
+
+        <h3>The response object</h3>
+
+        <p>The API returns a structured response:</p>
+
+        <pre><code class="language-python">{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1234567890,
+  "model": "gpt-4.1-mini",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Software 3.0 refers to..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 15,
+    "completion_tokens": 32,
+    "total_tokens": 47
+  }
+}</code></pre>
+
+        <p>The <code>usage</code> field tells you how many tokens were consumed—this determines cost.</p>
+    </section>
+
+    <!-- SECTION 2: STREAMING -->
+    <section id="streaming">
+        <div class="section-number">02 / STREAMING</div>
+        <h2>Watch tokens arrive</h2>
+
+        <p>With <a href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-stream">streaming</a>, you receive tokens as they're generated instead of waiting for the full response. This dramatically improves perceived latency.</p>
+
+        <pre><code class="language-python">stream = client.chat.completions.create(
+    model="gpt-4.1-mini",
+    messages=[{"role": "user", "content": "Write a haiku about APIs."}],
+    stream=True,  # Enable streaming
+)
+
+for chunk in stream:
+    content = chunk.choices[0].delta.content
+    if content:
+        print(content, end="", flush=True)</code></pre>
+
+        <p><strong>Run it:</strong></p>
+        <pre><code class="language-bash">uv run python labs/01_hello_world/2_streaming.py</code></pre>
+
+        <div class="content-card">
+            <h4>Why streaming matters</h4>
+            <ul>
+                <li><strong>Time to first token (TTFT)</strong> — the key UX metric. Users see output immediately instead of staring at a spinner.</li>
+                <li><strong>Perceived speed</strong> — a 5-second streamed response feels faster than a 3-second blocked response.</li>
+                <li><strong>Early cancellation</strong> — users can stop generation if it's going in the wrong direction.</li>
+            </ul>
+        </div>
+
+        <h3>Streaming vs non-streaming</h3>
+
+        <div class="ascii-diagram">Non-streaming:  [====== waiting ======] → Full response appears
+
+Streaming:      [=] H [=] e [=] l [=] l [=] o → Each token appears immediately</div>
+
+        <p>The total time may be similar, but the user experience is vastly different.</p>
+    </section>
+
+    <!-- SECTION 3: VOICE -->
+    <section id="voice">
+        <div class="section-number">03 / VOICE</div>
+        <h2>Speak and be spoken to</h2>
+
+        <p>Voice interaction combines three APIs into a pipeline:</p>
+
+        <div class="ascii-diagram">┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
+│  Your   │───▶│ Whisper │───▶│   GPT   │───▶│   TTS   │───▶│ Speaker │
+│  Voice  │    │  (STT)  │    │         │    │         │    │         │
+└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
+   Audio         Text          Text          Audio         Audio</div>
+
+        <p>Each step is a separate API call. The LLM doesn't "hear" you—it reads your transcribed words.</p>
+
+        <pre><code class="language-python"># 1. Record audio from microphone
+audio = sd.rec(int(5 * 16000), samplerate=16000, channels=1)
+sd.wait()
+
+# 2. Transcribe with Whisper (Speech-to-Text)
+transcript = client.audio.transcriptions.create(
+    model="whisper-1",
+    file=audio_file,
+)
+
+# 3. Get LLM response
+response = client.chat.completions.create(
+    model="gpt-4.1-mini",
+    messages=[{"role": "user", "content": transcript.text}],
+)
+
+# 4. Convert to speech (Text-to-Speech)
+speech = client.audio.speech.create(
+    model="tts-1",
+    voice="nova",  # Options: alloy, echo, fable, onyx, nova, shimmer
+    input=response.choices[0].message.content,
+)</code></pre>
+
+        <p><strong>Run it:</strong></p>
+        <pre><code class="language-bash">uv run python labs/01_hello_world/3_voice.py</code></pre>
+
+        <p>You'll have 5 seconds to speak. The script records, transcribes, thinks, and speaks back.</p>
+
+        <div class="content-card">
+            <h4>API references</h4>
+            <ul>
+                <li><a href="https://platform.openai.com/docs/api-reference/audio/createTranscription">Whisper transcription API</a> — converts audio to text</li>
+                <li><a href="https://platform.openai.com/docs/api-reference/audio/createSpeech">Text-to-speech API</a> — converts text to audio</li>
+            </ul>
+            <h4>Note</h4>
+            <p>This script requires microphone access. On macOS, you may see a permission prompt on first run. Grant terminal access to the microphone in System Preferences → Privacy & Security → Microphone.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 4: IMAGE -->
+    <section id="image">
+        <div class="section-number">04 / IMAGE GENERATION</div>
+        <h2>Describe, create</h2>
+
+        <p>The <a href="https://platform.openai.com/docs/api-reference/images/create">Images API</a> with DALL-E 3 generates images from text descriptions.</p>
+
+        <pre><code class="language-python">response = client.images.generate(
+    model="dall-e-3",
+    prompt="A robot teaching a classroom of humans, digital art style",
+    size="1024x1024",      # Also: 1024x1792, 1792x1024
+    quality="standard",    # Also: "hd" (more detail, higher cost)
+    n=1,                   # DALL-E 3 only supports n=1
+)
+
+image_url = response.data[0].url
+revised_prompt = response.data[0].revised_prompt</code></pre>
+
+        <p><strong>Please don't run this one</strong> — image generation is expensive (~$0.04 per call). The instructor will demo it in class.</p>
+
+        <div class="content-card">
+            <h4>Prompt revision</h4>
+            <p>DALL-E 3 automatically rewrites your prompt for better results. Your input "A cat" might become "A photorealistic orange tabby cat sitting on a windowsill, warm afternoon light streaming through the glass, soft focus background..."</p>
+            <p>Check <code>response.data[0].revised_prompt</code> to see what DALL-E actually generated from. This is both a feature (better images) and a limitation (less control).</p>
+            <h4>Note</h4>
+            <p>The returned URL is temporary (~1 hour). Download the image if you want to keep it.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 5: TESTING -->
+    <section id="testing">
+        <div class="section-number">05 / TESTING AI SYSTEMS</div>
+        <h2>How do you test this?</h2>
+
+        <p>In traditional software, testing is straightforward: <code>sort([3,1,2])</code> must return <code>[1,2,3]</code>. There is exactly one correct answer. Same input, same output, every time.</p>
+
+        <p>Now try testing the prompt you just ran in Section 1:</p>
+
+        <pre><code class="language-python">def test_explanation():
+    response = ask_llm("Explain Software 3.0 in one sentence.")
+    assert response == ???  # What goes here?</code></pre>
+
+        <p>Run it three times. You might get:</p>
+        <ul>
+            <li><em>"Software 3.0 is a paradigm where programs are written in natural language prompts rather than code."</em></li>
+            <li><em>"It refers to the shift from explicit programming to instructing AI models with plain English."</em></li>
+            <li><em>"Software 3.0 describes systems where behavior is specified through natural language rather than trained on data."</em></li>
+        </ul>
+
+        <p>All three are correct. All three are different. No <code>assert</code> catches this — and unlike a formatting issue you could parse around, these are <strong>genuinely different valid answers</strong>. The problem isn't surface-level variation. It's that for any non-trivial question, "correct" is a spectrum, not a point.</p>
+
+        <h3>What we CAN test</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Test type</th>
+                    <th>What it checks</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Structural</strong></td>
+                    <td>Response has expected shape</td>
+                    <td>Not empty, reasonable length, valid format</td>
+                </tr>
+                <tr>
+                    <td><strong>Property</strong></td>
+                    <td>Properties hold within bounds</td>
+                    <td>Latency < 30s, response < 1000 chars</td>
+                </tr>
+                <tr>
+                    <td><strong>LLM-as-judge</strong></td>
+                    <td>Another LLM evaluates quality</td>
+                    <td>"Is this response relevant to the question?"</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>LLM-as-judge: testing AI with AI</h3>
+
+        <p>For the voice pipeline, we can't easily verify correctness. Instead, we ask another LLM:</p>
+
+        <pre><code class="language-python">def test_voice_response_is_sensible(user_input, assistant_response):
+    judgment = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[{
+            "role": "user",
+            "content": f"""User said: "{user_input}"
+Assistant replied: "{assistant_response}"
+
+Is this a sensible, relevant response? Answer YES or NO."""
+        }],
+        temperature=0,
+    )
+
+    assert "YES" in judgment.choices[0].message.content.upper()</code></pre>
+
+        <p>This is circular (using the thing we're testing to evaluate itself), but it's often the best we can do. We'll explore this deeply in <strong>Skillset 2: Observation and "Evaluation"</strong>.</p>
+
+        <h3>Running the tests</h3>
+
+        <p>This lesson includes a test suite demonstrating these approaches:</p>
+
+        <pre><code class="language-bash"># Run fast tests (skip expensive image generation)
+uv run pytest labs/tests/test_session1.py -v -m "not slow"
+
+# Run all tests including image generation (~$0.08)
+uv run pytest labs/tests/test_session1.py -v</code></pre>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Testing AI systems requires different thinking. You can't test for "correct"—you test for <strong>"acceptable"</strong>, <strong>"not broken"</strong>, and <strong>"sensible"</strong>. This is a fundamental shift from traditional software testing.</p>
+        </div>
+    </section>
+
+    <!-- HOMEWORK: OLLAMA -->
+    <section id="homework">
+        <div class="section-number">HOMEWORK</div>
+        <h2>Run an LLM on your laptop</h2>
+
+        <p>In class you used cloud APIs (OpenAI, OpenRouter). For homework, you'll run a model <strong>locally</strong> on your own machine using <a href="https://ollama.com">Ollama</a>. No API key needed, no cost, no internet required once the model is downloaded.</p>
+
+        <div class="thesis-block">
+            <div class="label">Why this matters</div>
+            <p>Understanding local vs cloud inference is essential. Local models give you privacy, zero cost, and offline access — but with trade-offs in speed and capability. As a practitioner, you need to know both options.</p>
+        </div>
+
+        <h3>Step 1: Install Ollama</h3>
+
+        <p>Download and install from <a href="https://ollama.com/download">ollama.com/download</a>. It's available for macOS, Linux, and Windows.</p>
+
+        <pre><code class="language-bash"># macOS / Linux — or just download from the website
+curl -fsSL https://ollama.com/install.sh | sh</code></pre>
+
+        <p>Verify it's working:</p>
+
+        <pre><code class="language-bash">ollama --version</code></pre>
+
+        <h3>Step 2: Pull a model and chat</h3>
+
+        <p>Download a small model that runs well on most laptops (requires ~2 GB of disk and RAM):</p>
+
+        <pre><code class="language-bash"># Download the model (~2 GB)
+ollama pull llama3.2
+
+# Start chatting in the terminal
+ollama run llama3.2</code></pre>
+
+        <p>Try asking it the same question from class: <em>"Explain Software 3.0 in one sentence."</em></p>
+        <p>Type <code>/bye</code> to exit the chat.</p>
+
+        <div class="content-card">
+            <h4>Other models to try</h4>
+            <p>Browse the full catalog at <a href="https://ollama.com/library">ollama.com/library</a>. Some suggestions:</p>
+            <ul>
+                <li><strong>llama3.2</strong> (3B, ~2 GB) — good default, fast on most machines</li>
+                <li><strong>llama3.2:1b</strong> (1B, ~1.3 GB) — lighter, works on older hardware</li>
+                <li><strong>gemma3:4b</strong> (4B, ~3 GB) — Google's small model, good quality</li>
+                <li><strong>qwen3:4b</strong> (4B, ~2.6 GB) — another strong small model</li>
+            </ul>
+            <p>If your machine has 16+ GB RAM, you can try larger models like <code>llama3.3</code> (70B) or <code>gemma3:27b</code>.</p>
+        </div>
+
+        <h3>Step 3: Use the OpenAI SDK with Ollama</h3>
+
+        <p>Here's the key insight: <strong>Ollama exposes an OpenAI-compatible API</strong>. The same Python code you wrote in class works with local models — just change the <code>base_url</code>:</p>
+
+        <pre><code class="language-python">from openai import OpenAI
+
+# Point the SDK at your local Ollama server
+client = OpenAI(
+    base_url="http://localhost:11434/v1",
+    api_key="ollama",  # Required by the SDK, but Ollama ignores it
+)
+
+response = client.chat.completions.create(
+    model="llama3.2",
+    messages=[
+        {"role": "user", "content": "Explain Software 3.0 in one sentence."}
+    ],
+    temperature=0.7,
+)
+
+print(response.choices[0].message.content)</code></pre>
+
+        <p>The only differences from the cloud version: <code>base_url</code> points to localhost, and the <code>model</code> name matches what you pulled with Ollama.</p>
+
+        <h3>Step 4: Complete the notebook</h3>
+
+        <p>Open the homework notebook and work through the exercises:</p>
+
+        <pre><code class="language-bash">uv run jupyter lab labs/01_hello_world/homework_01_ollama.ipynb</code></pre>
+
+        <p>The notebook walks you through:</p>
+        <ol>
+            <li>Connecting to Ollama with the OpenAI SDK</li>
+            <li>Comparing cloud vs local responses (quality, speed)</li>
+            <li>Streaming from a local model</li>
+            <li>Trying different models and system prompts</li>
+        </ol>
+
+        <div class="thesis-block">
+            <div class="label">One SDK, three providers</div>
+            <p>You've now used the <code>openai</code> Python SDK with three different backends: OpenAI (cloud), OpenRouter (cloud, multi-provider), and Ollama (local). Same code, different <code>base_url</code>. This pattern — <strong>one interface, many backends</strong> — will keep coming back throughout the course.</p>
+        </div>
+    </section>
+
+    <!-- WHAT'S NEXT -->
+    <section id="whats-next">
+        <div class="section-number">WHAT'S NEXT</div>
+        <h2>From calls to conversations</h2>
+
+        <p>You've made four types of API calls. Each was <strong>stateless</strong>—the model has no memory of previous interactions. Every call starts fresh.</p>
+
+        <p>In the next lesson, we'll build <strong>agents</strong>: programs that maintain conversation history, make decisions, and use tools. The single API call becomes a building block in a larger loop.</p>
+
+        <h3>Exercises</h3>
+
+        <ol>
+            <li><strong>Temperature experiment:</strong> Modify <code>1_chat.py</code> to use temperature 0, then 1.5. Run each 3 times. How do the responses differ in consistency?</li>
+            <li><strong>Measure TTFT:</strong> In <code>2_streaming.py</code>, measure time-to-first-token vs total time. Print both. What's the ratio?</li>
+            <li><strong>Voice variations:</strong> Change the TTS voice in <code>3_voice.py</code>. Options: alloy, echo, fable, onyx, nova, shimmer. Which sounds most natural?</li>
+            <li><strong>Prompt revision:</strong> Generate images with "A cat" vs a 50-word detailed prompt. Compare DALL-E's revised prompts. When does it add more vs less?</li>
+            <li><strong>Test the tests:</strong> Run <code>test_exact_match_fails</code> 10 times. Does it always fail? Always pass? Sometimes both? What does this tell you?</li>
+        </ol>
+    </section>
+
+    <!-- REFERENCES -->
+    <section id="references">
+        <div class="section-number">REFERENCES</div>
+        <h2>API documentation & resources</h2>
+
+        <h3>OpenAI API reference</h3>
+        <ul>
+            <li><a href="https://platform.openai.com/docs/api-reference/chat/create">Chat Completions API</a> — the core text generation endpoint</li>
+            <li><a href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-stream">Streaming</a> — receive tokens as they're generated</li>
+            <li><a href="https://platform.openai.com/docs/api-reference/audio/createTranscription">Audio Transcription (Whisper)</a> — speech to text</li>
+            <li><a href="https://platform.openai.com/docs/api-reference/audio/createSpeech">Text-to-Speech</a> — text to audio</li>
+            <li><a href="https://platform.openai.com/docs/api-reference/images/create">Image Generation (DALL-E)</a> — text to image</li>
+            <li><a href="https://platform.openai.com/docs/models">Models overview</a> — available models and their capabilities</li>
+            <li><a href="https://openai.com/pricing">Pricing</a> — current API costs</li>
+        </ul>
+
+        <h3>Python SDK & tools</h3>
+        <ul>
+            <li><a href="https://github.com/openai/openai-python">openai-python</a> — official Python client library (works with OpenRouter too)</li>
+            <li><a href="https://pypi.org/project/python-dotenv/">python-dotenv</a> — load environment variables from .env files</li>
+            <li><a href="https://openrouter.ai/docs">OpenRouter</a> — unified API for multiple LLM providers</li>
+        </ul>
+
+        <h3>Background reading</h3>
+        <ul>
+            <li><a href="https://www.youtube.com/watch?v=7xTGNNLPyMI">1hr Intro to LLMs</a> — 1 year old and still very useful overview of how large language models work</li>
+            <li><a href="https://karpathy.medium.com/software-2-0-a26f6ef4538">Software 2.0</a> — Andrej Karpathy's original essay (Software 3.0 extends this)</li>
+            <li><a href="https://platform.openai.com/docs/guides/text-generation">OpenAI Text Generation Guide</a> — comprehensive guide to chat completions</li>
+        </ul>
+
+        <h3>Code for this lesson</h3>
+        <ul>
+            <li><a href="session1_demo.ipynb"><code>session1_demo.ipynb</code></a> — single notebook demo for class walkthrough</li>
+            <li><code>labs/01_hello_world/1_chat.py</code> — basic chat completion</li>
+            <li><code>labs/01_hello_world/2_streaming.py</code> — streaming responses</li>
+            <li><code>labs/01_hello_world/3_voice.py</code> — voice pipeline</li>
+            <li><code>labs/01_hello_world/4_image.py</code> — image generation</li>
+            <li><code>labs/tests/test_session1.py</code> — test suite demonstrating testing approaches</li>
+            <li><a href="session1_homework_ollama.ipynb"><code>session1_homework_ollama.ipynb</code></a> — homework: local LLM with Ollama</li>
+        </ul>
+    </section>
+
+</main>
+
+<footer>
+    L1: Hello Software 3.0 — AI Design Course, University of Trento
+    <br><span style="font-size: 0.85em;">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></span>
+</footer>
+
+<script>
+    hljs.highlightAll();
+
+    // Highlight current section in nav
+    const sections = document.querySelectorAll('section[id], .title-section');
+    const navLinks = document.querySelectorAll('nav a');
+
+    window.addEventListener('scroll', () => {
+        let current = 'intro';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (scrollY >= sectionTop - 200) {
+                current = section.getAttribute('id') || 'intro';
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

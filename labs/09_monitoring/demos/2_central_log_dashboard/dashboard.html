@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo 2 · Central log dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0E1726; --panel: #182436; --teal: #1C7293; --accent: #F4A261;
+    --text: #E8F1F5; --muted: #8A9BB5; --err: #E07A5F; --ok: #6B9080;
+    --grid: #22304688; --border: #2a3a55;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+  }
+  header { padding: 20px 32px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-weight: 500; font-size: 22px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .sub code { background: var(--panel); padding: 1px 6px; border-radius: 3px; font-size: 12px; }
+
+  .panels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 16px 32px; }
+  .panel { background: var(--panel); border-radius: 8px; padding: 16px; }
+  .panel h2 {
+    margin: 0 0 10px; font-size: 12px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+  }
+  .chart-wrap { position: relative; height: 240px; }
+
+  .searchbar { padding: 12px 32px 0; }
+  .searchbar input {
+    width: 100%; background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); padding: 10px 14px; border-radius: 6px;
+    font-family: "SF Mono", Consolas, monospace; font-size: 13px;
+  }
+  .searchbar input:focus { outline: none; border-color: var(--teal); }
+  .searchbar .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  .rows { padding: 12px 32px 32px; }
+  .count { color: var(--muted); font-size: 12px; padding: 8px 0; }
+  .count b { color: var(--text); }
+  table { width: 100%; border-collapse: collapse; font-family: "SF Mono", Consolas, monospace; font-size: 12px; }
+  th {
+    text-align: left; color: var(--muted); padding: 8px 6px;
+    border-bottom: 1px solid var(--border); font-weight: 500; text-transform: uppercase; letter-spacing: 1px; font-size: 11px;
+  }
+  td { padding: 6px; border-bottom: 1px solid #1e2a3e; }
+  tr.err td { color: var(--err); }
+  tr:hover td { background: #1e2a3e; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>tinysaas.example.com — <span>central log dashboard</span></h1>
+  <div class="sub">
+    RED panels over <code>logs.ndjson</code> · every chart is an aggregation of the same file,
+    bucketed at 5-minute intervals.
+  </div>
+</header>
+
+<div class="panels">
+  <div class="panel"><h2>Rate (req/min)</h2><div class="chart-wrap"><canvas id="rate"></canvas></div></div>
+  <div class="panel"><h2>Errors (% of requests)</h2><div class="chart-wrap"><canvas id="errors"></canvas></div></div>
+  <div class="panel"><h2>Latency (p50 solid · p95 dashed)</h2><div class="chart-wrap"><canvas id="latency"></canvas></div></div>
+</div>
+
+<div class="searchbar">
+  <input id="q" placeholder="search rows  —  try  500  or  /checkout  or  14:0">
+  <div class="hint">Substring match across every field. The table below shows the first 200 matches.</div>
+</div>
+
+<div class="rows">
+  <div class="count" id="count"></div>
+  <table>
+    <thead><tr>
+      <th>ts</th><th>method</th><th>endpoint</th><th>status</th><th>latency</th><th>user</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script src="logs.js"></script>
+<script>
+  // ---- Config -----------------------------------------------------------
+  const ENDPOINTS = ["/feed", "/login", "/checkout", "/profile"];
+  const COLORS = {
+    "/feed":     "#2E86AB",
+    "/login":    "#6B9080",
+    "/checkout": "#F4A261",
+    "/profile":  "#8A9BB5",
+  };
+  const BUCKET_MIN = 5;
+
+  // ---- Aggregation ------------------------------------------------------
+  // Every panel is computed here, over the raw rows. No aggregator service.
+  function minuteOfDay(ts) {
+    const [h, m] = ts.slice(11, 16).split(":").map(Number);
+    return h * 60 + m;
+  }
+  function bucketOf(ts) { return Math.floor(minuteOfDay(ts) / BUCKET_MIN) * BUCKET_MIN; }
+  function fmtMin(m) {
+    const h = String(Math.floor(m / 60)).padStart(2, "0");
+    const mm = String(m % 60).padStart(2, "0");
+    return `${h}:${mm}`;
+  }
+  function percentile(sortedAsc, p) {
+    if (sortedAsc.length === 0) return null;
+    const i = Math.min(sortedAsc.length - 1, Math.floor(p * sortedAsc.length));
+    return sortedAsc[i];
+  }
+
+  function aggregate(rows) {
+    const data = Object.fromEntries(ENDPOINTS.map(ep => [ep, {}]));
+    const bucketSet = new Set();
+    for (const r of rows) {
+      const b = bucketOf(r.ts);
+      bucketSet.add(b);
+      const d = data[r.endpoint][b] ||= { n: 0, e: 0, lat: [] };
+      d.n++;
+      if (r.status_code >= 500) d.e++;
+      d.lat.push(r.latency_ms);
+    }
+    // Pre-sort latencies once per bucket.
+    for (const ep of ENDPOINTS) {
+      for (const b in data[ep]) data[ep][b].lat.sort((a, b) => a - b);
+    }
+    return { buckets: [...bucketSet].sort((a, b) => a - b), data };
+  }
+
+  // ---- Chart helpers ----------------------------------------------------
+  const AXIS = { ticks: { color: "#8A9BB5", maxTicksLimit: 12 }, grid: { color: "#22304688" } };
+  const AXIS_Y_TITLE = (t) => ({ ...AXIS, title: { display: true, text: t, color: "#8A9BB5" } });
+  const LEGEND = { labels: { color: "#E8F1F5", boxWidth: 10, boxHeight: 10 } };
+
+  function rateChart(ctx, agg) {
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: agg.buckets.map(fmtMin),
+        datasets: ENDPOINTS.map(ep => ({
+          label: ep,
+          data: agg.buckets.map(b => (agg.data[ep][b]?.n || 0) / BUCKET_MIN),
+          borderColor: COLORS[ep],
+          backgroundColor: COLORS[ep] + "66",
+          fill: true, tension: 0.2, pointRadius: 0,
+        })),
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: { x: AXIS, y: { ...AXIS_Y_TITLE("req/min"), stacked: true } },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  function errorChart(ctx, agg) {
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: agg.buckets.map(fmtMin),
+        datasets: ENDPOINTS.map(ep => ({
+          label: ep,
+          data: agg.buckets.map(b => {
+            const d = agg.data[ep][b];
+            return d && d.n > 0 ? (d.e / d.n) * 100 : 0;
+          }),
+          borderColor: COLORS[ep], backgroundColor: "transparent",
+          tension: 0.2, pointRadius: 0,
+        })),
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: { x: AXIS, y: AXIS_Y_TITLE("% errors") },
+        plugins: { legend: LEGEND },
+      },
+    });
+  }
+
+  function latencyChart(ctx, agg) {
+    const datasets = [];
+    for (const ep of ENDPOINTS) {
+      datasets.push({
+        label: `${ep} p50`,
+        data: agg.buckets.map(b => agg.data[ep][b] ? percentile(agg.data[ep][b].lat, 0.50) : null),
+        borderColor: COLORS[ep], backgroundColor: "transparent",
+        tension: 0.2, pointRadius: 0,
+      });
+      datasets.push({
+        label: `${ep} p95`,
+        data: agg.buckets.map(b => agg.data[ep][b] ? percentile(agg.data[ep][b].lat, 0.95) : null),
+        borderColor: COLORS[ep], backgroundColor: "transparent",
+        borderDash: [4, 4], tension: 0.2, pointRadius: 0,
+      });
+    }
+    return new Chart(ctx, {
+      type: "line",
+      data: { labels: agg.buckets.map(fmtMin), datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        scales: { x: AXIS, y: { ...AXIS_Y_TITLE("ms (log)"), type: "logarithmic" } },
+        plugins: { legend: { ...LEGEND, labels: { ...LEGEND.labels, filter: (i) => i.text.endsWith("p95") || i.text.endsWith("p50") ? true : false } } },
+      },
+    });
+  }
+
+  // ---- Raw-rows table ---------------------------------------------------
+  function renderRows(rows, q) {
+    const tbody = document.getElementById("tbody");
+    const count = document.getElementById("count");
+    const needle = q.trim().toLowerCase();
+    const filtered = needle
+      ? rows.filter(r => JSON.stringify(r).toLowerCase().includes(needle))
+      : rows;
+    const total = filtered.length;
+    const shown = filtered.slice(0, 200);
+    count.innerHTML = needle
+      ? `<b>${total.toLocaleString()}</b> rows match <b>"${q}"</b>${total > 200 ? " (showing first 200)" : ""}`
+      : `<b>${total.toLocaleString()}</b> rows total (showing first 200)`;
+    tbody.innerHTML = shown.map(r => `
+      <tr class="${r.status_code >= 500 ? "err" : ""}">
+        <td>${r.ts.slice(11, 19)}</td>
+        <td>${r.method}</td>
+        <td>${r.endpoint}</td>
+        <td>${r.status_code}</td>
+        <td>${r.latency_ms}</td>
+        <td>${r.user_hash}</td>
+      </tr>
+    `).join("");
+  }
+
+  // ---- Go ---------------------------------------------------------------
+  const rows = window.__LOGS__;
+  if (!rows) {
+    document.body.innerHTML = `<pre style="padding:32px;color:#E07A5F">
+Could not load logs. Run <code>python gen_logs.py</code> in this folder first
+so that <code>logs.js</code> exists, then reload this page.
+</pre>`;
+  } else {
+    const agg = aggregate(rows);
+    rateChart(document.getElementById("rate"), agg);
+    errorChart(document.getElementById("errors"), agg);
+    latencyChart(document.getElementById("latency"), agg);
+
+    const input = document.getElementById("q");
+    input.addEventListener("input", () => renderRows(rows, input.value));
+    renderRows(rows, "");
+  }
+</script>
+
+</body>
+</html>

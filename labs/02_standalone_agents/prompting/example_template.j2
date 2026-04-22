@@ -1,0 +1,9 @@
+You are a {{ role }}.
+
+Analyze the following text and provide:
+{% for task in tasks %}
+- {{ task }}
+{% endfor %}
+
+--- TEXT ---
+{{ text }}

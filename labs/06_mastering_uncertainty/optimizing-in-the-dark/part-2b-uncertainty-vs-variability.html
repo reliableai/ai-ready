@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterating in the Dark - Part 2b: Uncertainty vs Variability</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        .series-title {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1em;
+            font-weight: 500;
+            color: #718096;
+            margin-bottom: 0.3em;
+            letter-spacing: 0.02em;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-top: 0.2em;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        img {
+            max-width: 90%;
+            height: auto;
+            margin: 2em auto;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        figure {
+            margin: 2em 0;
+            text-align: center;
+        }
+        figure img {
+            margin: 0 auto 0.8em;
+        }
+        figcaption {
+            font-size: 0.9em;
+            color: #718096;
+            font-style: italic;
+        }
+        blockquote {
+            border-left: 4px solid #38b2ac;
+            margin: 2em 0;
+            padding: 1em 1.5em;
+            color: #4a5568;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0;
+        }
+        blockquote p + p {
+            margin-top: 0.8em;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        sub {
+            font-size: 0.75em;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+        .tags code {
+            background: #e6fffa;
+            color: #234e52;
+            margin-right: 0.5em;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Uncertainty vs Variability</h1>
+<p class="series-title">Part 2b of <em>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</em></p>
+
+<p><em>When you see a range, what does it mean?</em></p>
+
+<p>&larr; <a href="./part-2-cost-of-ignorance.html">Part 2: The Cost of Ignorance</a> | <a href="./index.html">Series Index</a></p>
+
+<hr>
+
+<blockquote>
+<p><strong>Orientation.</strong> This section introduces a distinction used throughout the rest of the series: <em>variability</em> describes real differences in the world, while <em>uncertainty</em> describes limits in our measurement of a metric. Confusing the two leads to systematic evaluation errors.</p>
+</blockquote>
+
+<hr>
+
+<h2>The M×C Matrix: What You're Actually Optimizing</h2>
+
+<p>You have <strong>M agents</strong> (Incident Auto-Resolution, Incident Summarization, Knowledge Base Deduplication, Document Classification, ...) and you are considering deploying them across <strong>C customers</strong> (Customer A, Customer B, Customer C, ...) - or C domains, or C regions - whatever. Each cell in this matrix has a <em>value distribution</em>: V<sub>m,c</sub> - in other words, <em>each of these cell is a random variable</em>.</p>
+
+<figure>
+    <img src="./images/mxc-matrix.svg" alt="M×C Matrix showing value distributions across agents and customers" style="max-width: 100%; border: none; box-shadow: none;">
+</figure>
+
+<p><strong>The aggregates matter too:</strong> You can also consider what happens at the row and column level, that is, the value of one agent (across customers) of the value for a customer that implements some - or all - of the agents. Those are random variables, too. And you can think about statistics such as:</p>
+<ul>
+    <li><strong>Row totals</strong>: E[V<sub>m,*</sub>] = expected value of agent m across all customers, or, P(E[V<sub>m,*</sub>]>0) = probability that a customer will see a positive value from agent m.</li>
+    <li><strong>Column totals</strong>: E[V<sub>*,c</sub>] = expected value for customer c across all agents, or, P(E[V<sub>*,c</sub>]>0) = probability that a customer will see a positive value from the agents.</li>
+    <li><strong>Overall total</strong>: E[V] across all customers and agents.</li>
+</ul>
+
+<p>Each cell is <em>unknown</em>. We have <em>beliefs</em> about it, with varying degrees of uncertainty. It is very common to be uncertain about these distributions.</p>
+
+<p>What is important is 1. to be aware of what we are talking about when we are discussing a metric (which cell in this figure?) and 2. be aware that we are talking about estimation of random variables (sorry to keep insisting on this....)</p>
+
+<hr>
+
+<p>When you see distributions or "bars" around a value, you need to be sure you understand what they represent. And you want to make sure the presenter knows what they represent.</p>
+
+<p>If somebody says <em>"We expect our incident resolution agent to have a value/cost savings of $12 per run, plus or minus $4,"</em> <strong>you MUST ask what they mean</strong>.</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>What they might mean</th>
+            <th>Interpretation</th>
+            <th>Can we reduce it?</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Uncertainty</strong></td>
+            <td>"We believe the average is somewhere between $8 and $16, but we're not sure which"</td>
+            <td><strong>YES</strong> — better measurement narrows the range</td>
+        </tr>
+        <tr>
+            <td><strong>Variability</strong></td>
+            <td>"We're confident the average is $12, but some customers will be around $8, some other customers will see $16"</td>
+            <td><strong>NO</strong> — this is real-world difference, not measurement error</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>This distinction is fundamental:</p>
+
+<p><strong>Uncertainty</strong> is about our <em>knowledge</em>. It reflects the fact that we haven't measured enough, or our measurements are noisy, or our judges are inconsistent. Uncertainty can be reduced by:</p>
+<ul>
+    <li>Larger test sets</li>
+    <li>Better sampling</li>
+    <li>More consistent evaluation criteria</li>
+    <li>Multiple judges with adjudication</li>
+</ul>
+
+<p><strong>Variability</strong> is about different target customers or domains. It reflects the fact that different deployments of the same agent will have different data quality, different languages, different processes. Variability across customers (the fact that E[V<sub>m,c1</sub>] ≠ E[V<sub>m,c2</sub>]) cannot be reduced via better measurement. It can only be addressed via:</p>
+<ul>
+    <li>More adaptive agent implementations</li>
+    <li>Selective deployment (only deploy where E[V] > 0)</li>
+    <li>Better matching of agents to customer characteristics</li>
+</ul>
+
+<p><strong>This uncertainty is different</strong></p>
+
+<p>With measurement uncertainty, better evaluation narrows your range. You become more confident about the true E[V].</p>
+
+<p>With cross-customer variability:</p>
+<ul>
+    <li>Better measurement makes you <em>more confident about the variance</em> — you learn precisely how much performance differs across customers</li>
+    <li>But better measurement <em>doesn't reduce</em> the variance — it's real variability in the world, not measurement error</li>
+</ul>
+
+<p>If you evaluate on Customer C's data, you don't make the agent work better for Customer C. You just learn that it doesn't work well there.</p>
+
+<hr>
+
+<p><strong>What can you do to address variability?</strong></p>
+
+<ol>
+    <li><strong>Improve the system:</strong> Make the agent more robust to different data distributions. This actually reduces the variance.</li>
+    <li><strong>Deploy selectively:</strong> Learn which customers (or which data characteristics) predict success, and only deploy where you expect E[V] > 0.</li>
+    <li><strong>Set expectations:</strong> If you deploy broadly, communicate that results will vary. Some customers will see great results; some won't.</li>
+</ol>
+
+<p>The key point: this is not a measurement problem. It's a real-world variability problem. Recognizing the difference matters for deciding where to invest effort.
+So we will not be focusing on this variability.</p>
+
+<p>HOWEVER - remember that if you make changes and improve the agent for a customer, this does not mean other customers will see improvements - you may actually make things worse overall. It's obvious, but my experience is that this is part of the many obvious things that need to be said.</p>
+
+<hr>
+
+<p><em>Next: <a href="./part-3-value-of-better-measurement.html">Part 3: Better "Evals" Beats Better Dev</a> — The value of knowing what you're measuring</em></p>
+
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S14 — Safety, Security, and Guardrails — AI-Ready Engineers</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1><a href="../../index.html">AI-Ready Engineers</a></h1>
+    <nav>
+      <a href="../../index.html">Syllabus</a>
+      <a href="../../playground/index.html">Playground</a>
+      <a href="../../about.html">About</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="hero-meta"><span class="phase phase-3">Skillset 3</span> Building and Managing Complex Systems</p>
+    <h1>S14 — Safety, Security, and Guardrails</h1>
+    <p class="subtitle">End-to-end threat model for AI systems — content safety, system security, and operational guardrails that keep agents useful without letting them become liabilities.</p>
+  </section>
+
+  <section>
+    <h2>Learning objectives</h2>
+    <ul>
+      <li>Distinguish the three layers of AI safety: <em>content safety</em> (harmful, biased, or dangerously wrong outputs), <em>system security</em> (prompt injection, data exfiltration, tool abuse, supply-chain risk), and <em>operational guardrails</em> (rate limits, human-in-the-loop gates, blast-radius control, auditability)</li>
+      <li>Apply a threat model to an agentic system — what can a malicious input, a compromised tool, or a confused agent do, and which defenses are worth their cost</li>
+      <li>Implement practical defenses: input/output filters, tool allow-lists and scoping, sandboxing, approval gates for high-impact actions, anomaly detection and auditing</li>
+      <li>Red-team your own system: design attack scenarios, run them, and harden the system against what you find</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Page</h2>
+    <p>Folder: <a href="./">labs/13_safety/</a> <em>(to be populated)</em></p>
+  </section>
+
+  <section>
+    <h2>Slides</h2>
+    <p><em>TBD</em></p>
+  </section>
+
+  <section>
+    <h2>Resources</h2>
+    <ul>
+      <li>OWASP Top 10 for LLM Applications — canonical threat taxonomy for LLM-powered systems</li>
+      <li>Simon Willison's writeups on prompt injection and the "lethal trifecta" (private data + untrusted content + external communication channels)</li>
+      <li>Anthropic — Responsible Scaling Policy and agent-safety research</li>
+      <li>NIST AI Risk Management Framework (AI RMF) — for regulated/enterprise contexts</li>
+      <li><em>TBD — red-team scenario playbook and defense pattern catalogue</em></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Labs</h2>
+    <ul>
+      <li>Red-team lab: take the tool-using agent from S5, craft adversarial inputs to exfiltrate data, escalate tool access, or trigger a destructive action — then harden it and re-run the attacks</li>
+      <li>Guardrail integration lab: wrap an existing agent with an input filter, a tool allow-list, and an approval gate for high-impact actions; measure the cost (latency, false-positive rate) of each layer</li>
+      <li><em>TBD — notebooks and exercises</em></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Crosslinks</h2>
+    <p>Builds on <a href="../04_tool_calling/session5_index.html"><strong>S5</strong></a> (tool design), <a href="../09_monitoring/session6_index.html"><strong>S6</strong></a> (observability as a safety primitive), <a href="../10_complex_systems/3_architectures/session13_index.html"><strong>S13</strong></a> (reliable architectures). Feeds into <a href="../15_ai_as_user/session17_index.html"><strong>S17</strong></a> (when AI is the user — the adversary's view of the same interfaces).</p>
+  </section>
+</main>
+
+<footer>
+  <p>AI-Ready Engineers &middot; Spring 2026</p>
+  <p class="text-small">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></p>
+</footer>
+
+</body>
+</html>

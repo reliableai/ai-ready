@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L10: Putting It All Together</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../lecture-style.css">
+</head>
+<body>
+
+<nav>
+    <div class="logo">L10 Lab</div>
+    <ul>
+        <li><a href="#intro">Overview</a></li>
+        <li><a href="#task">The Task</a></li>
+        <li><a href="#parts">Parts 1-5</a></li>
+        <li><a href="#files">Files</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="intro">
+        <h1>Putting It All Together</h1>
+        <p class="subtitle">A Hands-On Evaluation Lab</p>
+    </div>
+
+    <blockquote>
+        "Wherever there is judgment, there is noise—and more of it than you think."<br>
+        — Daniel Kahneman, <em>Noise: A Flaw in Human Judgment</em>
+    </blockquote>
+
+    <!-- OVERVIEW -->
+    <section id="overview">
+        <h2>Overview</h2>
+
+        <p>You will build and evaluate a <strong>blog-ification agent</strong> — an LLM-powered system that transforms technical articles into accessible blog posts.</p>
+
+        <p>Sounds simple. But here's the catch: <strong>how do you know if your agent is any good?</strong></p>
+
+        <div class="thesis-block">
+            <div class="label">What You'll Discover</div>
+            <ul>
+                <li>Your evaluation criteria are more subjective than you thought</li>
+                <li>Your own judgments are noisier than you expected</li>
+                <li>"Improving" your system may be an illusion</li>
+            </ul>
+            <p>Welcome to the reality of evaluating AI systems.</p>
+        </div>
+
+        <h3>Learning Objectives</h3>
+        <ul>
+            <li>Design an LLM-based content transformation agent</li>
+            <li>Create an evaluation framework for subjective outputs</li>
+            <li>Quantify inter-rater reliability and self-consistency</li>
+            <li>Understand uncertainty in evaluation metrics</li>
+            <li>Experience the challenges of optimizing against noisy signals</li>
+        </ul>
+    </section>
+
+    <!-- THE TASK -->
+    <section id="task">
+        <div class="section-number">THE TASK</div>
+        <h2>What You'll Build</h2>
+
+        <div class="content-card">
+            <h4>Your Agent's Job</h4>
+            <p><strong>Given:</strong></p>
+            <ul>
+                <li>A <strong>source article</strong> (technical content)</li>
+                <li><strong>Blog guidelines</strong> (style, length, audience)</li>
+            </ul>
+            <p><strong>Produce:</strong></p>
+            <ul>
+                <li>A <strong>blog post</strong> that makes the content accessible</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Your Job</h4>
+            <ol>
+                <li><strong>Build</strong> the blog-ification agent</li>
+                <li><strong>Generate</strong> blog posts from provided articles</li>
+                <li><strong>Design</strong> an evaluation framework</li>
+                <li><strong>Rate</strong> outputs (yours and your peers')</li>
+                <li><strong>Analyze</strong> the results and reflect</li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- PARTS -->
+    <section id="parts">
+        <div class="section-number">THE WORK</div>
+        <h2>Lab Parts</h2>
+
+        <h3>Part 1: Build Your Agent (20 min)</h3>
+        <p>Design a prompt (or prompt chain) that transforms technical articles into blog posts.</p>
+        <p>Consider:</p>
+        <ul>
+            <li>Single prompt vs. multi-step (outline → draft → refine)?</li>
+            <li>What instructions help the LLM follow guidelines?</li>
+            <li>How do you handle long articles?</li>
+        </ul>
+        <p>Use the starter notebook (<code>notebook.ipynb</code>) and the provided articles.</p>
+        <p><strong>Deliverable</strong>: Your agent prompt(s) saved in the notebook.</p>
+
+        <div class="divider"></div>
+
+        <h3>Part 2: Generate Blogs (10 min)</h3>
+        <p>Run your agent on <strong>both provided articles</strong> using <strong>Guidelines V1</strong>.</p>
+        <p>Save your outputs — you'll need them for evaluation.</p>
+        <p><strong>Deliverable</strong>: 2 blog posts (one per article).</p>
+
+        <div class="divider"></div>
+
+        <h3>Part 3: Design Your Evaluation Framework (20 min)</h3>
+        <p>This is where it gets interesting. <strong>You</strong> decide what "good" means.</p>
+        <p>Design a rubric that answers: <em>How do I rate a blog post's quality?</em></p>
+
+        <p>Consider dimensions like:</p>
+        <ul>
+            <li><strong>Accuracy</strong>: Does it faithfully represent the source?</li>
+            <li><strong>Accessibility</strong>: Would a non-expert understand it?</li>
+            <li><strong>Engagement</strong>: Would someone want to read it?</li>
+            <li><strong>Guideline compliance</strong>: Does it follow the spec?</li>
+            <li><strong>Completeness</strong>: Are key points covered?</li>
+        </ul>
+
+        <div class="thesis-block">
+            <div class="label">Warning</div>
+            <p>There is no "correct" rubric. This is intentional.</p>
+        </div>
+
+        <p><strong>Deliverable</strong>: Your evaluation rubric (in the notebook or separate markdown).</p>
+
+        <div class="divider"></div>
+
+        <h3>Part 4: Rate Outputs (25 min)</h3>
+        <p>You will rate:</p>
+        <ul>
+            <li>Your own 2 blog posts</li>
+            <li>4 blog posts from peers (assigned via the submission form)</li>
+        </ul>
+
+        <p>For each blog:</p>
+        <ol>
+            <li>Apply your rubric</li>
+            <li>Assign scores for each dimension</li>
+            <li>Give an overall score (1-10)</li>
+            <li>Note your confidence (high/medium/low)</li>
+        </ol>
+
+        <p><strong>Submit your ratings via the Google Form</strong> (link provided by instructor).</p>
+
+        <div class="divider"></div>
+
+        <h3>Part 5: The Reveal (Next Session)</h3>
+        <p>In the next session, we'll analyze the class data together.</p>
+        <p><strong>Come prepared to be surprised.</strong></p>
+    </section>
+
+    <!-- FILES -->
+    <section id="files">
+        <div class="section-number">MATERIALS</div>
+        <h2>Files</h2>
+
+        <table>
+            <thead>
+                <tr><th>File</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><a href="notebook.ipynb"><code>notebook.ipynb</code></a></td><td>Starter code for your agent</td></tr>
+                <tr><td><a href="guidelines_v1.md"><code>guidelines_v1.md</code></a></td><td>Blog guidelines (version 1)</td></tr>
+                <tr><td><a href="guidelines_v2.md"><code>guidelines_v2.md</code></a></td><td>Blog guidelines (version 2) — used later</td></tr>
+                <tr><td><a href="articles/article_1.md"><code>articles/article_1.md</code></a></td><td>Source article 1</td></tr>
+                <tr><td><a href="articles/article_2.md"><code>articles/article_2.md</code></a></td><td>Source article 2</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Submission Checklist</h3>
+        <p>By end of session, submit via Google Form:</p>
+        <ul>
+            <li>Your agent prompt(s)</li>
+            <li>Your 2 generated blog posts</li>
+            <li>Your evaluation rubric</li>
+            <li>Your ratings (your blogs + 4 peer blogs)</li>
+        </ul>
+    </section>
+
+    <!-- HINTS -->
+    <section id="hints">
+        <h2>Hints</h2>
+
+        <div class="content-card">
+            <h4>On agent design</h4>
+            <ul>
+                <li>Start simple. A single well-crafted prompt often beats a complex chain.</li>
+                <li>Test with a short article first.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>On evaluation design</h4>
+            <ul>
+                <li>Fewer dimensions rated well > many dimensions rated sloppily</li>
+                <li>Write down your rubric <em>before</em> you start rating</li>
+                <li>Your rubric will feel insufficient. That's the point.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>On rating</h4>
+            <ul>
+                <li>Trust your gut on the first pass, then check against your rubric</li>
+                <li>Note when you feel uncertain — that's data too</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- REFLECTION -->
+    <section id="reflection">
+        <h2>Reflection Questions</h2>
+        <p>Start thinking about these for the next session:</p>
+        <ol>
+            <li>How much did your ratings vary from your peers' ratings on the same blog?</li>
+            <li>Would you rate your own outputs the same way tomorrow?</li>
+            <li>If you "improved" your agent to score higher on your rubric, would it actually be better?</li>
+            <li>What would it take to be <em>confident</em> that System A is better than System B?</li>
+        </ol>
+
+        <blockquote>
+            "The first principle is that you must not fool yourself—and you are the easiest person to fool."<br>
+            — Richard Feynman
+        </blockquote>
+    </section>
+
+</main>
+
+<footer>
+    L10: Putting It All Together — AI Design Course, University of Trento
+    <br><span style="font-size: 0.85em;">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></span>
+</footer>
+
+<script>
+    // Highlight current section in nav
+    const sections = document.querySelectorAll('section[id], .title-section');
+    const navLinks = document.querySelectorAll('nav a');
+
+    window.addEventListener('scroll', () => {
+        let current = 'intro';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (scrollY >= sectionTop - 200) {
+                current = section.getAttribute('id') || 'intro';
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

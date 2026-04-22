@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Design Space for AI+Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo">AI+Tools Design Space</div>
+    <ul>
+        <li><a href="#intro">Intro</a></li>
+        <li><a href="#describing">1. Describing</a></li>
+        <li><a href="#discovering">2. Discovering</a></li>
+        <li><a href="#invoking">3. Invoking</a></li>
+        <li><a href="#autonomy">4. Autonomy</a></li>
+        <li><a href="#testing">5. Testing</a></li>
+        <li><a href="#proliferation">6. Proliferation</a></li>
+        <li><a href="#mcp">9. MCP</a></li>
+        <li><a href="#conclusion">10. Conclusion</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="intro">
+        <h1>The Design Space for AI+Tools</h1>
+        <p class="subtitle">What abstractions do we need for AI agents to use tools?</p>
+    </div>
+
+    <!-- INTRO -->
+    <section>
+        <p>Before looking at what exists, let's ask: <strong>if we were designing the infrastructure for AI+tools from scratch, what abstractions would we need?</strong></p>
+
+        <p>One option is: nothing. And maybe that is where we will end: we have the web that works for human, why can't it work for agents?</p>
+
+        <p>This is the design space. Some of these problems are well-addressed today; others are wide open.</p>
+    </section>
+
+    <!-- SECTION 1 -->
+    <section id="describing">
+        <div class="section-number">01 / DESCRIBING TOOLS</div>
+        <h2>Describing tools</h2>
+
+        <p>The AI needs to know what tools exist and how to use them:</p>
+
+        <ul>
+            <li><strong>What the tool does</strong> — when to use it, when <em>not</em> to use it</li>
+            <li><strong>Input schema</strong> — parameters, types, constraints</li>
+            <li><strong>Output schema</strong> — what it returns</li>
+            <li><strong>Error conditions</strong> — what can go wrong</li>
+        </ul>
+
+        <p>This is analogous to the WSDL problem, but with a twist: the consumer is an AI that can tolerate imperfect descriptions. We don't need perfect machine-readable specs — we need <em>good enough</em> descriptions that an LLM can understand.</p>
+
+        <div class="content-card">
+            <h4>What exists</h4>
+            <p>JSON Schema for input/output. Docstrings. Tools like <a href="https://github.com/jlowin/fastmcp">FastMCP</a> that auto-generate schemas from Python.</p>
+            <h4>What's missing</h4>
+            <p>Standards for "when to use" vs "when not to use." Semantic versioning for tool behavior. Ways to express preconditions and side effects.</p>
+        </div>
+
+        <p><strong>Example — minimal vs better:</strong></p>
+
+        <pre><code class="language-python"># Minimal (LLM may guess wrong)
+@mcp.tool()
+def search_tickets(status: str, date: str) -> list[dict]:
+    """Search support tickets."""
+    ...</code></pre>
+
+        <pre><code class="language-python"># Better (explicit about formats, constraints, intent)
+@mcp.tool()
+def search_tickets(
+    status: Literal["open", "closed", "pending"],
+    created_after: str,
+    assignee: str | None = None,
+    limit: int = 50
+) -> list[dict]:
+    """Search support tickets in the helpdesk system.
+
+    Use this tool when the user asks about support tickets, customer issues,
+    or wants to find cases matching certain criteria. Do NOT use this for
+    searching knowledge base articles (use search_kb instead).
+
+    Args:
+        status: Filter by ticket status. Use "open" for active issues,
+                "closed" for resolved ones, "pending" for awaiting response.
+        created_after: ISO 8601 date (e.g., "2024-01-15"). Only returns
+                       tickets created on or after this date.
+        assignee: Email of the assigned agent. If None, returns tickets
+                  assigned to anyone. Use "unassigned" for tickets with
+                  no assignee.
+        limit: Maximum number of tickets to return (1-200). Default 50.
+
+    Returns:
+        List of ticket objects with id, subject, status, created_at, assignee.
+        Empty list if no matches found (not an error).
+    """
+    ...</code></pre>
+
+        <p>The key improvements:</p>
+        <ul>
+            <li><strong>Type hints with Literal</strong>: The LLM sees exactly which values are valid</li>
+            <li><strong>When to use (and when not to)</strong>: Prevents the LLM from picking the wrong tool</li>
+            <li><strong>Format examples</strong>: "ISO 8601 date (e.g., '2024-01-15')" removes ambiguity</li>
+            <li><strong>Edge cases explained</strong>: What does None mean? What does an empty result mean?</li>
+        </ul>
+
+        <p>This is documentation for a non-human reader. Write it like you're explaining to a capable but literal-minded colleague who has never seen your codebase.</p>
+    </section>
+
+    <!-- SECTION 2 -->
+    <section id="discovering">
+        <div class="section-number">02 / DISCOVERING TOOLS</div>
+        <h2>Discovering tools</h2>
+
+        <p>The AI needs to learn what tools are available. This requires:</p>
+
+        <ul>
+            <li><strong>Listing available tools</strong> — an endpoint or mechanism to enumerate tools</li>
+            <li><strong>Dynamic updates</strong> — if tools change, the AI should be notified</li>
+            <li><strong>Filtering/search</strong> — with many tools, the AI may need to search rather than list all</li>
+        </ul>
+
+        <p>This is analogous to the UDDI problem, but scoped differently. UDDI imagined global registries across organizations; for AI+tools, discovery is usually within a session or a configured set of servers.</p>
+
+        <div class="content-card">
+            <h4>What exists</h4>
+            <p>Protocol-level discovery (e.g., <code>tools/list</code> in MCP). Configuration files listing available tools.</p>
+            <h4>What's missing</h4>
+            <p>Semantic search over tools ("find me a tool that can send emails"). Hierarchical organization. Federation across tool providers.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 3 -->
+    <section id="invoking">
+        <div class="section-number">03 / INVOKING TOOLS</div>
+        <h2>Invoking tools (communication protocol)</h2>
+
+        <p>Once the AI decides to use a tool, how does the call happen?</p>
+
+        <ul>
+            <li><strong>Wire format</strong> — how is the request encoded? JSON? XML? Binary?</li>
+            <li><strong>Transport</strong> — HTTP? WebSockets? stdin/stdout for local tools?</li>
+            <li><strong>Synchronous vs streaming</strong> — does the tool return all at once or stream results?</li>
+            <li><strong>Error handling</strong> — how are errors communicated? Retries?</li>
+        </ul>
+
+        <p>This is analogous to SOAP, but much simpler. The modern answer is JSON over HTTP (or stdio for local tools), with JSON-RPC as a thin layer for request/response correlation.</p>
+
+        <p><strong>What exists:</strong> <a href="https://www.jsonrpc.org/specification">JSON-RPC 2.0</a> provides a minimal, transport-agnostic protocol:</p>
+
+        <pre><code class="language-json">// Request
+{"jsonrpc": "2.0", "method": "get_weather", "params": {"location": "NYC"}, "id": 1}
+
+// Response
+{"jsonrpc": "2.0", "result": {"temp": 72, "conditions": "sunny"}, "id": 1}</code></pre>
+
+        <div class="content-card">
+            <h4>What's missing</h4>
+            <p>Streaming is ad-hoc. Long-running operations need polling or callbacks. No standard for partial results.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 4 -->
+    <section id="autonomy">
+        <div class="section-number">04 / MANAGING AUTONOMY</div>
+        <h2>Managing autonomy</h2>
+
+        <p>This is <strong>new</strong> — we didn't have this problem with SOAP/WSDL because clients were deterministic. If you called a SOAP service, it did exactly what you programmed it to do.</p>
+
+        <p>AI clients are different: they interpret, reason, and sometimes surprise you. The question becomes: <strong>how much can the AI do without asking?</strong></p>
+
+        <div class="image-container">
+            <img src="figs/autonomy-spectrum.svg" alt="Autonomy spectrum">
+            <p class="caption">The autonomy slider — from full human control (approve every action) to full AI autonomy (AI acts freely). Most real systems live somewhere in the middle.</p>
+        </div>
+
+        <div class="ascii-diagram">Full human control                                    Full AI autonomy
+|-------------------------------------------------------|
+  Human approves       AI suggests,        AI acts,        AI acts
+  every action         human confirms      human can       freely
+                                           intervene</div>
+
+        <p>Where you land depends on:</p>
+        <ul>
+            <li><strong>Stakes</strong>: reading a file vs. sending an email vs. transferring money</li>
+            <li><strong>Reversibility</strong>: can you undo the action?</li>
+            <li><strong>Trust</strong>: how well-tested is the AI's judgment for this task?</li>
+            <li><strong>Context</strong>: is this a demo, a personal assistant, or a production system?</li>
+        </ul>
+
+        <h3>The "Click" problem</h3>
+
+        <p>Remember the movie <em><a href="https://en.wikipedia.org/wiki/Click_(2006_film)">Click</a></em> (2006) with Adam Sandler.</p>
+
+        <div class="image-container">
+            <img src="figs/click_film_poster.jpg" alt="Click (2006) movie poster" style="max-width: 200px;">
+            <p class="caption">Click (2006) — a cautionary tale about automation that learns your preferences.</p>
+        </div>
+
+        <p>In the film, Sandler's character gets a universal remote control that can fast-forward through boring parts of his life. Convenient! But the remote starts <em>learning</em> his preferences and auto-piloting his life — skipping arguments with his wife, fast-forwarding through his kids growing up, missing moments he would have wanted to experience.</p>
+
+        <p>This is a cautionary tale for AI autonomy:</p>
+        <ul>
+            <li><strong>Learning preferences is not the same as understanding intent.</strong> The remote learned "he skips arguments" but not "he values his family."</li>
+            <li><strong>Defaults compound.</strong> One shortcut becomes a pattern; a pattern becomes autopilot.</li>
+            <li><strong>You can't unlive skipped moments.</strong> Some actions are irreversible.</li>
+        </ul>
+
+        <p>When we design AI systems that "learn from user preferences" to reduce confirmation prompts, we risk building a Click remote.</p>
+
+        <div class="content-card">
+            <h4>What exists</h4>
+            <p>Guidelines like "human in the loop." Confirmation prompts. Allowlists/blocklists.</p>
+            <h4>What's missing</h4>
+            <p>Policy frameworks. Permission systems with fine-grained control. Audit infrastructure. Ways to express "the AI can do X but not Y" declaratively. Middleware that enforces autonomy policies.</p>
+        </div>
+
+        <h3>Patterns for managing autonomy</h3>
+        <ol>
+            <li><strong>Confirmation prompts</strong> — ask before executing</li>
+            <li><strong>Allowlists/blocklists</strong> — restrict which tools can be called</li>
+            <li><strong>Sandboxing</strong> — run tools in isolated environments</li>
+            <li><strong>Audit logging</strong> — record every invocation for review</li>
+            <li><strong>Rate limiting</strong> — prevent runaway AI</li>
+            <li><strong>Capability escalation</strong> — start limited, expand with trust</li>
+            <li><strong>Semantic guardrails</strong> — use another AI to review proposed actions</li>
+        </ol>
+    </section>
+
+    <!-- SECTION 5 -->
+    <section id="testing">
+        <div class="section-number">05 / TESTING</div>
+        <h2>Testing</h2>
+
+        <p>Testing is another area where <strong>we lack mature abstractions</strong>.</p>
+
+        <p>Traditional software testing has well-established patterns: unit tests, integration tests, end-to-end tests. For AI systems with tool access? We're mostly flying blind.</p>
+
+        <h3>What makes testing AI+tools hard?</h3>
+        <ol>
+            <li><strong>Non-determinism</strong>: The same input may produce different outputs.</li>
+            <li><strong>Combinatorial explosion</strong>: 20 tools × 5 parameters each = enormous test space.</li>
+            <li><strong>Context sensitivity</strong>: Behavior depends on conversation history, phrasing.</li>
+            <li><strong>Emergent behavior</strong>: The AI might use tools in unanticipated ways.</li>
+            <li><strong>No ground truth</strong>: For many tasks, there's no single "correct" answer.</li>
+        </ol>
+
+        <div class="content-card">
+            <h4>What exists</h4>
+            <p>Manual probing. Adversarial testing. Eval frameworks like <a href="https://github.com/promptfoo/promptfoo">promptfoo</a>, <a href="https://www.braintrust.dev/">Braintrust</a>.</p>
+            <h4>What's missing</h4>
+            <ul>
+                <li><strong>Behavioral specifications</strong>: "the AI should never call <code>delete_file</code> without confirmation"</li>
+                <li><strong>Coverage metrics</strong>: Did we exercise all tools? All parameter combinations?</li>
+                <li><strong>Regression detection</strong>: Did this prompt change cause different behavior?</li>
+                <li><strong>Simulation environments</strong>: Mock tools that look real but aren't</li>
+                <li><strong>Middleware for test harnesses</strong>: Intercept calls, inject failures, record/replay</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- SECTION 6 -->
+    <section id="proliferation">
+        <div class="section-number">06 / TOOL PROLIFERATION</div>
+        <h2>Tool proliferation</h2>
+
+        <p>If you expose 500 tools to an LLM, it will struggle. Context windows are finite, and more tools mean more tokens spent on descriptions rather than reasoning.</p>
+
+        <div class="content-card">
+            <h4>What exists</h4>
+            <p>Flat tool lists. Manual curation.</p>
+            <h4>What's missing</h4>
+            <ul>
+                <li><strong>Hierarchical organization</strong>: Group tools into categories</li>
+                <li><strong>Dynamic loading</strong>: Only expose tools relevant to the current task</li>
+                <li><strong>Semantic search</strong>: Let the AI search for tools by description</li>
+                <li><strong>Agent delegation</strong>: Instead of one agent with 500 tools, have specialized agents</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- SECTION 7 -->
+    <section id="other-gaps">
+        <div class="section-number">07 / OTHER GAPS</div>
+        <h2>Other gaps</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Area</th>
+                    <th>What we have</th>
+                    <th>What we need</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Observability</strong></td>
+                    <td>Basic logging</td>
+                    <td>Standardized traces, anomaly detection, cost attribution</td>
+                </tr>
+                <tr>
+                    <td><strong>Security</strong></td>
+                    <td>Transport-level auth</td>
+                    <td>Fine-grained permissions, prompt injection defense</td>
+                </tr>
+                <tr>
+                    <td><strong>Versioning</strong></td>
+                    <td>Nothing standard</td>
+                    <td>Tool version negotiation, deprecation policies</td>
+                </tr>
+                <tr>
+                    <td><strong>Streaming</strong></td>
+                    <td>Ad-hoc implementations</td>
+                    <td>Standard protocol for partial results</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- SECTION 8 -->
+    <section id="summary">
+        <div class="section-number">08 / SUMMARY</div>
+        <h2>Summary: the design space</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Need</th>
+                    <th>Analogous to</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Describing tools</td>
+                    <td>WSDL</td>
+                    <td>Partially solved (JSON Schema + natural language)</td>
+                </tr>
+                <tr>
+                    <td>Discovering tools</td>
+                    <td>UDDI</td>
+                    <td>Partially solved (protocol-level listing)</td>
+                </tr>
+                <tr>
+                    <td>Invoking tools</td>
+                    <td>SOAP</td>
+                    <td>Mostly solved (JSON-RPC over HTTP/stdio)</td>
+                </tr>
+                <tr>
+                    <td>Managing autonomy</td>
+                    <td><em>New</em></td>
+                    <td><strong>Wide open</strong></td>
+                </tr>
+                <tr>
+                    <td>Testing</td>
+                    <td><em>New</em></td>
+                    <td><strong>Wide open</strong></td>
+                </tr>
+                <tr>
+                    <td>Tool proliferation</td>
+                    <td><em>New</em></td>
+                    <td><strong>Wide open</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="thesis-block">
+            <div class="label">Key Insight</div>
+            <p>The first three are the "classic" problems from the services era — and they're reasonably well-addressed today, though not perfectly.</p>
+            <p>The last three are <strong>genuinely new</strong> problems introduced by AI clients. This is where we need more experience, more abstractions, and eventually middleware.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 9 -->
+    <section id="mcp">
+        <div class="section-number">09 / WHAT EXISTS TODAY</div>
+        <h2>What exists today: MCP as an example</h2>
+
+        <p>The <strong>Model Context Protocol (MCP)</strong> is one attempt to standardize some of these needs. It's worth understanding what MCP covers and what it doesn't.</p>
+
+        <p>MCP is developed by Anthropic and is designed for AI hosts (like Claude) to interact with external tools and data sources.</p>
+
+        <h3>9.1 What MCP standardizes</h3>
+
+        <p><strong>Describing tools</strong> — Tools are described with JSON Schema for inputs, plus natural language descriptions:</p>
+
+        <pre><code class="language-json">{
+  "name": "get_weather",
+  "description": "Get current weather information for a location",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "location": {"type": "string", "description": "City name or zip code"}
+    },
+    "required": ["location"]
+  }
+}</code></pre>
+
+        <p><strong>Discovering tools</strong> — Clients can call <code>tools/list</code> to enumerate available tools:</p>
+
+        <pre><code class="language-json">// Request
+{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+
+// Response
+{"jsonrpc": "2.0", "id": 1, "result": {"tools": [...]}}</code></pre>
+
+        <p><strong>Invoking tools</strong> — Clients call <code>tools/call</code> with the tool name and arguments:</p>
+
+        <pre><code class="language-json">// Request
+{"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+ "params": {"name": "get_weather", "arguments": {"location": "NYC"}}}
+
+// Response
+{"jsonrpc": "2.0", "id": 2, "result": {"content": [{"type": "text", "text": "72°F, sunny"}]}}</code></pre>
+
+        <p><strong>Lifecycle</strong> — MCP defines initialization, capability negotiation, and notifications (e.g., <code>tools/list_changed</code>).</p>
+
+        <p><strong>Transport</strong> — MCP works over stdio (for local tools) or HTTP with Server-Sent Events (for remote tools).</p>
+
+        <div class="image-container">
+            <img src="figs/message-flow-diagram.svg" alt="MCP message flow: Discovery, Tool Selection, Invocation, Updates">
+            <p class="caption">MCP message flow — the client discovers tools from the server, the LLM selects which tool to use, the client invokes it, and the server can notify of changes.</p>
+        </div>
+
+        <h3>9.2 What MCP doesn't standardize</h3>
+
+        <p>MCP is a <strong>wire protocol</strong>. It tells you how to describe, discover, and invoke tools. It does <em>not</em> tell you:</p>
+
+        <ul>
+            <li><strong>Autonomy policies</strong>: Who can call what? When should the user be asked?</li>
+            <li><strong>Testing infrastructure</strong>: How do you test AI+tool behavior?</li>
+            <li><strong>Tool proliferation</strong>: How do you organize 500 tools?</li>
+            <li><strong>Observability</strong>: How do you trace and debug tool invocations?</li>
+            <li><strong>Fine-grained security</strong>: Beyond transport-level auth</li>
+        </ul>
+
+        <div class="thesis-block">
+            <p>MCP gives you the primitives; <strong>you build the governance layer</strong>.</p>
+        </div>
+
+        <h3>9.3 MCP vs REST APIs</h3>
+
+        <p>You should still expose REST APIs. MCP doesn't replace them.</p>
+
+        <p>Think of it as layers:</p>
+        <ol>
+            <li><strong>Core APIs</strong> (REST/SDK) are the stable foundation for all clients</li>
+            <li><strong>MCP</strong> is an additional surface optimized for AI hosts</li>
+        </ol>
+
+        <p>An MCP server usually <em>wraps</em> existing REST APIs — it's a different contract, optimized for AI consumption.</p>
+
+        <h3>9.4 When to use MCP</h3>
+
+        <p>MCP helps most when:</p>
+        <ul>
+            <li>Many AI hosts need the same capabilities</li>
+            <li>You want consistent tool schemas across ecosystems</li>
+            <li>You want discoverability and standard invocation semantics</li>
+        </ul>
+
+        <p>A plain API wrapper is often enough when:</p>
+        <ul>
+            <li>You control both the host and the service</li>
+            <li>The integration is unique to one system</li>
+            <li>You're still iterating on the product boundary</li>
+        </ul>
+
+        <blockquote>
+            Rule of thumb: Build on APIs for stability; add MCP for AI interoperability.
+        </blockquote>
+
+        <h3>9.5 Other resources</h3>
+
+        <ul>
+            <li><a href="https://modelcontextprotocol.io/">MCP Specification</a></li>
+            <li><a href="https://github.com/jlowin/fastmcp">FastMCP</a> — Python library for building MCP servers</li>
+            <li><a href="https://www.jsonrpc.org/specification">JSON-RPC 2.0 Specification</a></li>
+        </ul>
+    </section>
+
+    <!-- SECTION 10 -->
+    <section id="conclusion">
+        <div class="section-number">10 / CONCLUSION</div>
+        <h2>Conclusion: where we are</h2>
+
+        <p>We've come full circle from the services era:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Era</th>
+                    <th>Problem</th>
+                    <th>Solution attempted</th>
+                    <th>Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2000s</td>
+                    <td>Machine-to-machine services</td>
+                    <td>SOAP/WSDL/UDDI</td>
+                    <td>Failed (too complex)</td>
+                </tr>
+                <tr>
+                    <td>2010s</td>
+                    <td>API integration</td>
+                    <td>REST + documentation</td>
+                    <td>Succeeded (good enough)</td>
+                </tr>
+                <tr>
+                    <td>2020s</td>
+                    <td>AI+tools</td>
+                    <td>MCP + ???</td>
+                    <td>In progress</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>The "classic" problems (description, discovery, invocation) are reasonably solved. MCP and similar protocols address them adequately.</p>
+
+        <p>The <strong>new</strong> problems (autonomy, testing, tool proliferation) are wide open. This is where the next generation of infrastructure will emerge.</p>
+
+        <div class="content-card">
+            <h4>For now</h4>
+            <ul>
+                <li>Use MCP (or similar) for the wire protocol</li>
+                <li>Build custom solutions for autonomy, testing, observability</li>
+                <li>Design for replaceability — your solutions will be superseded</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">The Lesson from History</div>
+            <p><strong>Standards succeed when they reduce friction, not when they maximize expressiveness.</strong> Whatever emerges for autonomy and testing will need to be simple enough for average developers to adopt.</p>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    The Design Space for AI+Tools — AI Design Course, University of Trento
+    <br><span style="font-size: 0.85em;">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></span>
+</footer>
+
+<script>
+    hljs.highlightAll();
+
+    // Highlight current section in nav
+    const sections = document.querySelectorAll('section[id], .title-section');
+    const navLinks = document.querySelectorAll('nav a');
+
+    window.addEventListener('scroll', () => {
+        let current = 'intro';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (scrollY >= sectionTop - 200) {
+                current = section.getAttribute('id') || 'intro';
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

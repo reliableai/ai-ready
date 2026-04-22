@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotes from the Field</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-bottom: 0.5em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        .subtitle {
+            font-style: italic;
+            color: #718096;
+            margin-bottom: 2em;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        .quote-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #d97706;
+            border-radius: 0 12px 12px 0;
+            padding: 1.2em 1.5em;
+            margin: 2em 0;
+        }
+        .quote-card h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: #92400e;
+            margin: 0 0 0.8em 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .quote-card p {
+            margin: 0.8em 0;
+            color: #78350f;
+        }
+        .quote-card ul {
+            margin: 0.6em 0;
+            padding-left: 1.4em;
+            color: #78350f;
+        }
+        .quote-card li {
+            margin: 0.3em 0;
+        }
+        .quote-card .attribution {
+            font-style: italic;
+            font-size: 0.9em;
+            margin-top: 1em;
+            color: #a16207;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+    </style>
+</head>
+<body>
+<h1>Quotes from the Field</h1>
+<p class="subtitle">Observations and insights from practitioners building AI systems</p>
+
+<hr />
+
+<div class="quote-card">
+    <h3>What Happens When Eval Goes Wrong</h3>
+    <p>The measurement uncertainty described here becomes organizational damage through a predictable cascade:</p>
+    <ul>
+        <li><strong>Week 2:</strong> First consequential failure from untested edge cases causes stakeholder trust cliff.</li>
+        <li><strong>Week 4:</strong> Teams discover in production what should have been found in evaluation, requiring costly architectural rework.</li>
+        <li><strong>Week 12:</strong> Pilot purgatory — systems stuck in post-production validation loops because evaluation frameworks never measured what production demands.</li>
+    </ul>
+    <p>The pattern repeats: agentic AI pilots that "succeed" in curated evaluation fail within weeks of production deployment. This isn't unpredictable chaos; it's a systematic failure with recognizable timelines.</p>
+    <p class="attribution">— From a conversation with Filip Deryckere</p>
+</div>
+
+<hr />
+
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+</body>
+</html>

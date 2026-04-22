@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterating in the Dark - Part 3b: From Value to Scorecards: Enabling Effective Dev Iterations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 750px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        .series-title {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1em;
+            font-weight: 500;
+            color: #718096;
+            margin-bottom: 0.3em;
+            letter-spacing: 0.02em;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-top: 0.2em;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        img {
+            max-width: 85%;
+            height: auto;
+            margin: 2em auto;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        figure {
+            margin: 2em 0;
+            text-align: center;
+        }
+        figure img {
+            margin: 0 auto 0.8em;
+        }
+        figcaption {
+            font-size: 0.9em;
+            color: #718096;
+            font-style: italic;
+        }
+        blockquote {
+            border-left: 4px solid #38b2ac;
+            margin: 2em 0;
+            padding: 1em 1.5em;
+            color: #4a5568;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 12px 14px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        .question-list {
+            background: #f0fff4;
+            border-radius: 8px;
+            padding: 1.2em 1.5em;
+            margin: 1.5em 0;
+        }
+        .question-list ol {
+            margin: 0;
+        }
+        .question-list li {
+            margin: 0.8em 0;
+        }
+        sub {
+            font-size: 0.75em;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+        .tags code {
+            background: #e6fffa;
+            color: #234e52;
+            margin-right: 0.5em;
+        }
+    </style>
+</head>
+<body>
+
+<h1>From Value to Scorecards: Enabling Effective Dev Iterations</h1>
+<p class="series-title">Part 3b of <em>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</em></p>
+
+<p><em>Knowing where to improve</em></p>
+
+<p>&larr; <a href="./part-3-value-of-better-measurement.html">Part 3: Better "Evals" Beats Better Dev</a> | <a href="./index.html">Series Index</a></p>
+
+<hr>
+
+<h2>From Value to Scorecard: Knowing Where to Improve</h2>
+
+<p>So far we've talked about V (value) as a single number. But in practice, value is composed of multiple factors.</p>
+
+<p>Think back to the loss profile from Part 1:</p>
+
+<figure>
+    <img src="./images/loss_flat.png" alt="Loss profile optimization landscape" style="max-width: 70%;">
+    <figcaption>The loss landscape has many dimensions—each representing a different quality axis</figcaption>
+</figure>
+
+<p>This multi-dimensional surface maps to a <em>scorecard</em>—a breakdown of value into measurable components:</p>
+
+<ul>
+    <li><strong>Latency</strong>: How fast does the agent respond?</li>
+    <li><strong>"Precision"</strong>: Does it get provide useful suggestions?</li>
+    <li><strong>Fluency (German)</strong>: How natural is the German output?</li>
+    <li><strong>Fluency (English)</strong>: How natural is the English output?</li>
+    <li><strong>"Recall"</strong>: Does it uncover all relevant suggestions?</li>
+    <li><strong>Safety</strong>: Does it avoid harmful outputs?</li>
+    <li><strong>Cost</strong>: How much does it cost to run?</li>
+</ul>
+
+<p>Each dimension is an axis along which we can improve. And critically, <strong>if we can measure these dimensions reliably, we know where to focus engineering effort</strong>.</p>
+
+<p>This is the second way better eval leads to better quality: not just through better deployment decisions, but through <strong>directed improvement</strong>.</p>
+
+<p>Consider two scenarios:</p>
+
+<p><strong>Scenario A: Poor scorecard measurement</strong></p>
+<ul>
+    <li>You know the agent is "not great" but not why</li>
+    <li>Engineers try random improvements</li>
+    <li>Some work, some don't, you're not sure which</li>
+    <li>Progress is slow and uncertain</li>
+</ul>
+
+<p><strong>Scenario B: Good scorecard measurement</strong></p>
+<ul>
+    <li>You know German fluency is at 65%, English at 92%, accuracy at 88%</li>
+    <li>Engineers focus specifically on German fluency</li>
+    <li>You can measure whether each change helps</li>
+    <li>Progress is fast and directed</li>
+</ul>
+
+<p>Conversely, if we cannot measure scorecard metrics properly, we cannot understand where to act. We're flying blind—iterating toward a random target, as we discussed in Part 1.</p>
+
+<hr>
+
+<p>And yes, you guessed it - every dimension, every metric is a random variable, just like our "value".</p>
+
+<hr>
+
+<h2>Finding What Matters: Correlation as a Shortcut</h2>
+
+<p>Sometimes it's hard to come up with a good scorecard from first principles. What dimensions actually matter to customers? Is latency more important than fluency? Does accuracy matter more than compliance?
+There's an empirical shortcut:</p>
+
+<ol>
+    <li><strong>Build a rich scorecard</strong> — many dimensions, even speculative ones</li>
+    <li><strong>Measure actual value</strong> — ask customers directly, or observe outcomes (adoption, complaints, escalations)--> this is easier than you think, just try</li>
+    <li><strong>Identify correlations</strong> — which scorecard dimensions predict customer value?</li>
+    <li><strong>Focus on what matters</strong> — now you know which aspects of the scorecard are useful and which are secondary</li>
+</ol>
+
+<p><strong>This is extremely powerful.</strong> You don't necessarily need to know in advance exactly what matters. You can discover it empirically.
+And you don't need a lot of data to begin to see patterns. it just takes a study and sit down with some design partners or customers.</p>
+
+<p>For example, you might hypothesize that latency matters a lot. But after measuring, you discover that customers don't complain about latency until it exceeds 5 seconds—below that, they don't notice. Meanwhile, every 10% improvement in German fluency correlates with a 15% increase in adoption among German-speaking users.</p>
+
+<p>Now you know: optimize German fluency, not latency. Without the correlation analysis, you might have spent months shaving milliseconds off response time while the real problem went unaddressed.
+You dont need a thousands data points for this - after a few dozens you'll start having a good insight on where to focus.</p>
+
+<hr>
+
+<p><em>Next: <a href="./part-4-sources-of-error.html">Part 4: Where and Why "Eval" Goes Wrong</a> — Where evaluation uncertainty comes from</em></p>
+
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+</body>
+</html>

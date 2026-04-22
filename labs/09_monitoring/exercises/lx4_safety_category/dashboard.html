@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LX-4 · Guardrail dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0E1726; --panel: #182436; --teal: #1C7293; --accent: #F4A261;
+    --text: #E8F1F5; --muted: #8A9BB5; --err: #E07A5F; --ok: #6B9080;
+    --amber: #E0A458; --grid: #22304688; --border: #2a3a55;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px; }
+  header { padding: 20px 32px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-weight: 500; font-size: 22px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .sub code { background: var(--panel); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px 32px; }
+  .panel { background: var(--panel); border-radius: 8px; padding: 18px; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel h2 { margin: 0 0 4px; font-size: 12px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .panel .note { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+  .chart-wrap { position: relative; height: 280px; }
+
+  .kpi { display: flex; gap: 14px; padding: 0 32px; }
+  .kpi > div { background: var(--panel); border-radius: 8px; padding: 12px 18px;
+    border-left: 3px solid var(--teal); flex: 1; }
+  .kpi .lbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .kpi .val { font-size: 20px; font-weight: 500; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LX-4 · <span>Guardrail dashboard</span></h1>
+  <div class="sub">
+    Reads <code>llm_calls.ndjson</code> produced by <code>starter.py</code>.
+    The <b>outcome-mix</b> panel shows the overall rate of each outcome.
+    The <b>guardrail trips per day</b> panel is where your new category
+    should appear — see the <code>TODO</code> in this file's script.
+  </div>
+</header>
+
+<div class="kpi" id="kpi"></div>
+
+<div class="panels">
+  <div class="panel">
+    <h2>Outcome mix — last 14 days</h2>
+    <div class="note">Counts by <code>outcome</code>. Your new category adds a slice here.</div>
+    <div class="chart-wrap"><canvas id="mix"></canvas></div>
+  </div>
+
+  <div class="panel wide">
+    <h2>Guardrail trips per day</h2>
+    <div class="note">
+      Stacked bars: one colour per guardrail outcome. Baseline is the
+      existing PII trips. After you wire up <code>check_medical_advice</code>
+      the red-ish bars should appear on days 8+, with a clear lift on
+      day 12 when the parenting-forum link drops.
+    </div>
+    <div class="chart-wrap"><canvas id="trips"></canvas></div>
+  </div>
+</div>
+
+<script src="calls.js"></script>
+<script>
+  const DATA = window.__CALLS__;
+  if (!DATA) {
+    document.body.innerHTML = `<pre style="padding:32px;color:#E07A5F">
+Could not load calls.js. Run:  python starter.py
+</pre>`;
+    throw new Error("no data");
+  }
+
+  const PALETTE = {
+    text: "#E8F1F5", muted: "#8A9BB5", teal: "#1C7293", accent: "#F4A261",
+    ok: "#6B9080", err: "#E07A5F", amber: "#E0A458", grid: "#22304688",
+    // A new colour for the new category. Feel free to pick another one.
+    med: "#B5838D",
+  };
+  const AXIS = { ticks: { color: PALETTE.muted }, grid: { color: PALETTE.grid } };
+  const LEGEND = { labels: { color: PALETTE.text, boxWidth: 10, boxHeight: 10 } };
+
+  const WINDOW_START = new Date(Math.min(...DATA.map(r => new Date(r.ts).getTime())));
+  const dayOf = ts => Math.floor((new Date(ts) - WINDOW_START) / 86400000);
+
+  // -------- KPIs --------
+  const by = {};
+  for (const r of DATA) by[r.outcome] = (by[r.outcome] ?? 0) + 1;
+  const kpiEl = document.getElementById("kpi");
+  const kpis = [
+    ["total calls", DATA.length.toLocaleString()],
+    ["ok",          (by.ok ?? 0).toLocaleString()],
+    ["blocked_pii", (by.blocked_pii ?? 0).toLocaleString()],
+    // TODO (optional): add a KPI tile for your new category.
+  ];
+  for (const [lbl, val] of kpis) {
+    const d = document.createElement("div");
+    d.innerHTML = `<div class="lbl">${lbl}</div><div class="val">${val}</div>`;
+    kpiEl.appendChild(d);
+  }
+
+  // -------- Panel 1: outcome mix (doughnut) --------
+  const mixLabels = Object.keys(by);
+  const mixData   = mixLabels.map(k => by[k]);
+  const MIX_COLORS = {
+    "ok":                      PALETTE.ok,
+    "schema_fail":             PALETTE.err,
+    "timeout":                 PALETTE.amber,
+    "blocked_pii":             PALETTE.accent,
+    "blocked_toxic":           "#8E5D56",
+    // New outcomes fall through to grey. If you want your new category
+    // to have a distinct colour in the doughnut, add it here.
+  };
+  new Chart(document.getElementById("mix"), {
+    type: "doughnut",
+    data: {
+      labels: mixLabels,
+      datasets: [{ data: mixData,
+        backgroundColor: mixLabels.map(k => MIX_COLORS[k] ?? "#555"),
+        borderColor: PALETTE.grid, borderWidth: 2 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { ...LEGEND, position: "right" } },
+    },
+  });
+
+  // -------- Panel 2: trips per day --------
+  const TRIP_OUTCOMES = [
+    "blocked_pii",
+    "blocked_toxic",
+    // TODO: add "blocked_medical_advice" here so it shows up as a
+    // new stacked bar. (Then run `python starter.py` again and refresh
+    // this page.)
+  ];
+  const TRIP_COLOR = {
+    "blocked_pii":            PALETTE.accent,
+    "blocked_toxic":          "#8E5D56",
+    // Add an entry for your new category. Defaults to grey otherwise.
+  };
+  const byDay = Array.from({length: 14}, () =>
+    Object.fromEntries(TRIP_OUTCOMES.map(o => [o, 0]))
+  );
+  for (const r of DATA) {
+    const d = dayOf(r.ts);
+    if (d < 0 || d >= 14) continue;
+    if (TRIP_OUTCOMES.includes(r.outcome)) byDay[d][r.outcome]++;
+  }
+  const labels = byDay.map((_, i) => "d" + i);
+  new Chart(document.getElementById("trips"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: TRIP_OUTCOMES.map(o => ({
+        label: o,
+        data: byDay.map(b => b[o]),
+        backgroundColor: TRIP_COLOR[o] ?? "#555",
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      scales: { x: { ...AXIS, stacked: true },
+                y: { ...AXIS, stacked: true, beginAtZero: true,
+                     title: { display: true, text: "trips", color: PALETTE.muted } } },
+      plugins: { legend: LEGEND },
+    },
+  });
+</script>
+</body>
+</html>

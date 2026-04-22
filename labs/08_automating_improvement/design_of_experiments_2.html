@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L9: Designing Experiments and Mastering Uncertainty &mdash; Part II</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../lecture-style.css">
+</head>
+<body>
+
+<nav>
+  <div class="logo"><a href="../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L9: Designing Experiments and Mastering Uncertainty &mdash; Part II</div>
+</nav>
+
+<main>
+
+  <div class="title-section" id="intro">
+    <h1>Designing Experiments and Mastering Uncertainty &mdash; Part II</h1>
+    <p class="subtitle">Estimators, the Central Limit Theorem, and bootstrapping</p>
+  </div>
+
+  <div class="thesis-block">
+    <div class="label">Guiding principles</div>
+    <p>"Any measurement, without knowledge of the uncertainty, is meaningless." &mdash; Walter Lewin, MIT</p>
+    <p>"Those who are able to represent what they do not know make better decisions." &mdash; Chris Piech, CS109 class at Stanford</p>
+  </div>
+
+  <section id="topics">
+    <div class="section-number">TOPICS</div>
+    <h2>The Series (continued)</h2>
+
+    <div class="content-card">
+      <h4>4 &mdash; Random Variables for Random Variables</h4>
+      <p>Distributions of estimators. The Beta distribution as a tool for modeling uncertainty about probabilities. How to assess an AI system and reason about the uncertainty in your measurements. Updating beliefs with data and credible intervals.</p>
+    </div>
+
+    <div class="content-card">
+      <h4>5 &mdash; Adding Random Variables</h4>
+      <p>Combining independent random variables. The Central Limit Theorem and why sums of random variables tend toward the normal distribution. Practical consequences for AI evaluation.</p>
+    </div>
+
+    <div class="content-card">
+      <h4>6 &mdash; Bootstrapping</h4>
+      <p>Bootstrapping methods for practical uncertainty estimation. Building sampling distributions from a single dataset, computing confidence intervals, and comparing systems without parametric assumptions.</p>
+    </div>
+  </section>
+
+  <section id="playgrounds">
+    <div class="section-number">PLAYGROUNDS</div>
+    <h2>Interactive Tools</h2>
+
+    <div class="content-card">
+      <h4><a href="../../playground/convolution_of_independent_random_variables.html">Convolution Playground</a></h4>
+      <p>Interactive visualization of the convolution of independent random variables. Explore how sums of random variables give rise to new distributions.</p>
+    </div>
+
+    <div class="content-card">
+      <h4><a href="../../playground/bootstrap_lab.html">Bootstrap Lab</a></h4>
+      <p>Hands-on bootstrapping playground: resample, build sampling distributions, and reason about uncertainty from a single dataset.</p>
+    </div>
+  </section>
+
+  <section id="reference">
+    <div class="section-number">REFERENCE MATERIAL</div>
+    <h2>Course Reader</h2>
+
+    <div class="content-card">
+      <p>The reference material for this part is the open textbook <a href="https://chrispiech.github.io/probabilityForComputerScientists/en/" target="_blank">Probability for Computer Scientists</a> by Chris Piech (Stanford CS109) &mdash; Part 4 up to "Bootstrapping" (included).</p>
+    </div>
+  </section>
+
+  <section id="prev">
+    <div class="content-card" style="text-align: center;">
+      <h4><a href="design_of_experiments.html">&larr; Back to Part I</a></h4>
+      <p>Probability, random variables, and Bayesian reasoning</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Designing Large Scale AI Systems &middot; Spring 2026</p>
+</footer>
+
+</body>
+</html>

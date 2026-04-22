@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Evaluation Playgrounds</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+    :root {
+      --bg: #0c0f14; --surface: #151a23; --surface-2: #1c2230; --border: #2a3040;
+      --text: #e2e8f0; --text-dim: #8892a4;
+      --accent-a: #3b82f6; --accent-b: #f97316; --green: #22c55e; --red: #ef4444;
+      --yellow: #eab308; --purple: #a78bfa;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 2.5rem;
+    }
+
+    .container { max-width: 960px; margin: 0 auto; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.3rem;
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .intro {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      max-width: 700px;
+    }
+    .intro strong { color: var(--text); }
+
+    .section-label {
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      margin-bottom: 0.75rem;
+      margin-top: 2rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+      display: block;
+    }
+    .card:hover {
+      border-color: var(--accent-a);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .card .num {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--accent-a);
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.01em;
+    }
+
+    .card p {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+
+    .card .tag {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      margin-right: 0.3rem;
+    }
+    .tag-interactive { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+    .tag-data { background: rgba(249,115,22,0.1); color: var(--accent-b); border: 1px solid rgba(249,115,22,0.2); }
+    .tag-stats { background: rgba(167,139,250,0.1); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
+    .tag-key { background: rgba(234,179,8,0.1); color: var(--yellow); border: 1px solid rgba(234,179,8,0.2); }
+
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+    }
+    .footer a { color: var(--accent-a); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Site nav */
+    .site-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .site-nav .brand {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-a);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .site-nav .brand:hover { color: var(--text); }
+    .site-nav .links {
+      display: flex;
+      gap: 1rem;
+    }
+    .site-nav .links a {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding-bottom: 2px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .site-nav .links a:hover,
+    .site-nav .links a.active {
+      color: var(--accent-a);
+      border-bottom-color: var(--accent-a);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="site-nav">
+      <a class="brand" href="../index.html">AI-Ready Engineers</a>
+      <div class="links">
+        <a href="../index.html">Syllabus</a>
+        <a href="index.html" class="active">Playground</a>
+        <a href="../about.html">About</a>
+      </div>
+    </nav>
+    <h1>AI Evaluation Playgrounds</h1>
+    <div class="subtitle">Sources of Uncertainty in AI Evaluation</div>
+    <div class="intro">
+      Interactive labs for AI-Ready Engineers.
+      Each playground lets you <strong>feel</strong> a source of uncertainty firsthand, then shows you how to <strong>fix</strong> it.
+      Unified setup: an AI system scored 1&ndash;5 by an LLM judge on four metrics (Correctness, Helpfulness, Tone, Completeness).
+    </div>
+
+    <div class="section-label">Statistics Foundations</div>
+    <div class="card-grid">
+
+      <a class="card" href="convolution_of_independent_random_variables.html">
+        <h3>N Coin Flips</h3>
+        <p>Watch the bell curve emerge as you increase the number of coin flips. A visual introduction to the Central Limit Theorem and convolution of independent random variables.</p>
+        <span class="tag tag-stats">CLT</span>
+        <span class="tag tag-interactive">interactive</span>
+      </a>
+
+      <a class="card" href="bootstrap_lab.html">
+        <h3>Bootstrap Lab</h3>
+        <p>Hands-on bootstrapping: resample from your data, build sampling distributions, compute confidence intervals, and test whether two samples differ. The foundation for many of the uncertainty fixes above.</p>
+        <span class="tag tag-stats">bootstrap</span>
+        <span class="tag tag-interactive">interactive</span>
+      </a>
+
+      <a class="card" href="distribution_explorer.html">
+        <h3>Distribution Explorer</h3>
+        <p>Explore common probability distributions interactively. Adjust parameters and see how the shape changes.</p>
+        <span class="tag tag-stats">distributions</span>
+        <span class="tag tag-interactive">interactive</span>
+      </a>
+
+    </div>
+
+    <div class="section-label">Sources of Uncertainty</div>
+    <div class="card-grid">
+
+      <a class="card" href="sampling_noise.html">
+        <span class="num">#1</span>
+        <h3>Sampling Noise</h3>
+        <p>Run the same evaluation twice &mdash; get different numbers. Set true scores, pick a sample size, and watch the scorecard wobble. Then tame it with beta posteriors, bootstrap CIs, and confidence intervals.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-key">more data helps</span>
+      </a>
+
+      <a class="card" href="accuracy_estimator.html">
+        <h3>Model Accuracy Estimator</h3>
+        <p>Enter successes out of n trials and get a posterior over accuracy: point estimate, mode, and 95% credible interval. Powered by the Beta distribution with selectable priors.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-stats">beta posterior</span>
+      </a>
+
+      <a class="card" href="sampling_bias.html">
+        <span class="num">#2</span>
+        <h3>Sampling Bias</h3>
+        <p>Your test set is 70% English but production is 40%. The scorecard looks great &mdash; until you see what users actually experience. Explore biased vs. representative sampling with adjustable language mixes.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-key">more data doesn't help</span>
+      </a>
+
+      <a class="card" href="multiple_hypothesis_testing.html">
+        <span class="num">#4</span>
+        <h3>Multiple Hypothesis Testing</h3>
+        <p>You test 10 prompt variants. The winner scores 4.3. Ship it? All variants had the same true score &mdash; the "winner" was just the luckiest. See how selection bias grows with N.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-stats">selection bias</span>
+      </a>
+
+      <a class="card" href="domain_variance.html">
+        <span class="num">#5</span>
+        <h3>Variance Across Domains</h3>
+        <p>Aggregate says 4.0. But Client A sees 4.5 and Client B sees 3.0. The aggregate hides the story. Includes a Simpson's Paradox demo where the "winning" system actually loses everywhere.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-key">property of the world</span>
+      </a>
+
+      <a class="card" href="metric_choice.html">
+        <span class="num">#6</span>
+        <h3>Choice of Metric</h3>
+        <p>Mean says A wins. Threshold rate says B wins. Worst-case says B wins clearly. The winner changes with every tab click. The data didn't change &mdash; the question did.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-key">design decision</span>
+      </a>
+
+      <a class="card" href="temporal_drift.html">
+        <span class="num">#7</span>
+        <h3>Temporal Drift</h3>
+        <p>Your January eval says nothing about April. Simulate 12 months of gradual degradation and sudden shocks. See how long it takes to notice without continuous monitoring.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-key">fresh data over time</span>
+      </a>
+
+      <a class="card" href="llm_evolution.html">
+        <span class="num">#9</span>
+        <h3>LLM Evolution</h3>
+        <p>GPT-4: 97.6% &rarr; 2.4% in 3 months. Same prompt. Same task. The model changed under you. Real documented cases + simulated version timeline.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-key">version discipline</span>
+      </a>
+
+      <a class="card" href="judges_and_compounding.html">
+        <span class="num">&#10038;</span>
+        <h3>Judges &amp; Compounding</h3>
+        <p>Every source applies again at the judge level. See how judge noise widens CIs, judge bias shifts scores, and stacking uncertainties makes measurements unreliable.</p>
+        <span class="tag tag-interactive">interactive</span>
+        <span class="tag tag-key">cross-cutting</span>
+      </a>
+
+    </div>
+
+
+    <div class="section-label">Python Notebooks (Live LLM Calls)</div>
+    <div class="card-grid">
+
+      <a class="card" href="https://github.com/reliableai/ai-design-2026-pub/blob/main/labs/08_automating_improvement/overfitting_lab.py" target="_blank" rel="noopener">
+        <span class="num">#3</span>
+        <h3>Overfitting</h3>
+        <p>Iterate on a judge prompt: watch dev score climb across 4 versions, then see the held-out gap. The gut punch. Uses synthetic customer support data + real OpenAI API calls.</p>
+        <span class="tag tag-data">python notebook</span>
+        <span class="tag tag-key">process discipline</span>
+      </a>
+
+      <a class="card" href="https://github.com/reliableai/ai-design-2026-pub/blob/main/labs/08_automating_improvement/prompt_brittleness_lab.py" target="_blank" rel="noopener">
+        <span class="num">#8</span>
+        <h3>Prompt Brittleness</h3>
+        <p>7 "semantically equivalent" prompt variants — reorder examples, change delimiters, rephrase rubric. Same data, same model. Watch scores swing wildly.</p>
+        <span class="tag tag-data">python notebook</span>
+        <span class="tag tag-key">robustness testing</span>
+      </a>
+
+    </div>
+
+    <div class="footer">
+      Fabio Casati &middot; <a href="../index.html">AI-Ready Engineers</a> &middot; <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> &middot; <a href="https://x.com/sphoebs">X</a>
+    </div>
+  </div>
+</body>
+</html>

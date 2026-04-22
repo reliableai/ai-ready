@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterating in the Dark: Organizational Blindness in AI Evaluations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        .series-title {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1em;
+            font-weight: 500;
+            color: #718096;
+            margin-bottom: 0.3em;
+            letter-spacing: 0.02em;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-top: 0.2em;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        img {
+            max-width: 70%;
+            height: auto;
+            margin: 2em auto;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        blockquote {
+            border-left: 4px solid #38b2ac;
+            margin: 2em 0;
+            padding: 1em 1.5em;
+            color: #4a5568;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+<h1>A Structural Flaw in Judgment</h1>
+<p class="series-title">Part 1 of <em>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</em></p>
+<p><em>Iterating towards a random target</em></p>
+<p><a href="./index.html">Series Index</a> | <a href="./part-2-cost-of-ignorance.html">Part 2 →</a></p>
+<hr />
+
+<blockquote>
+<p><em>"Any measurement, without knowledge of the uncertainty, is meaningless."</em><br />
+— Walter Lewin, MIT</p>
+</blockquote>
+
+<hr />
+
+<p>Walter Lewin, the MIT physicist, in his first lecture of the course in basic Physics, tells his students: "<em>Any measurement, without knowledge of the uncertainty, is meaningless.</em>" Not "less precise." Not "directionally useful." <strong>Meaningless.</strong></p>
+
+<p>Then he adds: "<em>I want you to hear this at 3am tonight when you wake up.</em>"</p>
+
+<p>And <strong>he was talking to people who live in the science of measurement</strong>.
+We are not in that world. In enterprise AI we evaluate and report "at scale" across many use cases and teams, with vastly diverse audiences ranging from engineers to scientists to executives. <em>It is the duty of the presenter to make sure that they convey information in a manner that enables the listeners to take the right action.</em></p>
+
+<p>I posit that while the number in itself may be <em>meaningless</em>, the act of <strong>reporting</strong> without knowledge and indication of its uncertainty makes it <strong>misleading</strong>.</p>
+
+<hr />
+
+<blockquote>
+<p><em>"Any report that does not state the uncertainty of a measure is <strong>misleading</strong>."</em><br />
+— Just me</p>
+</blockquote>
+
+<hr />
+
+<p>The problem is not that teams are careless or statistically naïve; it is that most evaluation pipelines and reporting conventions systematically hide uncertainty and reward apparent progress.</p>
+
+<p>A common tendency in organizations is to wash uncertainty away based on the idea that "<em>we are engineers, we are so cool because we approximate, and iterate. Uncertainty is for theorists. A measure may not be perfect, we know, but it's a hint, and we will improve over time. We crawl, walk, run.</em>"
+How many times have you heard this argument? Or how often do you hear that "yeah, it would be great to discuss uncertainty but executives won't understand, they need a simple number"?</p>
+
+<p>These are scarily naive and dangerous arguments.
+Having a sense for how biased and noisy our measures can be is central to the notion of "engineering approximation". More specifically:</p>
+
+<blockquote>
+<p><em>A measurement - and a report of a measurement - is harmful if it leads to making the wrong decision, or taking the wrong action on a system.</em></p>
+</blockquote>
+
+<p>There are only two conditions under which ignoring and not reporting on uncertainty is not a problem:</p>
+
+<ol>
+<li>The measurement is so precise that it is not subject to <em>any meaningful uncertainty</em></li>
+<li>The measurement doesn't matter that much</li>
+</ol>
+
+<p>If the second condition is true, then stop reading - and stop measuring.
+If metrics matter, then reporting without knowledge of uncertainty should be actively discouraged—a quality gate, not an afterthought.
+The industry here needs a "<a href="https://github.com/victorvalentee/bezos_api_mandate">Jeff Bezos memo</a>" moment, where leadership across companies send a clear message to their teams about making uncertainty and estimation of AI quality a first class citizen.</p>
+
+<hr />
+
+<h1>Signs of Collective Blindmess</h1>
+
+<p>I started paying closer attention to this problem when Anthropic published a paper titled "<a href="https://arxiv.org/abs/2411.00640">Adding Error Bars to Evals</a>." I thought: "It's about time people in this industry begin making this point."</p>
+
+<img src="./images/image4.png" alt="Anthropic paper" />
+
+<p>But..... no, I was wrong. Social media were telling a different story.
+Famous AI researchers said on X: "<em>Spectacular breakthrough in AI: Anthropic has discovered error bars!</em>" The sarcasm was widespread. "<em>What an unserious field</em>", people said, that needs to be told to add error bars.</p>
+
+<!-- <img src="./images/image5.png" alt="Social media reactions" /> -->
+
+<p><strong>The mockery proved the paper's point.</strong> (the paper is on way more than "error bars" - and uncertainty is not synonymous with "error bars" - but it makes the point).
+If this was obvious and practiced, the paper wouldn't exist. The fact that a leading AI lab felt the need to write it—and the fact that the community's response was ridicule rather than embarrassment—tells us where we are.</p>
+
+<hr />
+
+<h2>Kahneman's "Noise" and Organizational Blindness</h2>
+
+<p>Around the same time, I came across Kahneman, Sibony, and Sunstein's book "<em>Noise: A Flaw in Human Judgment</em>."</p>
+
+<p>One of its central observations is that <em>organizations systematically underestimate—and resist acknowledging—variability</em> in judgment. We prefer consensus and harmony. We don't want to see the noise. The book focuses more on human judgment and assessment of human judgment, but the same applies to assessment of AI systems.</p>
+
+<p>This book resonated well with my experience working with many companies and system integrators.</p>
+
+<img src="./images/image6.jpeg" alt="Noise book" style="max-width: 35%; float: right; margin: 0 0 1em 1.5em;" />
+
+<p>I've had this conversation a dozen times with engineers at AI companies. The response is remarkably consistent: "<em>Yeah, we know there's variance. Big deal.</em>"</p>
+
+<p>But the point the book is making is not that assessments are subject to errors and variability, but that such errors are <em>large</em>, and <em>largely ignored</em> by organizations. The book dwells on how orgs are especially insensitive to noise even more so than bias. For us, both are present, relevant, and need to be addressed.</p>
+
+<p style="clear: both;">So yes, there's noise and variance—and we don't know:</p>
+
+<ul>
+<li>How large it is,</li>
+<li>Where it comes from,</li>
+<li>How much it's costing us,</li>
+<li>How to reduce it</li>
+<li><em>Or even how to talk about it</em></li>
+</ul>
+
+<p>And - noise and variance are only part of the problem. In most of the customers I have worked with, measurement processes can be—and typically are—<em>systematically</em> biased: consistently producing results that are too optimistic or simply measuring the wrong thing.</p>
+
+<p>What Kahneman helped me see is that this isn't just a skills gap. It's <strong>structural</strong>. Organizations have never had to develop the muscle for properly measuring the quality of AI systems and of machine judgment and have never had to deal with measurements that have so much uncertainty and this level of complexity. And to do so at scale.</p>
+
+<p>The muscle doesn't exist—and it is unclear even if the right incentives to develop it are in place.</p>
+
+<hr />
+
+<h1>The Three Problems - and who bears responsibility</h1>
+
+<p>We are building highly consequential AI systems, making decisions based on evaluation numbers, and we are systematically both <em>underestimating</em> and <em>ignoring</em> the uncertainty in those numbers.</p>
+
+<p>This begs the question: who bears responsibility for this widespread flaw? Is it the person presenting? The person who designed the reporting template? The team that delivered evaluation tools? The instructors that prepared the training material? or, <em>The executive who doesn't ask? The culture that punishes uncertainty?</em> Or, the natural unwillingness of organizations to accept the existence of variability within a structured process?</p>
+
+<p>The question is hard also because the "problem" landscape has three distinct facets:</p>
+
+<ol>
+<li><p><strong>The visibility problem</strong> (epistemic): People are not aware the problem exists or how massive it is. It's not reported, not computed, not surfaced. The green 89% on the screen looks solid. Decision-makers can't account for what they don't know exists.</p></li>
+<li><p><strong>The culture problem</strong> (organizational): The organization doesn't ask. We don't reward quantifying uncertainty. We don't penalize ignoring it. The question "how confident are we?" isn't part of the discussion process. Uncertainty stays invisible because making it visible has no upside and many potential downsides (looking less confident, slowing things down, looking..... uncertain).</p></li>
+<li><p><strong>The action problem</strong> (methodological): Even when uncertainty is visible and the culture asks about it, people don't know what to do. How do you decide when the range is 77–95%? How do you reduce variance when you don't know which source dominates? The frameworks and practices are neither widely known nor well-established in modern AI.</p></li>
+</ol>
+
+<p>Let's understand the cost of inaction—and then what to do about it.</p>
+
+<hr />
+
+<p>(See <strong><a href="./glossary.html">Glossary and Notation</a></strong> for key terms and notation used throughout this series.)</p>
+
+<p><strong>Next: <a href="./part-2-cost-of-ignorance.html">Part 2: The Cost of Ignorance</a></strong> — Why ignoring uncertainty is expensive</p>
+
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+</body>
+</html>

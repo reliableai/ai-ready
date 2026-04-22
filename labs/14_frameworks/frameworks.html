@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L16: Using AI Frameworks</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L16: Using AI Frameworks</div>
+    <ul>
+        <li><a href="#why">1. What frameworks buy</a></li>
+        <li><a href="#landscape">2. Landscape</a></li>
+        <li><a href="#case-study">3. Case study: LangChain</a></li>
+        <li><a href="#memory">4. Memory</a></li>
+        <li><a href="#observability">5. Observability</a></li>
+        <li><a href="#alternatives">6. Alternatives</a></li>
+        <li><a href="#decide">7. When (not) to use</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <div class="title-section" id="intro">
+        <h1>Using AI Frameworks</h1>
+        <p class="subtitle">When and why to use frameworks &mdash; LangChain as a case study, plus how memory, context management, and observability shape the decision.</p>
+    </div>
+
+    <p>We spent seven weeks building from scratch. A single LLM call (L1). A stateless chat loop (L2). A stateful agent with four different memory strategies (L3). Tool calling (L4). Eval harnesses (L5&ndash;L8). Monitoring (L9). Councils and complex systems (L10&ndash;L13). Every abstraction we could have imported, we built by hand first. That was on purpose.</p>
+
+    <p>Now the question this lecture answers: <strong>should you throw away what you built and adopt LangChain?</strong> Or LlamaIndex, or LangGraph, or one of the twenty other frameworks that promise to turn your 200-line agent into 15? The honest answer is "it depends," and the point of this lecture is to give you the language to say what it depends <em>on</em>, rather than arguing from taste.</p>
+
+    <p>We will not try to cover every framework. We'll treat <strong>LangChain</strong> as the case study because it's the one most students will encounter first, compare it to <strong>LlamaIndex</strong> and <strong>LangGraph</strong> where those are genuinely different rather than cosmetically different, and spend real time on the two places where framework choice actually bites in production: <strong>memory and context management</strong>, and <strong>observability</strong>.</p>
+
+    <!-- ================================================================ -->
+    <!-- WHAT FRAMEWORKS BUY -->
+    <!-- ================================================================ -->
+    <section id="why">
+        <div class="section-number">01 / WHAT FRAMEWORKS ACTUALLY GIVE YOU</div>
+        <h2>Four things you're really buying</h2>
+
+        <p>"LangChain lets you build an agent in 10 lines" is a demo statement, not an engineering statement. The real value of a framework, the thing you're paying for in complexity and lock-in, falls into four categories. Be honest about which ones you actually need.</p>
+
+        <div class="content-card">
+            <h4>The four categories of value</h4>
+            <ul>
+                <li><strong>Abstractions.</strong> Prompt templates, retrievers, chains, memories, agents, tools. Names for patterns you would have built anyway. Value = shared vocabulary + tested implementations of the boring cases.</li>
+                <li><strong>Integrations.</strong> Adapters for 50+ model providers, 30+ vector stores, 100+ loaders. Swap OpenAI for Anthropic by changing one import. Value = you don't write the adapter, someone else does, and they keep it working.</li>
+                <li><strong>Observability hooks.</strong> Callback systems that emit every LLM call, every tool invocation, every retrieval, into LangSmith / Langfuse / Phoenix / OpenTelemetry. Value = tracing without instrumenting your code by hand.</li>
+                <li><strong>Ecosystem.</strong> Cookbooks, Stack Overflow answers, tutorials, hires who already speak the vocabulary. Value = network effect. Real, and often underrated in favour of &laquo;it's easy to roll my own&raquo;.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>What you are <em>not</em> buying</h4>
+            <ul>
+                <li><strong>Not correctness.</strong> Frameworks do not make your prompts better, your retrieval more relevant, or your evals more rigorous. All the Skillset 2 content still applies.</li>
+                <li><strong>Not performance.</strong> Every abstraction adds latency, every callback adds overhead, every retry layer hides cost. The &laquo;one-liner&raquo; is often six LLM calls.</li>
+                <li><strong>Not stability.</strong> LangChain has had multiple major API rewrites (classic Chains &rarr; LCEL &rarr; LangGraph for agents) in two years. Your code will rot unless you pin and upgrade deliberately.</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>A framework is a bet on <em>ecosystem</em>, not on <em>lines of code</em>. If the ecosystem's integrations and observability save you weeks, the tax on abstractions and breaking changes is worth paying. If you only need two integrations and control your own tracing, you are buying the tax without the benefit.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- LANDSCAPE -->
+    <!-- ================================================================ -->
+    <section id="landscape">
+        <div class="section-number">02 / THE LANDSCAPE, FAST</div>
+        <h2>A 2&times;2 is enough to orient</h2>
+
+        <p>There are roughly thirty serious frameworks. You do not need to learn them; you need to know which <em>quadrant</em> each sits in so you can find them when the problem appears.</p>
+
+        <div class="ascii-diagram">                         ORCHESTRATION-FIRST          DATA / RAG-FIRST
+                       &#x250c;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x252c;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
+    BATTERIES-IN      &#x2502;  LangChain, LangGraph,  &#x2502;  LlamaIndex         &#x2502;
+                      &#x2502;  CrewAI, AutoGen        &#x2502;                    &#x2502;
+                       &#x251c;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x253c;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2524;
+    MINIMALIST        &#x2502;  OpenAI Agents SDK,     &#x2502;  Haystack (lean),   &#x2502;
+                      &#x2502;  PydanticAI, plain SDKs &#x2502;  plain vector SDKs  &#x2502;
+                       &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
+
+    Off-axis: DSPy (prompt compilation), Mastra (TS-first),
+              Semantic Kernel (MS ecosystem), Agent Skills (portable skills).</div>
+
+        <div class="content-card">
+            <h4>How to read the quadrants</h4>
+            <ul>
+                <li><strong>LangChain / LangGraph.</strong> The Python default. LangChain for composing chains with LCEL; LangGraph for stateful graphs with explicit nodes, edges, and checkpointing. New agentic systems should start at LangGraph, not classic LangChain agents.</li>
+                <li><strong>LlamaIndex.</strong> Data-first. Better defaults for chunking, multi-document querying, query planning. &laquo;LlamaIndex is a framework for your <em>data</em>; LangChain is a framework for your <em>pipeline</em>.&raquo;</li>
+                <li><strong>CrewAI / AutoGen.</strong> Multi-agent collaboration patterns out of the box. Useful if your problem genuinely decomposes into roles; overkill otherwise.</li>
+                <li><strong>OpenAI Agents SDK / PydanticAI.</strong> Minimalist, typed, no graph engine. You write the loop; the framework gives you tool calling, retries, and structured output. Debugger-friendly.</li>
+                <li><strong>DSPy.</strong> Different axis entirely &mdash; it <em>compiles</em> prompts against a metric. You don't write prompts, you write modules; DSPy optimizes the prompt. Powerful for benchmark-driven work; niche for product work.</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Orientation rule</div>
+            <p>Start from the <em>shape of your problem</em>, not the popularity of the framework. Orchestration-heavy agentic loop &rArr; LangGraph or an Agents SDK. Document-heavy retrieval &rArr; LlamaIndex. Role-decomposed workflow &rArr; CrewAI. Benchmark-driven prompt tuning &rArr; DSPy. If none of those apply strongly, the honest answer is that you probably don't need a framework yet.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- CASE STUDY: LANGCHAIN -->
+    <!-- ================================================================ -->
+    <section id="case-study">
+        <div class="section-number">03 / CASE STUDY &mdash; A TOOL-CALLING AGENT, FOUR WAYS</div>
+        <h2>One agent, one tool-calling loop, four implementations</h2>
+
+        <p>The running example for this lecture is a <strong>course-assistant agent</strong> with three tools, multi-turn memory, and a real tool-calling loop. The tools are deliberately different shapes so the agent has to <em>choose</em>:</p>
+
+        <div class="content-card">
+            <h4>The three tools</h4>
+            <ul>
+                <li><code>search_syllabus(query, k=3)</code> &mdash; retrieval over the syllabus corpus. Unstructured input and output.</li>
+                <li><code>get_office_hours(day=None)</code> &mdash; deterministic structured lookup. Returns <code>{"slots": [...], "email_fallback": ...}</code>.</li>
+                <li><code>compute_grade(project, homework, exam, participation)</code> &mdash; pure function, weighted sum.</li>
+            </ul>
+            <p>These three live in <code>tools_shared.py</code> as plain Python. Each framework wraps them in its own type system (OpenAI schema, <code>@tool</code>, <code>FunctionTool</code>, <code>ToolNode</code>), but the underlying code is shared. That keeps the comparison honest.</p>
+        </div>
+
+        <p>First, the from-scratch agent. Every moving part is visible: OpenAI's tool-call schema, an explicit dispatcher, a hand-written memory with summary + window compression, structured trace events. This is the standard from L3 + L4, written once more so the framework versions have something to compare to.</p>
+
+<pre><code class="language-python"># agent_scratch.py  (abridged -- see the file for the full version)
+from openai import OpenAI
+from tools_shared import OPENAI_TOOL_SCHEMAS, TOOL_DISPATCH
+
+def run_turn(memory, user_msg, trace, max_steps=5):
+    client = OpenAI()
+    memory.add({"role": "user", "content": user_msg})
+
+    for step in range(max_steps):
+        r = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=memory.render(),           # summary + recent window
+            tools=OPENAI_TOOL_SCHEMAS,
+            tool_choice="auto",
+        )
+        msg = r.choices[0].message
+        memory.add(msg.model_dump(exclude_none=True))
+        trace.emit("llm_end", tokens_in=r.usage.prompt_tokens,
+                              tool_calls=len(msg.tool_calls or []))
+
+        if not msg.tool_calls:
+            return msg.content
+
+        for tc in msg.tool_calls:
+            args   = json.loads(tc.function.arguments or "{}")
+            result = TOOL_DISPATCH[tc.function.name](args)
+            trace.emit("tool_end", name=tc.function.name)
+            memory.add({"role": "tool", "tool_call_id": tc.id,
+                        "content": json.dumps(result)})
+    return "[max_steps]"</code></pre>
+
+        <p>Now the LangChain version. The <em>loop</em> is still there &mdash; we wrote it by hand on purpose, so the mapping to the scratch version stays one-to-one &mdash; but the tool schemas, the dispatch table, and the observability hook disappear into framework primitives.</p>
+
+<pre><code class="language-python"># agent_langchain.py  (abridged)
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+import tools_shared as ts
+
+@tool
+def search_syllabus(query: str, k: int = 3) -> list[str]:
+    """Retrieve top-k relevant snippets from the course syllabus."""
+    return ts.search_syllabus(query, k)
+
+# ... same for get_office_hours, compute_grade ...
+
+TOOLS = [search_syllabus, get_office_hours, compute_grade]
+
+def run_turn(session_id, user_text, tracer, max_steps=5):
+    llm = ChatOpenAI(model="gpt-4.1-mini",
+                     callbacks=[tracer]).bind_tools(TOOLS)
+    history = get_history(session_id)          # InMemoryChatMessageHistory
+    history.add_message(HumanMessage(content=user_text))
+
+    for _ in range(max_steps):
+        ai = llm.invoke([SystemMessage(content=SYSTEM), *history.messages])
+        history.add_message(ai)
+        if not ai.tool_calls:
+            return ai.content
+        for tc in ai.tool_calls:
+            result = TOOLS_BY_NAME[tc["name"]].invoke(
+                tc["args"], config={"callbacks": [tracer]})
+            history.add_message(ToolMessage(content=str(result),
+                                            tool_call_id=tc["id"]))</code></pre>
+
+        <div class="content-card">
+            <h4>What changed between the two versions</h4>
+            <ul>
+                <li><strong>Gone:</strong> OpenAI tool-schema JSON (generated from the function signature by <code>@tool</code>); the manual <code>TOOL_DISPATCH</code> table (replaced by <code>TOOLS_BY_NAME</code>); the ad-hoc <code>Trace</code> class (replaced by <code>BaseCallbackHandler</code> &mdash; the hook LangSmith / Langfuse / Phoenix all subscribe to).</li>
+                <li><strong>Still there:</strong> the loop. The max_steps guard. The decision about what goes into the system prompt. The memory strategy. These are the things a framework <em>cannot</em> decide for you.</li>
+                <li><strong>Coupled to:</strong> LangChain's message types, tool format, and callback interface. When you later want LlamaIndex's retriever or LangGraph's checkpointer, you're re-typing.</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Debugging rule</div>
+            <p>Before you ship any agent, run it once with <code>langchain.debug = True</code> (or with a callback that prints every LLM and tool event). If you cannot immediately recognize every call the framework made, you don't yet understand your own agent, and you will not be able to debug it when it silently burns 60x the expected tokens in production.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- MEMORY AND CONTEXT MANAGEMENT -->
+    <!-- ================================================================ -->
+    <section id="memory">
+        <div class="section-number">04 / MEMORY AND CONTEXT MANAGEMENT</div>
+        <h2>Memory is a design decision, not a feature</h2>
+
+        <p>In L3 we built four memory strategies by hand: full history, sliding window, running summary, and vector-retrieved. Each one is a different answer to the same question: <strong>when the context window isn't big enough, what do you throw away, and who decides?</strong> Frameworks give you labelled boxes for each strategy. They don't answer the question for you; they just make it easier to pick a box and harder to see inside it.</p>
+
+        <p>With a tool-calling agent the stakes get higher. Every turn of the loop (assistant message, tool_call, tool result) is a message in the history. A four-turn conversation with two tool calls per turn is already twelve messages, and tool results are often long JSON blobs. <strong>The agent's memory budget is dominated by tool I/O, not by user turns</strong>. If you don't actively compress, your second-turn prompt will be 10&times; the first.</p>
+
+        <div class="content-card">
+            <h4>Mapping L3 strategies to LangChain memory primitives</h4>
+            <ul>
+                <li><strong>Full history</strong> &harr; <code>ConversationBufferMemory</code>. Keeps every turn. Grows without bound. Cheapest to implement, most expensive to run.</li>
+                <li><strong>Windowed</strong> &harr; <code>ConversationBufferWindowMemory(k=N)</code>. Keeps last N turns. Bounded cost, but any fact older than N turns is gone.</li>
+                <li><strong>Summarised</strong> &harr; <code>ConversationSummaryMemory</code>. Each turn, an LLM re-summarises history. Bounded cost, but every summary is a lossy compression and every summary call is another LLM call.</li>
+                <li><strong>Summarised + windowed</strong> &harr; <code>ConversationSummaryBufferMemory(max_token_limit=...)</code>. Recent turns verbatim, older turns summarised. The sensible default when you actually need long conversations.</li>
+                <li><strong>Vector-retrieved</strong> &harr; <code>VectorStoreRetrieverMemory</code>. Past turns are embedded and retrieved by relevance to the current query. Scales to unlimited history; retrieval quality becomes the bottleneck.</li>
+            </ul>
+        </div>
+
+        <p>If you came from L3, this list should feel familiar &mdash; you built all five. The framework's contribution is the <em>names</em>, not the strategies. In LangChain &ge; 0.3, the classic <code>Memory</code> classes are considered legacy; the modern API is <code>RunnableWithMessageHistory</code> wrapping a chain with a pluggable message store (in-memory, Redis, Postgres). The shape is the same: you still pick the compression strategy yourself.</p>
+
+        <div class="content-card">
+            <h4>LangGraph's model &mdash; memory as first-class state</h4>
+            <p>LangGraph takes a different stance. State is an explicit typed dict on the graph, and a <strong>checkpointer</strong> persists it after every node. Threads (conversations) are just checkpoint streams keyed by <code>thread_id</code>. You can stop a conversation, restart it three days later on a different machine, and get the same state.</p>
+            <ul>
+                <li><strong>Checkpointers shipped today:</strong> in-memory, SQLite, Postgres, Redis.</li>
+                <li><strong>Time travel:</strong> you can roll back to any checkpoint and re-run from there &mdash; invaluable for debugging agent failures.</li>
+                <li><strong>Human-in-the-loop:</strong> interrupt at a node, wait for user input, resume. Enabled because state is externalized.</li>
+            </ul>
+            <p>The trade: you commit to expressing your agent as a graph. That is either &laquo;finally, an honest model of control flow&raquo; or &laquo;I just wanted to write a <code>while</code> loop,&raquo; depending on the problem.</p>
+        </div>
+
+<pre><code class="language-python"># A sketch of the same chat agent with LangGraph checkpointing.
+from typing import TypedDict, Annotated
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+from langgraph.checkpoint.sqlite import SqliteSaver
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
+
+def chat_node(state: State) -> State:
+    reply = llm.invoke(state["messages"])
+    return {"messages": [reply]}
+
+graph = StateGraph(State)
+graph.add_node("chat", chat_node)
+graph.set_entry_point("chat")
+graph.add_edge("chat", END)
+
+app = graph.compile(checkpointer=SqliteSaver.from_conn_string("memory.db"))
+
+# Same thread_id = same conversation. Different thread_id = fresh context.
+config = {"configurable": {"thread_id": "user-42"}}
+app.invoke({"messages": [("user", "Remember my dog is named Juno.")]}, config)
+app.invoke({"messages": [("user", "What's my dog's name?")]},      config)</code></pre>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Picking a memory strategy is picking <em>which failure mode you are willing to ship</em>. Full history fails with latency and token-budget explosions. Window fails by forgetting. Summary fails by distortion. Retrieval fails by relevance miss. Every production agent has one of these failure modes; the only question is whether you chose it or the framework's default did.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- OBSERVABILITY -->
+    <!-- ================================================================ -->
+    <section id="observability">
+        <div class="section-number">05 / OBSERVABILITY</div>
+        <h2>Tracing is not optional; the question is who owns it</h2>
+
+        <p>In L9 we said: the failures of AI systems are semantic, probabilistic, and slow to surface. A <em>trace</em> &mdash; the full call graph of every LLM, tool, retriever, and memory read/write for a single request &mdash; is the smallest observability artifact that lets you reason about those failures. If you cannot produce a trace for last Tuesday's 3am complaint, you cannot debug it.</p>
+
+        <p>For tool-calling agents this matters double. A single user turn can fan out to three LLM calls and four tool calls, each with its own latency and cost, and most agent bugs (&laquo;it called the wrong tool&raquo;, &laquo;it looped forever&raquo;, &laquo;it ignored the tool result&raquo;) are <em>invisible</em> in the final assistant message. You can only see them in a trace.</p>
+
+        <p>Frameworks do not relieve you of needing observability. They change the answer to the question <strong>who emits the trace, and to whom</strong>. Four tiers, in increasing order of ecosystem commitment:</p>
+
+        <div class="content-card">
+            <h4>Tier 1 &mdash; Hand-rolled</h4>
+            <p>Your <code>monitoring.py</code> from L9. <code>structlog</code>, a <code>trace_id</code>, a <code>@traced</code> decorator. Full control, zero dependencies, zero ecosystem. Works perfectly until you want to visualize 10,000 traces, correlate across services, or run LLM-as-judge on sampled traffic &mdash; then you're rebuilding a trace store.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>Tier 2 &mdash; Framework callbacks</h4>
+            <p>LangChain emits events through <code>BaseCallbackHandler</code>: <code>on_llm_start</code>, <code>on_llm_end</code>, <code>on_tool_start</code>, <code>on_retriever_end</code>, and so on. You subscribe and do whatever you like &mdash; log to stdout, push to your own store, forward to a vendor. This is the hook that <em>every</em> higher tier builds on.</p>
+<pre><code class="language-python">from langchain_core.callbacks import BaseCallbackHandler
+
+class CostCallback(BaseCallbackHandler):
+    def __init__(self):
+        self.tokens_in = self.tokens_out = 0
+    def on_llm_end(self, response, **kwargs):
+        usage = response.llm_output.get("token_usage", {})
+        self.tokens_in  += usage.get("prompt_tokens", 0)
+        self.tokens_out += usage.get("completion_tokens", 0)
+
+cb = CostCallback()
+chain.invoke("...", config={"callbacks": [cb]})
+print(cb.tokens_in, cb.tokens_out)</code></pre>
+        </div>
+
+        <div class="content-card">
+            <h4>Tier 3 &mdash; Vendor-integrated tracing</h4>
+            <ul>
+                <li><strong>LangSmith</strong> &mdash; first-party for LangChain / LangGraph. Enable with one env var (<code>LANGCHAIN_TRACING_V2=true</code>), get traces, eval runs, prompt versioning, and dataset management in the same UI. Paid for teams, commercial.</li>
+                <li><strong>Langfuse</strong> &mdash; OSS, self-hostable. Framework-agnostic via decorators (<code>@observe</code>) and OTel ingestion. Strong alternative if you want a vendor UX without the vendor lock-in.</li>
+                <li><strong>Phoenix (Arize)</strong> &mdash; OSS, strong on RAG tracing visualization and eval loops. Good default when RAG is the bulk of your system.</li>
+                <li><strong>Logfire (Pydantic)</strong> &mdash; OTel-native. Strong Python DX, strong typing, pairs naturally with PydanticAI.</li>
+                <li><strong>Helicone</strong> &mdash; proxy-based. Point your model client at the Helicone proxy; no code changes, logs everything. Easiest to adopt, hardest to extend.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Tier 4 &mdash; Open standards (OpenTelemetry)</h4>
+            <p>The <strong>OpenTelemetry GenAI semantic conventions</strong> define a standard vocabulary for LLM traces: <code>gen_ai.request.model</code>, <code>gen_ai.usage.input_tokens</code>, <code>gen_ai.response.finish_reasons</code>, etc. Libraries like <strong>OpenLLMetry</strong> (Traceloop) auto-instrument OpenAI, Anthropic, LangChain, LlamaIndex and others to emit OTLP spans. Any OTLP-compatible backend (Langfuse, Phoenix, Datadog, Grafana Tempo, Honeycomb) ingests them.</p>
+            <p>This is the tier you want if you already run OTel for the rest of your stack, or if you explicitly do not want your tracing to be coupled to any single vendor.</p>
+<pre><code class="language-python">from traceloop.sdk import Traceloop
+Traceloop.init(app_name="rag-demo")  # auto-instruments LangChain, OpenAI, etc.
+
+# Every chain.invoke() now emits OTLP spans to your configured backend.
+# Same code, same traces, swap backends with one env var.</code></pre>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Sequencing rule</div>
+            <p>Pick your observability layer <em>before</em> your framework, not after. If your organization standardizes on OTel, that rules out anything whose tracing story is a proprietary callback with no OTel exporter. If you don't care and want fastest time-to-traces on LangChain, LangSmith is the honest answer. Observability is where "which framework" most often becomes "which framework's vendor do I want to depend on."</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- ALTERNATIVES -->
+    <!-- ================================================================ -->
+    <section id="alternatives">
+        <div class="section-number">06 / ALTERNATIVES, BRIEFLY</div>
+        <h2>The same agent in LlamaIndex and LangGraph</h2>
+
+        <p>The notebook contains the full runnable versions; here is the shape of each so you can recognize the pattern.</p>
+
+<pre><code class="language-python"># agent_llamaindex.py  (abridged) -- the framework owns the loop
+from llama_index.core.agent.workflow import FunctionAgent
+from llama_index.core.tools import FunctionTool
+from llama_index.core.memory import ChatMemoryBuffer
+import tools_shared as ts
+
+tools = [FunctionTool.from_defaults(fn=ts.search_syllabus,
+                                    name="search_syllabus", description="..."),
+         FunctionTool.from_defaults(fn=ts.get_office_hours,
+                                    name="get_office_hours", description="..."),
+         FunctionTool.from_defaults(fn=ts.compute_grade,
+                                    name="compute_grade", description="...")]
+
+agent  = FunctionAgent(tools=tools, llm=Settings.llm, system_prompt=SYSTEM)
+memory = ChatMemoryBuffer.from_defaults(token_limit=2000)
+
+await agent.run(user_msg="When are your office hours?", memory=memory)
+await agent.run(user_msg="And what's the late-homework rule?", memory=memory)</code></pre>
+
+        <p>The tool loop, the message bookkeeping, and the multi-turn memory are all <em>inside</em> <code>FunctionAgent.run</code>. The trade is that when you want to interpose between a tool decision and its execution &mdash; for a guardrail, a budget check, a confirmation prompt &mdash; you are reading framework source.</p>
+
+<pre><code class="language-python"># agent_langgraph.py  (abridged) -- explicit graph, checkpointed state
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.sqlite import SqliteSaver
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]   # add_messages = append reducer
+
+llm = ChatOpenAI(model="gpt-4.1-mini").bind_tools(TOOLS)
+
+def agent_node(state): return {"messages": [llm.invoke([SYSTEM, *state["messages"]])]}
+
+graph = StateGraph(State)
+graph.add_node("agent", agent_node)
+graph.add_node("tools", ToolNode(TOOLS))
+graph.set_entry_point("agent")
+graph.add_conditional_edges("agent", tools_condition,
+                            {"tools": "tools", END: END})
+graph.add_edge("tools", "agent")
+
+app = graph.compile(checkpointer=SqliteSaver.from_conn_string("agent.db"))
+app.invoke({"messages": [HumanMessage(content="...")]},
+           config={"configurable": {"thread_id": "session-1"}})</code></pre>
+
+        <p>LangGraph earns its complexity when control flow has real branches &mdash; tool result &rarr; check confidence &rarr; maybe re-plan &rarr; maybe ask a clarifying question. The compiled graph also gives you <strong>time-travel debugging</strong> for free: <code>app.get_state_history(config)</code> lists every checkpoint, and you can resume from any of them. That is the killer feature for stateful agents you actually have to debug in production.</p>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- WHEN TO USE / WHEN TO AVOID -->
+    <!-- ================================================================ -->
+    <section id="decide">
+        <div class="section-number">07 / WHEN TO USE, WHEN TO AVOID</div>
+        <h2>The framework decision, made honestly</h2>
+
+        <div class="content-card">
+            <h4>Use a framework when</h4>
+            <ul>
+                <li>You need to support multiple model providers and/or vector stores from day one.</li>
+                <li>You want observability to &laquo;just work&raquo; and are happy to adopt the framework's vendor (LangSmith, LlamaIndex + Phoenix, etc.).</li>
+                <li>You're prototyping and optimizing for velocity over clarity &mdash; you'll rewrite once the product shape is known.</li>
+                <li>Your team is large enough that a shared vocabulary is worth the tax.</li>
+                <li>You need a pre-built integration (Slack, Gmail, Notion, 100+ loaders) and don't want to maintain it yourself.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Avoid a framework when</h4>
+            <ul>
+                <li>Your core loop is small and stable &mdash; a three-step agent does not need a graph library.</li>
+                <li>You have hard latency or cost budgets and cannot afford hidden retries or callback overhead.</li>
+                <li>You need to reason about the exact token sequence the model sees (regulated domains, safety-critical systems).</li>
+                <li>You cannot tolerate a breaking change every six months. Frameworks are young and their APIs move.</li>
+                <li>Your observability is already OTel and the framework's tracing story is proprietary-callback-only.</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>The framework tax &mdash; a checklist before you commit</h4>
+            <ul>
+                <li>Can I print the <em>exact</em> prompt that was sent to the model, without reading framework source?</li>
+                <li>Can I step through the retry and fallback logic in a debugger?</li>
+                <li>Can I pin a version and not be forced to upgrade for at least 6 months?</li>
+                <li>Is my observability independent of the framework (OTel) or coupled to it (proprietary callbacks)?</li>
+                <li>If this framework were abandoned tomorrow, how many engineer-days to rip it out?</li>
+            </ul>
+            <p>Four &laquo;yes&raquo; answers out of five, and the framework is probably a net positive. Two or fewer, and you're buying tax without benefit.</p>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Closing thesis</div>
+            <p>You already built most of what LangChain offers, by hand, in seven weeks. That is not wasted work &mdash; it is the only way to have an informed opinion about what a framework is hiding. Choose a framework the way you'd choose a dependency for any other system: because the ecosystem saves you more than the abstraction costs you, because you can read its source when it misbehaves, and because your observability story does not live inside its walls.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- HOMEWORK -->
+    <!-- ================================================================ -->
+    <section id="homework">
+        <div class="section-number">08 / HOMEWORK</div>
+        <h2>One week, one rewrite, one decision memo</h2>
+
+        <div class="content-card">
+            <h4>The assignment</h4>
+            <ul>
+                <li>Pick <strong>one component</strong> of your running project (the retrieval step, the planning loop, the memory layer).</li>
+                <li>Rewrite it with <strong>LangChain</strong>, <strong>LlamaIndex</strong>, or <strong>LangGraph</strong>. Keep both versions in git under separate entry points.</li>
+                <li>Measure: lines of code, p50 and p95 latency, cost per call on a fixed eval set, and a 3-line qualitative note on debuggability (&laquo;can I see the exact prompt?&raquo;).</li>
+                <li>Add <strong>LangSmith</strong> or <strong>Langfuse</strong> tracing to the framework version. Share three interesting traces.</li>
+                <li>Write a one-page decision memo: would you ship the framework version? Why? Apply the checklist from &sect;7.</li>
+            </ul>
+        </div>
+
+        <p>There is no &laquo;right answer&raquo; to this homework. The point is that after doing it, you will have an opinion you can defend.</p>
+    </section>
+
+</main>
+
+<script>
+    hljs.highlightAll();
+</script>
+</body>
+</html>

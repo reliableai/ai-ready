@@ -1,0 +1,20 @@
+You are given a passage from a mystery story. Extract:
+1. A concise plot summary (3-5 sentences) capturing the key events and any suspense or intrigue
+2. A list of all characters mentioned (main and secondary)
+
+Return valid JSON only, in this format:
+{
+  "plot_summary": "...",
+  "characters": ["Name1", "Name2", ...]
+}
+
+Example output:
+{
+  "plot_summary": "Detective Poirot arrives at a country estate after receiving an urgent letter from the host. During dinner, the lights go out and a scream is heard. The host is found dead in his study, and Poirot suspects one of the guests.",
+  "characters": ["Hercule Poirot", "Lord Blackwood", "Lady Ashworth", "Colonel Hastings"]
+}
+
+--- PASSAGE ---
+{{ story_text }}
+
+Return only the JSON, no additional text.

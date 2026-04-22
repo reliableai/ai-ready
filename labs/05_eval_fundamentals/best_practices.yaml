@@ -1,0 +1,62 @@
+# Best practices for information-extraction prompts.
+# The improvement prompt references these as techniques to consider — not a checklist.
+
+- name: explicit output schema
+  description: >
+    Specify the exact JSON keys, their types, and constraints.
+    Reduces format errors and hallucinated fields.
+
+- name: role assignment
+  description: >
+    Open with a concrete role ("You are a support-ticket triage assistant").
+    Anchors the model's behavior and vocabulary.
+
+- name: one fact per field
+  description: >
+    Instruct the model to keep each list entry atomic — one observable fact,
+    no merging, no interpretation. Improves downstream filtering and search.
+
+- name: verb-phrase intent
+  description: >
+    Ask for the intent as a short, lowercase verb phrase (e.g., "request refund").
+    Makes intents consistent and machine-comparable across tickets.
+
+- name: ambiguity handling
+  description: >
+    Tell the model what to do when the request is ambiguous — e.g., pick the
+    most likely intent and flag uncertainty in a separate field.
+
+- name: few-shot examples
+  description: >
+    Include 1-3 input/output examples in the prompt. Anchors format, length,
+    and level of detail more reliably than instructions alone.
+
+- name: negative instructions
+  description: >
+    Explicitly state what NOT to do (e.g., "do not infer causes",
+    "do not suggest solutions"). Reduces common drift patterns.
+
+- name: chain of thought before answer
+  description: >
+    Ask the model to briefly reason before producing the structured output.
+    Can improve accuracy at the cost of extra tokens.
+
+- name: self-critique then final answer
+  description: >
+    Ask the model to produce a three-part output per item:
+    "answer" (the draft extraction), "critique" (a brief review checking for
+    missing facts, hallucinations, or schema errors), and "revised_answer"
+    (the corrected extraction). The downstream pipeline uses "revised_answer"
+    as the final output. This forces the model to reflect before committing,
+    improving reliability on ambiguous or noisy inputs.
+    Be very explicit on the output schema for this practice and make sure the output schema example includes the review and the revised answer
+
+- name: output-only response
+  description: >
+    Instruct the model to respond with only the JSON, no preamble or explanation.
+    Simplifies parsing and reduces token cost.
+
+- name: ground in quotes
+  description: >
+    Ask the model to tie each symptom to a phrase from the original text.
+    Reduces hallucination and makes review easier.

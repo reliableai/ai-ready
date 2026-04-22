@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<!--
+  L10 · Monitoring, Observability and Reporting — lecture deck
+  Companion to slides_outline.md (the source of truth).
+
+  Plain HTML. No framework, no JS, no Reveal.js. Open in a browser
+  and scroll; use the sidebar to jump around. Cmd/Ctrl-P prints
+  cleanly to PDF (sidebar and speaker notes hidden in print).
+
+  Author-TODOs: search "TODO: screenshot" for the seven demo-interlude
+  placeholders.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L10 · Monitoring, Observability and Reporting</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /*
+      Simple color scheme:
+        bg      #111   near-black
+        text    #fff   white
+        accent  #F4A261 warm orange
+        muted   #888   secondary chrome
+        border  #2a2a2a hairlines
+        code    #1a1a1a code backgrounds
+    */
+    :root {
+      --bg:     #111111;
+      --text:   #ffffff;
+      --accent: #F4A261;
+      --muted:  #888888;
+      --border: #2a2a2a;
+      --code:   #1a1a1a;
+      --sidebar-w: 280px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-weight: 400;
+      font-size: 17px;
+      line-height: 1.55;
+      scroll-behavior: smooth;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =================================================================== */
+    /* SIDEBAR                                                              */
+    /* =================================================================== */
+    nav.toc {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      overflow-y: auto;
+      background: #0b0b0b;
+      border-right: 1px solid var(--border);
+      padding: 28px 22px 40px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    nav.toc .brand {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 4px;
+      display: block;
+    }
+    nav.toc .sub {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      color: var(--accent);
+      font-size: 14px;
+      margin-bottom: 22px;
+    }
+    nav.toc h3 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin: 20px 0 6px;
+      font-weight: 600;
+    }
+    nav.toc ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    nav.toc li { margin: 0; }
+    nav.toc a.item {
+      display: block;
+      padding: 4px 6px;
+      color: #ccc;
+      border-radius: 3px;
+    }
+    nav.toc a.item:hover {
+      background: #1a1a1a;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    nav.toc a.item.interlude {
+      color: var(--accent);
+    }
+
+    /* =================================================================== */
+    /* MAIN                                                                 */
+    /* =================================================================== */
+    main {
+      margin-left: var(--sidebar-w);
+      max-width: none;
+    }
+
+    section.slide {
+      padding: 70px 80px;
+      border-bottom: 1px solid var(--border);
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Headings ---------------------------------------------------------- */
+    h1, h2, h3, h4 {
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin: 0 0 0.6em;
+    }
+    h1 { font-size: 2.2em; font-weight: 300; line-height: 1.15; }
+    h2 { font-size: 1.55em; font-weight: 500; color: var(--accent); }
+    h3 { font-size: 1.1em; font-weight: 600; margin-top: 1.4em; }
+    h4 { font-size: 1em; font-weight: 600; color: var(--accent); margin: 0 0 0.3em; }
+
+    p { margin: 0.6em 0; }
+    ul, ol { margin: 0.6em 0; padding-left: 1.4em; }
+    li { margin: 0.35em 0; }
+
+    strong { color: var(--accent); font-weight: 600; }
+    em { font-style: italic; }
+
+    /* Code -------------------------------------------------------------- */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88em;
+      color: var(--accent);
+      background: transparent;
+    }
+    pre {
+      background: var(--code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 18px 22px;
+      margin: 1em 0;
+      overflow-x: auto;
+    }
+    pre code {
+      color: var(--text);
+      font-size: 0.88em;
+      line-height: 1.55;
+    }
+
+    /* Callouts ---------------------------------------------------------- */
+    .callout {
+      border-left: 3px solid var(--accent);
+      padding: 0.3em 0 0.3em 1.1em;
+      margin: 1.2em 0;
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 1.25em;
+      line-height: 1.4;
+      color: var(--text);
+    }
+    .callout em { color: var(--accent); font-style: italic; }
+
+    .note {
+      font-size: 0.9em;
+      margin-top: 1.4em;
+      padding-top: 0.8em;
+      border-top: 1px solid var(--border);
+      color: #c8c8c8;
+    }
+    .note .label { color: var(--accent); font-weight: 600; }
+
+    /* Speaker notes ----------------------------------------------------- */
+    aside.notes {
+      display: block;
+      margin: 1.4em 0 0;
+      padding: 0.8em 1em;
+      border-left: 2px solid var(--muted);
+      background: #171717;
+      font-size: 0.85em;
+      color: #a8a8a8;
+      font-style: italic;
+    }
+    aside.notes::before {
+      content: "Speaker note · ";
+      font-style: normal;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 0.85em;
+    }
+
+    /* Title slide ------------------------------------------------------- */
+    section.title-slide {
+      min-height: 75vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 100px 80px;
+    }
+    section.title-slide h1 {
+      font-size: 3em;
+      font-weight: 300;
+    }
+    section.title-slide h1 .accent { color: var(--accent); }
+    section.title-slide .tagline {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 1.6em;
+      color: var(--accent);
+      margin: 1.4em 0 0.3em;
+    }
+    section.title-slide .meta {
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-top: 2.4em;
+    }
+
+    /* Section divider --------------------------------------------------- */
+    section.section-divider {
+      min-height: 55vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 100px 80px;
+    }
+    section.section-divider .label {
+      color: var(--accent);
+      font-size: 0.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    section.section-divider h1 {
+      font-size: 2.6em;
+      font-weight: 300;
+    }
+
+    /* Interlude --------------------------------------------------------- */
+    section.interlude {
+      background: #0d0d0d;
+    }
+    section.interlude .label {
+      color: var(--accent);
+      font-size: 0.8em;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      margin-bottom: 0.5em;
+    }
+    .demo-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8em;
+      color: var(--muted);
+      margin: 0.4em 0 1em;
+    }
+    .demo-screen {
+      background: var(--code);
+      border: 1px dashed var(--border);
+      border-radius: 4px;
+      padding: 50px 30px;
+      color: var(--muted);
+      text-align: center;
+      margin: 1em 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+    }
+    .demo-meta {
+      font-size: 0.85em;
+      color: var(--muted);
+      margin-top: 1em;
+    }
+
+    /* Thesis slide ------------------------------------------------------ */
+    section.thesis-slide {
+      min-height: 55vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 100px 80px;
+    }
+    section.thesis-slide .thesis-big {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.9em;
+      font-style: italic;
+      line-height: 1.4;
+      color: var(--text);
+      max-width: 22em;
+    }
+    section.thesis-slide .thesis-big em { color: var(--accent); font-style: italic; }
+
+    /* Matrix ------------------------------------------------------------ */
+    table.matrix {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1em 0;
+      font-size: 0.92em;
+    }
+    table.matrix th, table.matrix td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--border);
+    }
+    table.matrix th {
+      font-weight: 500;
+      font-size: 0.82em;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text);
+    }
+    table.matrix td.row-label {
+      color: var(--accent);
+      font-weight: 600;
+      white-space: nowrap;
+      width: 18%;
+    }
+    table.matrix td.empty {
+      opacity: 0.35;
+      font-style: italic;
+    }
+    table.matrix td.empty::before { content: "—"; }
+
+    /* Columns ----------------------------------------------------------- */
+    .cols {
+      display: grid;
+      gap: 28px;
+      margin: 1em 0;
+    }
+    .cols.two { grid-template-columns: 1fr 1fr; }
+    .cols .col h4 { margin-bottom: 0.3em; }
+    .cols .col p, .cols .col ul { margin: 0.3em 0; }
+
+    /* ASCII tree -------------------------------------------------------- */
+    .tree {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      line-height: 1.65;
+      background: var(--code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px 22px;
+      margin: 1em 0;
+      white-space: pre;
+      overflow-x: auto;
+      color: var(--text);
+    }
+    .tree .root { color: var(--accent); font-weight: 600; }
+
+    /* =================================================================== */
+    /* PRINT — hide sidebar, one slide per page                             */
+    /* =================================================================== */
+    @media print {
+      nav.toc { display: none; }
+      main { margin-left: 0; }
+      section.slide {
+        page-break-after: always;
+        border-bottom: none;
+        padding: 40px 50px;
+      }
+      aside.notes { display: none; }
+      html, body { font-size: 13px; }
+    }
+
+    @media (max-width: 900px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      main { margin-left: 0; }
+      section.slide { padding: 50px 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ================================================================== -->
+<!-- SIDEBAR TABLE OF CONTENTS                                           -->
+<!-- ================================================================== -->
+<nav class="toc">
+  <a href="#title" class="brand">L10 · Monitoring</a>
+  <div class="sub">Power is Nothing Without Control</div>
+
+  <h3>Opener</h3>
+  <ul>
+    <li><a class="item" href="#title">Title</a></li>
+    <li><a class="item" href="#why-we-monitor">Why we monitor</a></li>
+    <li><a class="item" href="#roadmap-empty">Roadmap: summary matrix</a></li>
+  </ul>
+
+  <h3>01 · Logging and monitoring</h3>
+  <ul>
+    <li><a class="item" href="#assertions">Assertions</a></li>
+    <li><a class="item" href="#exceptions">Exceptions</a></li>
+    <li><a class="item" href="#logging">Logging</a></li>
+    <li><a class="item" href="#logging-primitives">Logging primitives</a></li>
+    <li><a class="item interlude" href="#demo-1">Demo 1 &middot; basic logging</a></li>
+    <li><a class="item" href="#logging-to-monitoring">From logging to monitoring</a></li>
+    <li><a class="item" href="#traces">Traces + process mining</a></li>
+    <li><a class="item" href="#centralized-logging">Centralized logging + metrics</a></li>
+    <li><a class="item interlude" href="#demo-2">Demo 2 &middot; log dashboard</a></li>
+    <li><a class="item" href="#privacy-why">Privacy: why here</a></li>
+    <li><a class="item" href="#privacy-patterns">Privacy: patterns</a></li>
+    <li><a class="item" href="#roadmap-row-1">Roadmap: row 1</a></li>
+  </ul>
+
+  <h3>02 &middot; Classical ML</h3>
+  <ul>
+    <li><a class="item" href="#classical-ml">What we monitor</a></li>
+    <li><a class="item" href="#quality-assertion">Quality assertion</a></li>
+    <li><a class="item interlude" href="#demo-3">Demo 3 &middot; classical-ML dashboard</a></li>
+    <li><a class="item" href="#roadmap-row-2">Roadmap: row 2</a></li>
+  </ul>
+
+  <h3>03 &middot; LLM systems</h3>
+  <ul>
+    <li><a class="item" href="#stage-a-anatomy">Stage A &middot; anatomy</a></li>
+    <li><a class="item" href="#stage-a-over-time">Stage A &middot; over time</a></li>
+    <li><a class="item" href="#content-safety">Content safety</a></li>
+    <li><a class="item" href="#guardrails">Guardrail patterns</a></li>
+    <li><a class="item interlude" href="#demo-4">Demo 4 &middot; LLM calls</a></li>
+    <li><a class="item" href="#stage-b">Stage B &middot; context + tools</a></li>
+    <li><a class="item" href="#tracing">Tracing multi-step</a></li>
+    <li><a class="item" href="#otel">OTel + GenAI semconv</a></li>
+    <li><a class="item interlude" href="#demo-5">Demo 5 &middot; OTel traces</a></li>
+    <li><a class="item" href="#tooling">What's out there</a></li>
+    <li><a class="item" href="#roadmap-rows-3-4">Roadmap: rows 3 &amp; 4</a></li>
+  </ul>
+
+  <h3>04 &middot; Agents</h3>
+  <ul>
+    <li><a class="item" href="#topology">Topology</a></li>
+    <li><a class="item" href="#task-assertions">Task &amp; coordination</a></li>
+    <li><a class="item" href="#failure-modes">Failure modes</a></li>
+    <li><a class="item interlude" href="#demo-6">Demo 6 &middot; multi-agent trace</a></li>
+    <li><a class="item" href="#roadmap-row-5">Roadmap: row 5</a></li>
+  </ul>
+
+  <h3>05 &middot; CI &middot; Telemetry &middot; Analysis &middot; Reporting</h3>
+  <ul>
+    <li><a class="item" href="#ci-gate">CI eval gate</a></li>
+    <li><a class="item" href="#telemetry">Telemetry</a></li>
+    <li><a class="item" href="#online-evals">Online evals</a></li>
+    <li><a class="item" href="#analysis">Analysis</a></li>
+    <li><a class="item interlude" href="#demo-7">Demo 7 &middot; A/B analysis</a></li>
+    <li><a class="item" href="#reporting">Reporting cadences</a></li>
+    <li><a class="item" href="#incidents">Incident reviews</a></li>
+    <li><a class="item" href="#thesis-05">Thesis</a></li>
+  </ul>
+
+  <h3>Closing</h3>
+  <ul>
+    <li><a class="item" href="#summary-matrix">Summary matrix</a></li>
+    <li><a class="item" href="#take-aways">Take-aways &amp; next</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<!-- ================================================================== -->
+<!-- OPENER                                                              -->
+<!-- ================================================================== -->
+
+<section id="title" class="slide title-slide">
+  <h1>L10 &middot; Monitoring, Observability <span class="accent">and Reporting</span></h1>
+  <p class="tagline">Power is Nothing Without Control</p>
+  <p class="meta">Week 5 &middot; AI Design 2026</p>
+</section>
+
+<section id="why-we-monitor" class="slide">
+  <h2>Why we monitor (and why it matters more than ever)</h2>
+  <p>Today's question: <em>How do we know an AI system is still working, once it's live?</em></p>
+  <p><strong>Three reasons we monitor</strong> &mdash; all three amplified for AI systems:</p>
+  <ul>
+    <li><strong>Find and fix bugs.</strong></li>
+    <li><strong>Understand</strong> &mdash; we don't fully understand the system's behavior (true for any big system; doubly true for models).</li>
+    <li><strong>Control</strong> &mdash; we want to set guardrails against specific failure modes.</li>
+    <li><strong>Improve</strong> &mdash; observe &rarr; learn &rarr; improve. Monitoring is the data source for next week's fix.</li>
+  </ul>
+  <p>Both <strong>humans and AI</strong> participate in monitoring AI: operators read dashboards <em>and</em> agents check other agents' outputs. We'll see both in the lab.</p>
+</section>
+
+<section id="roadmap-empty" class="slide">
+  <h2>Roadmap: the summary matrix</h2>
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th></th>
+        <th>What we monitor</th>
+        <th>How</th>
+        <th>Why</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="row-label">Traditional SW / SaaS</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">Classical ML</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">Single LLM call</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">LLM + context / tool / memory</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">Systems of agents</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+    </tbody>
+  </table>
+  <aside class="notes">We will fill this in row by row, and this is what you take with you.</aside>
+</section>
+
+<!-- ================================================================== -->
+<!-- SECTION 01                                                          -->
+<!-- ================================================================== -->
+
+<section class="slide section-divider">
+  <p class="label">Section 01</p>
+  <h1>Logging and monitoring</h1>
+</section>
+
+<section id="assertions" class="slide">
+  <h2>Assertions: Avoid Silent Failures Like the Plague</h2>
+  <p><code>assert</code> &mdash; an <em>invariant</em>. The violation means the program has an internal bug. Fires now, halts execution. Don't use it for user-input validation &mdash; that's what exceptions are for.</p>
+  <p>But, better crashing than proceeding with a "wrong", unexpected state.</p>
+  <p>Use assertions as often as you want: they act as great documentation, too.</p>
+  <div class="callout">Assertions fight the biggest problem in dev: silent failures.</div>
+</section>
+
+<section id="exceptions" class="slide">
+  <h2>Exceptions</h2>
+  <p><code>raise</code> / <code>try</code> / <code>except</code> &mdash; <em>expected-but-exceptional</em> flow: bad input, network error, missing file. Use when there's a recovery path or a well-defined way to signal failure up the stack.</p>
+  <div class="callout">Exception handling tends to suppress failures: use them with caution.</div>
+</section>
+
+<section id="logging" class="slide">
+  <h2>Logging</h2>
+  <p><em>"this happened, here, with these values, at this time."</em></p>
+  <p>Two complementary reasons, both predating dashboards:</p>
+  <ul>
+    <li><strong>To find and diagnose unexpected behaviors.</strong> You log the state to try to identify when and why a bug hits.</li>
+    <li><strong>To have a trail of what happened.</strong> Sometimes we log just to have a record, regardless of whether anything went wrong. Logs give us peace of mind, and let us reconstruct behaviours and facts later (who did what, when, with what data).</li>
+  </ul>
+  <p>Uses that grow from those two: audit trails, session replay, billing, compliance, product analytics.</p>
+</section>
+
+<section id="logging-primitives" class="slide">
+  <h2>Logging primitives</h2>
+  <p>Three complementary controls in the standard library &mdash; different answers to "something unexpected was detected, now what?"</p>
+  <ul>
+    <li><code>logging</code> &mdash; a <em>side channel</em> that records "something happened." Doesn't change control flow. Verbosity controlled by level.</li>
+    <li><strong>Log levels</strong> &mdash; a verbosity knob <em>and</em> an alerting hook:
+      <ul>
+        <li><code>DEBUG</code> &mdash; developer detail, usually silenced in prod</li>
+        <li><code>INFO</code> &mdash; normal events ("request served")</li>
+        <li><code>WARNING</code> &mdash; unusual but handled</li>
+        <li><code>ERROR</code> &mdash; a failure we recovered from or escalated</li>
+        <li><code>CRITICAL</code> &mdash; demands immediate attention</li>
+      </ul>
+    </li>
+  </ul>
+<pre><code>import logging
+log = logging.getLogger(__name__)
+
+def divide(a, b):
+    assert isinstance(a, (int, float)), "a must be numeric"
+    if b == 0:
+        log.warning("division by zero", extra={"a": a})
+        raise ZeroDivisionError(f"a={a}, b={b}")
+    result = a / b
+    log.info("divide ok", extra={"a": a, "b": b, "result": result})
+    return result</code></pre>
+  <p class="note"><span class="label">Footnote &middot;</span> stdlib <code>logging</code> is what you'll use 95% of the time. <code>structlog</code> / <code>loguru</code> exist for niche ergonomics &mdash; reach for them only when context-binding or a terser API genuinely hurts.</p>
+  <div class="callout">These three primitives show up again, adapted, at every level we'll cover today.</div>
+  <p class="note"><span class="label">&rarr; pause for IC-1 (3 min):</span> <em>Pick the primitive</em> &mdash; four one-liners.</p>
+</section>
+
+<section id="demo-1" class="slide interlude">
+  <p class="label">Interlude &middot; Demo 1</p>
+  <h2>Basic logging primitives</h2>
+  <p class="demo-path">labs/09_monitoring/demos/1_basic_logging/ &middot; <code>python demo.py</code></p>
+  <div class="demo-screen">TODO: screenshot</div>
+  <p><strong>What students see:</strong> JSON rows in <code>app.log</code>, level filtering (INFO vs DEBUG), and a deliberate crash at the end. Teaching beat: "in dev, crashes are fine; silent failures are not."</p>
+  <p><strong>Returns to the deck</strong> by motivating the next step: <em>"one log file is already useful &mdash; now what changes when we watch it automatically?"</em></p>
+  <p class="demo-meta">Budget: ~5 minutes</p>
+</section>
+
+<section id="logging-to-monitoring" class="slide">
+  <h2>From logging to monitoring</h2>
+  <ul>
+    <li><strong>Monitoring = automated, continuous inspection</strong> of logged data against expectations. Moves us from reading logs by hand to dashboards and alerts.</li>
+    <li><strong>RED:</strong> Rate, Errors, Duration &mdash; the three numbers every request-driven service wants on a dashboard.</li>
+    <li><strong>USE:</strong> Utilization, Saturation, Errors &mdash; the resource-side view.</li>
+    <li><strong>SLOs, error budgets, MTTR, alerting culture</strong> &mdash; the operational vocabulary built on top.</li>
+  </ul>
+  <div class="callout">Every dashboard is ultimately an aggregation of log events plus an expectation about their values.</div>
+  <p class="note"><span class="label">&rarr; pause for IC-2 (3 min):</span> <em>Read the RED dashboard</em> &mdash; what fields must each event carry?</p>
+</section>
+
+<section id="traces" class="slide">
+  <h2>Traces: causal structure over events (and process mining)</h2>
+  <ul>
+    <li>Some events belong together: a <strong>session</strong>, a <strong>request</strong>, a <strong>business workflow</strong>. If we give them a shared identifier, the events form a <strong>trace</strong>.</li>
+    <li>In enterprise SaaS, that's exactly the input format for <strong>process mining</strong> &mdash; given a log with <code>case_id &middot; activity &middot; timestamp &middot; actor</code>, discover the real business process that produced it.</li>
+    <li>Key point: "trace" is first a <em>business</em> concept (a workflow you can replay) and only later an <em>engineering</em> concept (a request you can debug). LLM-era traces (OTel, Section 03) inherit both meanings.</li>
+  </ul>
+  <p class="note"><span class="label">Visual &middot;</span> a small process-mining swimlane &mdash; case_id rows, activities as coloured blocks along a timeline.</p>
+  <p class="note"><span class="label">&rarr; pause for IC-3 (3 min):</span> <em>The untraceable request</em> &mdash; why per-service RED isn't enough.</p>
+</section>
+
+<section id="centralized-logging" class="slide">
+  <h2>Centralized logging + metrics at scale</h2>
+  <p>One log file per box doesn't scale. SaaS-scale services ship logs to a central system that <strong>collects &middot; aggregates &middot; indexes &middot; queries</strong>.</p>
+  <div class="cols two">
+    <div class="col">
+      <h4>Common systems</h4>
+      <ul>
+        <li><strong>Splunk</strong> &mdash; enterprise workhorse, SPL query language, dashboards + alerts.</li>
+        <li><strong>Datadog / New Relic</strong> &mdash; SaaS-hosted; logs + metrics + traces in one pane.</li>
+        <li><strong>ELK</strong> (Elasticsearch / Logstash / Kibana) &mdash; open-source stack.</li>
+        <li><strong>Grafana Loki</strong> &mdash; lightweight, log-only; fits an existing Grafana stack.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>Metrics emerge naturally from centralization</h4>
+      <p>Once events are in one place you can aggregate them &mdash; counts, rates, histograms &mdash; cheaply. Metrics aren't a separate "pillar," they're <em>a cheaper, coarser view of the same events</em>.</p>
+      <p>Dashboards = metrics + expectations. Alerts = automated checks on those expectations.</p>
+    </div>
+  </div>
+</section>
+
+<section id="demo-2" class="slide interlude">
+  <p class="label">Interlude &middot; Demo 2</p>
+  <h2>Central log dashboard (Splunk-like)</h2>
+  <p class="demo-path">labs/09_monitoring/demos/2_central_log_dashboard/ &middot; open <code>dashboard.html</code></p>
+  <div class="demo-screen">TODO: screenshot</div>
+  <p><strong>What students see:</strong> three RED panels computed from a 10k-row synthetic <code>logs.ndjson</code>, a 15-minute <code>/checkout</code> incident visible on the error-rate panel, and a search box that drills from summary back to the raw rows.</p>
+  <p><strong>Closing beat (plants the Section-02 seed).</strong> All of these panels measure <em>is it up, fast, not erroring</em> &mdash; none measure <em>is the output correct</em>. For a SaaS endpoint there's no notion of a correct response to compare against; that axis only appears once the system is making predictions you could be right or wrong about. No new panel &mdash; the point is that the quality axis isn't even askable yet.</p>
+  <p><strong>Returns to the deck</strong> by motivating the next slide: <em>"now that everyone on the team can query everything, what you put into the log matters."</em></p>
+  <p class="demo-meta">Budget: ~8 minutes</p>
+</section>
+
+<section id="privacy-why" class="slide">
+  <h2>Privacy: why it shows up here</h2>
+  <p>The moment logs are centralized and queryable, <strong>what you put into them matters as much as the log itself</strong>:</p>
+  <ul>
+    <li>Centralized access &mdash; everyone on the team can query everything.</li>
+    <li>Regulation &mdash; GDPR, CCPA, right-to-erasure, data-residency rules.</li>
+    <li>Auditability cuts both ways: a detailed log is a liability as well as an asset.</li>
+  </ul>
+  <p>Classic failure modes:</p>
+  <ul>
+    <li>Raw emails or tokens in <code>log.info</code> payloads.</li>
+    <li>"We'll redact later" pipelines that never get built.</li>
+    <li>Over-verbose production loggers inherited from dev.</li>
+  </ul>
+  <p class="note"><span class="label">Preview &middot;</span> this concern expands in Section 03, where the log may contain the user's entire prompt.</p>
+</section>
+
+<section id="privacy-patterns" class="slide">
+  <h2>Privacy: patterns that work</h2>
+  <ul>
+    <li><strong>Hash or tokenise identifiers</strong> &mdash; log <code>user_hash</code> not <code>user_email</code>; keep the mapping in one controlled store.</li>
+    <li><strong>Environment-gated verbosity</strong> &mdash; verbose in dev; redacted in prod; gated by a single config flag.</li>
+    <li><strong>Redact at the event boundary</strong>, not downstream. A scrubber runs inside the log formatter so raw data never hits disk.</li>
+    <li><strong>Typed secret wrappers</strong> &mdash; <code>class Secret(str)</code> whose <code>__repr__</code> returns <code>"***"</code> &mdash; makes it impossible to accidentally serialize.</li>
+    <li><strong>Retention + deletion</strong> &mdash; decide upfront how long logs live and how you handle deletion requests.</li>
+  </ul>
+  <div class="callout">Every one of these patterns is itself an <em>assertion</em> about the log pipeline: "no raw PII ever crosses this boundary."</div>
+</section>
+
+<section id="roadmap-row-1" class="slide">
+  <h2>Roadmap: row 1 filled in</h2>
+  <table class="matrix">
+    <thead>
+      <tr><th></th><th>What we monitor</th><th>How</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">Traditional SW / SaaS</td>
+        <td>control flow, exceptions, latency, error rate, resource use</td>
+        <td><code>assert</code> + exceptions + structured logs + centralized aggregation + dashboards on RED/USE + SLOs</td>
+        <td>know when broken, restore fast, debug post-hoc, keep a record, hit SLAs</td>
+      </tr>
+      <tr><td class="row-label">Classical ML</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">Single LLM call</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">LLM + context / tool / memory</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">Systems of agents</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================================================================== -->
+<!-- SECTION 02                                                          -->
+<!-- ================================================================== -->
+
+<section class="slide section-divider">
+  <p class="label">Section 02</p>
+  <h1>Classical ML</h1>
+</section>
+
+<section id="classical-ml" class="slide">
+  <h2>What we monitor in classical ML</h2>
+  <p>Three things, in this order:</p>
+  <ul>
+    <li><strong>Training-job health</strong> &mdash; did the scheduled job run? did it produce a model artifact? how long did it take? any resource issues?</li>
+    <li><strong>Serving latency &amp; throughput</strong> &mdash; p50/p95 per endpoint; QPS; error rates. Same story as any other service.</li>
+    <li><strong>Quality</strong> &mdash; accuracy / F1 / recall-at-k / whatever metric the model was trained for, measured on held-out data and (when labels arrive) on production traffic.</li>
+  </ul>
+  <p>Drift tests (K-S, PSI, &chi;&sup2;) are a subset of <em>quality monitoring</em> &mdash; useful when labels are delayed or absent.</p>
+  <div class="callout">Classical ML monitoring is mostly standard service monitoring plus a quality metric. The open-ended complications arrive with LLMs.</div>
+</section>
+
+<section id="quality-assertion" class="slide">
+  <h2>Example: a quality assertion</h2>
+<pre><code>from sklearn.metrics import accuracy_score
+
+preds = model.predict(X_holdout)
+acc = accuracy_score(y_holdout, preds)
+log.info("holdout eval", extra={"accuracy": acc, "n": len(preds)})
+assert acc &gt;= 0.85, f"quality regression: accuracy={acc:.3f}"</code></pre>
+  <p>Same <em>shape</em> as an ordinary code assertion &mdash; but the value being asserted on is a <em>summary over a dataset</em>, not a single request. This is the smallest step from Section 01 into statistical territory.</p>
+  <p class="note"><span class="label">&rarr; pause for IC-4 (3 min):</span> <em>Which assertion broke?</em> &mdash; single-request <code>assert</code> vs. nightly-eval <code>assert</code>.</p>
+</section>
+
+<section id="demo-3" class="slide interlude">
+  <p class="label">Interlude &middot; Demo 3</p>
+  <h2>Classical-ML monitoring dashboard</h2>
+  <p class="demo-path">labs/09_monitoring/demos/3_classical_ml_dashboard/ &middot; open <code>dashboard.html</code></p>
+  <div class="demo-screen">TODO: screenshot</div>
+  <p><strong>What students see:</strong> the training-job board (HUNG / CRASHED / RUNAWAY / HEALTHY tiles), the error-log drawer for a hung and a crashed job, and the quality-over-time chart with an injected drift window. Instructor toggles the quality assertion between a loose and a tight threshold live.</p>
+  <p><strong>Returns to the deck</strong> by staging Section 03: <em>"same dashboard shape, now swap the quality metric for a rubric score over an LLM's answer."</em></p>
+  <p class="demo-meta">Budget: ~15 minutes</p>
+</section>
+
+<section id="roadmap-row-2" class="slide">
+  <h2>Roadmap: row 2 filled in</h2>
+  <table class="matrix">
+    <thead>
+      <tr><th></th><th>What we monitor</th><th>How</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">Traditional SW / SaaS</td>
+        <td>control flow, exceptions, latency, error rate, resource use</td>
+        <td><code>assert</code> + exceptions + structured logs + centralized aggregation + dashboards on RED/USE + SLOs</td>
+        <td>know when broken, restore fast, debug post-hoc, keep a record, hit SLAs</td>
+      </tr>
+      <tr>
+        <td class="row-label">Classical ML</td>
+        <td>training-job health, serving latency, quality metrics</td>
+        <td>job-status checks, service-level metrics, held-out evaluation, drift tests when labels lag</td>
+        <td>same as any service &mdash; plus "is the model still good?" &mdash; answered with statistics, not per-request assertions</td>
+      </tr>
+      <tr><td class="row-label">Single LLM call</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">LLM + context / tool / memory</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+      <tr><td class="row-label">Systems of agents</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================================================================== -->
+<!-- SECTION 03                                                          -->
+<!-- ================================================================== -->
+
+<section class="slide section-divider">
+  <p class="label">Section 03</p>
+  <h1>LLM systems, escalating</h1>
+</section>
+
+<section id="stage-a-anatomy" class="slide">
+  <h2>Stage A &middot; A single LLM call &mdash; anatomy &amp; what to log</h2>
+  <p>A single LLM call has: a prompt (often templated), optional output schema, a completion, usage stats, a latency.</p>
+  <p><strong>What to log &mdash; generously:</strong></p>
+  <ul>
+    <li>Metadata: request id, model, prompt version, temperature, input/output tokens, latency, cost, outcome.</li>
+    <li><strong>The actual prompt and completion.</strong> Non-negotiable for debugging. Subject to the privacy caveats from the Privacy slides (hashing, env-gated verbosity, redact-at-boundary).</li>
+  </ul>
+  <p><strong>Structured-output contract:</strong> declare the shape you want with a <strong>Pydantic</strong> model (or JSON schema). Parse after the call; re-ask once on validation failure.</p>
+<pre><code>class Decision(BaseModel):
+    action: Literal["buy", "sell", "hold"]
+    confidence: float
+
+out = llm.structured(prompt, schema=Decision)
+log.info("llm.call", extra={
+    "request_id": rid, "prompt_version": "v3",
+    "prompt": prompt, "completion": out.model_dump_json(),
+    "in_tokens": it, "out_tokens": ot, "latency_ms": ms,
+})</code></pre>
+  <p class="note"><span class="label">Data structure &middot;</span> one JSON row per call &mdash; rich, flat, queryable.</p>
+</section>
+
+<section id="stage-a-over-time" class="slide">
+  <h2>Stage A &middot; Monitoring over time</h2>
+  <p>One call is data. The <strong>stream</strong> of calls is where monitoring lives. What to watch:</p>
+  <ul>
+    <li><strong>Latency distributions</strong> &mdash; p50 / p95 / p99 per model, per prompt version. Alert on drift.</li>
+    <li><strong>Failure rate</strong> &mdash; schema-validation fails, API errors, <strong>timeouts</strong>. Alert when timeout rate crosses threshold.</li>
+    <li><strong>Correctness sampling</strong> &mdash; sample a small % of production traffic and run LLM-as-judge (L7) offline. Track rubric score over time.</li>
+    <li><strong>Cost</strong> is first-class &mdash; spend per day, per model, per prompt version.</li>
+  </ul>
+  <p>Pattern: every dashboard for Stage A is an aggregation over the structured log rows from the previous slide.</p>
+  <div class="callout">Same RED picture from earlier, with a quality axis added.</div>
+</section>
+
+<section id="content-safety" class="slide">
+  <h2>Stage A &middot; Content safety (separate from structural validation)</h2>
+  <p>Pydantic-valid &ne; safe. A well-formed answer can still be toxic, leak PII, or violate policy. These checks sit <strong>after</strong> the structural validation from the previous slide.</p>
+  <ul>
+    <li><strong>Toxicity / policy</strong> &mdash; rule-based filters, classifier models, or an LLM judge. Run pre-response.</li>
+    <li><strong>PII in the answer</strong> &mdash; the model may <em>emit</em> PII even when the prompt was clean. Detect at the output boundary, then decide:
+      <ul>
+        <li>Redact before responding.</li>
+        <li>Block the response entirely.</li>
+        <li>Let it through, flag for audit.</li>
+      </ul>
+    </li>
+  </ul>
+  <p><strong>Important distinction:</strong> detecting PII in an answer is <em>different</em> from logging it. You might allow the answer but refuse to persist it in the log &mdash; two separate knobs, usually controlled by two separate configs.</p>
+  <p class="note"><span class="label">&rarr; pause for IC-5 (3 min):</span> <em>PII sorting</em> &mdash; separate "in the answer" from "in the log" on a three-case table.</p>
+</section>
+
+<section id="guardrails" class="slide">
+  <h2>Stage A &middot; Guardrail design patterns</h2>
+  <p>Once you have checks, you need a policy for <em>what to do when one trips</em>. Four patterns you'll see everywhere:</p>
+  <ul>
+    <li><strong>Fail-closed vs. fail-open</strong> &mdash; per check, not global. Schema &rarr; fail-closed. Toxicity &rarr; fail-closed. Latency budget &rarr; often fail-open (serve stale).</li>
+    <li><strong>Retry-with-repair</strong> &mdash; one bounded retry: <em>"your last answer didn't parse &mdash; here's the error, try again."</em></li>
+    <li><strong>Fallback chains</strong> &mdash; cheap model &rarr; strong model &rarr; human.</li>
+    <li><strong>Circuit breakers</strong> &mdash; trip when a check's reject-rate spikes above threshold; stop hitting the guarded path temporarily.</li>
+  </ul>
+  <p>Every trip should produce a structured log entry and a metric &mdash; otherwise the guardrail is invisible to monitoring.</p>
+</section>
+
+<section id="demo-4" class="slide interlude">
+  <p class="label">Interlude &middot; Demo 4</p>
+  <h2>LLM-call log viewer and dashboard</h2>
+  <p class="demo-path">labs/09_monitoring/demos/4_llm_calls/ &middot; first <code>log_viewer.html</code>, then <code>dashboard.html</code></p>
+  <div class="demo-screen">TODO: screenshot</div>
+  <p><strong>What students see &mdash; Step 1:</strong> the raw log viewer over <code>llm_calls.ndjson</code> &mdash; filter by prompt version, expand a row to see the full prompt + completion. Teaching beat: <em>building a viewer like this is essentially free today &mdash; what Splunk sells is scale, not viewing.</em></p>
+  <p><strong>Step 2:</strong> the aggregation dashboard over the same file &mdash; latency, failure rate, cost, safety trips, guardrail outcomes. "View rows" links deep-link back to the viewer.</p>
+  <p><strong>Returns to the deck</strong> by motivating Stage B: <em>"flat rows are fine for one call &mdash; about to stop being enough."</em></p>
+  <p class="demo-meta">Budget: ~15 minutes</p>
+</section>
+
+<section id="stage-b" class="slide">
+  <h2>Stage B &middot; Add context and tool calls</h2>
+  <p>Real systems extend the single call with two things:</p>
+  <ul>
+    <li><strong>Context / memory</strong> &mdash; system prompts, retrieved chunks (RAG), conversation history.</li>
+    <li><strong>Tool calls</strong> &mdash; the model requests information or actions (search, code execution, APIs).</li>
+  </ul>
+  <p>The call becomes a <strong>loop</strong>: the model reasons, optionally calls a tool, reads the result, reasons again, and continues until it returns an answer. Still one logical request/response from the user's point of view.</p>
+  <p>What we now need to keep track of along that flow:</p>
+  <ul>
+    <li><strong>Memory state</strong> &mdash; what the model actually saw at each step.</li>
+    <li><strong>Reasoning</strong> &mdash; the model's explanation for what it's doing, when exposed.</li>
+    <li><strong>Tool-calling decisions</strong> &mdash; which tool it picked and with what arguments.</li>
+    <li><strong>Tool logs</strong> &mdash; tool call inputs, outputs, latency, errors.</li>
+    <li><strong>Session-level state</strong> &mdash; <code>session_id</code>, step count, cumulative cost and latency, whether the session ended resolved.</li>
+  </ul>
+</section>
+
+<section id="tracing" class="slide">
+  <h2>Tracing a multi-step flow</h2>
+  <p>Once a single request involves several LLM calls, tool calls, and optional hand-offs to other agents, flat log rows can't show <em>which step led to which</em>. We need a <strong>trace</strong>: events with a shared request id and parent/child relationships.</p>
+  <p><strong>Worked example</strong> (from the lab): a research agent delegates a sub-task to a retrieval agent, which calls a search tool:</p>
+<div class="tree"><span class="root">research.task       [rid=7a2, 4.2s]</span>
+├── llm.call plan   [142ms]
+├── retrieval.agent [3.1s]
+│   ├── llm.call    [310ms]
+│   └── tool.search [2.7s]
+└── llm.call answer [720ms]</div>
+  <p><strong>Callback:</strong> same idea as process mining &mdash; events with a shared case id reveal the process that produced them. Here the case id is the request id; the activities are LLM and tool calls.</p>
+  <p><strong>Data structure:</strong> a trace is a set of spans linked by a trace id and a parent span id. Parent/child relationships recover the causal order.</p>
+  <p class="note"><span class="label">&rarr; pause for IC-6 (3 min):</span> <em>Tree vs. rows</em> &mdash; name three questions answerable only with parent/child info.</p>
+</section>
+
+<section id="otel" class="slide">
+  <h2>OpenTelemetry + GenAI semantic conventions</h2>
+  <ul>
+    <li><strong>OpenTelemetry (OTel)</strong> = the vendor-neutral standard for trace data.</li>
+    <li><strong>GenAI semantic conventions</strong> pick attribute names that work across all backends: <code>gen_ai.system</code>, <code>gen_ai.request.model</code>, <code>gen_ai.usage.input_tokens</code>, <code>gen_ai.usage.output_tokens</code>, <code>gen_ai.operation.name</code>.</li>
+    <li>Standard names = portability. Write instrumentation once, swap backends without touching code.</li>
+  </ul>
+  <p class="note"><span class="label">Code &middot;</span> the lab's <code>trace_llm_call</code> context manager setting GenAI attributes and emitting a span.</p>
+</section>
+
+<section id="demo-5" class="slide interlude">
+  <p class="label">Interlude &middot; Demo 5</p>
+  <h2>OpenTelemetry traces + viewer</h2>
+  <p class="demo-path">labs/09_monitoring/demos/5_otel_traces/ &middot; open <code>trace_viewer.html</code></p>
+  <div class="demo-screen">TODO: screenshot</div>
+  <p><strong>What students see:</strong> a Stage-B flow's spans exported as NDJSON, reconstructed into a collapsible waterfall; clicking a span shows the GenAI-semconv attributes (model, tokens, tool args). Optional side-trip: <code>--with-otlp</code> streams the same spans into a local Phoenix so students see the "real" UI on the same data.</p>
+  <p><strong>Returns to the deck</strong> by setting up tooling: <em>"you've read your own tree &mdash; now let's survey what's out there."</em></p>
+  <p class="demo-meta">Budget: ~10 minutes</p>
+</section>
+
+<section id="tooling" class="slide">
+  <h2>What's out there (and when to reach for it)</h2>
+  <ul>
+    <li><strong>Phoenix</strong> (Arize) &mdash; notebook-first, open source.</li>
+    <li><strong>Langfuse</strong> &mdash; full-stack LLM observability: tracing + eval + prompt management.</li>
+    <li><strong>Jaeger</strong> &mdash; generic OTel backend, engineer-friendly, no LLM-specific UI.</li>
+    <li><strong>LangSmith</strong> &mdash; LangChain-native; hosted; proprietary.</li>
+    <li><strong>Grafana Tempo</strong> &mdash; fits into an existing Grafana/Prometheus stack.</li>
+  </ul>
+  <div class="callout">Build-vs-buy: OTLP is standard, so swap cost is low. Start with a home-grown viewer to own the primitives; adopt a backend when the team outgrows it.</div>
+</section>
+
+<section id="roadmap-rows-3-4" class="slide">
+  <h2>Roadmap: rows 3 &amp; 4 filled in</h2>
+  <table class="matrix">
+    <thead>
+      <tr><th></th><th>What we monitor</th><th>How</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">Traditional SW / SaaS</td>
+        <td>control flow, exceptions, latency, error rate, resource use</td>
+        <td><code>assert</code> + exceptions + structured logs + dashboards on RED/USE + SLOs</td>
+        <td>know when broken, restore fast, debug post-hoc</td>
+      </tr>
+      <tr>
+        <td class="row-label">Classical ML</td>
+        <td>training-job health, serving latency, quality metrics</td>
+        <td>job-status checks, service metrics, held-out eval, drift tests</td>
+        <td>same as any service &mdash; plus "is the model still good?"</td>
+      </tr>
+      <tr>
+        <td class="row-label">Single LLM call</td>
+        <td>prompt/completion, latency, cost, schema validity, safety checks</td>
+        <td>structured log row per call, Pydantic output contract, sampled LLM-as-judge, guardrails</td>
+        <td>correctness now measurable per-call; cost + safety first-class</td>
+      </tr>
+      <tr>
+        <td class="row-label">LLM + context / tool / memory</td>
+        <td>per-step spans, memory state, tool decisions, tool results, session cumulative</td>
+        <td>OTel spans + GenAI semconv, trace viewer, tree-aware rollups over flat rows</td>
+        <td>recover <em>which step</em> caused it &mdash; rows can't answer that</td>
+      </tr>
+      <tr><td class="row-label">Systems of agents</td><td class="empty"></td><td class="empty"></td><td class="empty"></td></tr>
+    </tbody>
+  </table>
+  <div class="callout">Each rung up the complexity ladder forces a new data structure: row &rarr; session-keyed rows &rarr; causal tree.</div>
+</section>
+
+<!-- ================================================================== -->
+<!-- SECTION 04                                                          -->
+<!-- ================================================================== -->
+
+<section class="slide section-divider">
+  <p class="label">Section 04</p>
+  <h1>Agents and systems of agents</h1>
+</section>
+
+<section id="topology" class="slide">
+  <h2>Topology: orchestrators and sub-agents</h2>
+  <ul>
+    <li>Orchestrators, planners, reasoners, sub-agents, handoffs, re-entry.</li>
+    <li>The span structure from the previous section generalises: one request can spawn several sub-agent spans, each with its own LLM and tool calls underneath.</li>
+  </ul>
+  <p class="note"><span class="label">Visual &middot;</span> orchestrator span at top, 2&ndash;3 sub-agent spans beneath, each with child LLM and tool spans.</p>
+</section>
+
+<section id="task-assertions" class="slide">
+  <h2>Task-level and coordination assertions</h2>
+  <ul>
+    <li><strong>Task-level:</strong> "did the final answer satisfy the original user intent?" &mdash; an LLM-as-judge rubric (L7) over the whole span tree.</li>
+    <li><strong>Coordination:</strong> plan is valid; step budget bounded across the tree; no role drift ("research agent started writing code"); no planner-ping-pong.</li>
+    <li><strong>Statistical at task level:</strong> task-success rate, repair rate, human-escalation rate, cost/task.</li>
+  </ul>
+</section>
+
+<section id="failure-modes" class="slide">
+  <h2>Failure modes unique to multi-agent</h2>
+  <ul>
+    <li>Silent agent disagreement.</li>
+    <li>Cascading repair (each layer retries, cost explodes).</li>
+    <li>Planner loops.</li>
+    <li>Role confusion.</li>
+  </ul>
+  <p class="note"><span class="label">&rarr; pause for IC-7 (3 min):</span> <em>Spot the pathology</em> &mdash; label three ASCII trees.</p>
+</section>
+
+<section id="demo-6" class="slide interlude">
+  <p class="label">Interlude &middot; Demo 6</p>
+  <h2>Multi-agent trace</h2>
+  <p class="demo-path">labs/09_monitoring/demos/6_multi_agent/ &middot; reuse Demo 5's <code>trace_viewer.html</code></p>
+  <div class="demo-screen">TODO: screenshot</div>
+  <p><strong>What students see:</strong> a healthy orchestrator tree (wide, bounded depth) next to a <code>--failure-mode=planner_loop</code> run (tall, repeating retries); <code>task_judgments.ndjson</code> alongside shows the task-level rubric verdict. Instructor points at the shape and reads back the failure-mode vocabulary.</p>
+  <p><strong>Returns to the deck</strong> by closing the section: <em>"failure mode is a shape &mdash; and the shape is in the same spans file you had before."</em></p>
+  <p class="demo-meta">Budget: ~10 minutes</p>
+</section>
+
+<section id="roadmap-row-5" class="slide">
+  <h2>Roadmap: row 5 filled in</h2>
+  <table class="matrix">
+    <thead>
+      <tr><th></th><th>What we monitor</th><th>How</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">Traditional SW / SaaS</td>
+        <td>control flow, exceptions, latency, error rate, resource use</td>
+        <td><code>assert</code> + exceptions + structured logs + dashboards on RED/USE + SLOs</td>
+        <td>know when broken, restore fast, debug post-hoc</td>
+      </tr>
+      <tr>
+        <td class="row-label">Classical ML</td>
+        <td>training-job health, serving latency, quality metrics</td>
+        <td>job-status checks, service metrics, held-out eval, drift tests</td>
+        <td>same as any service &mdash; plus "is the model still good?"</td>
+      </tr>
+      <tr>
+        <td class="row-label">Single LLM call</td>
+        <td>prompt/completion, latency, cost, schema validity, safety checks</td>
+        <td>structured log row per call, Pydantic output contract, sampled LLM-as-judge, guardrails</td>
+        <td>correctness measurable per-call; cost + safety first-class</td>
+      </tr>
+      <tr>
+        <td class="row-label">LLM + context / tool / memory</td>
+        <td>per-step spans, memory state, tool decisions, tool results, session cumulative</td>
+        <td>OTel spans + GenAI semconv, trace viewer, tree-aware rollups</td>
+        <td>recover <em>which step</em> caused it</td>
+      </tr>
+      <tr>
+        <td class="row-label">Systems of agents</td>
+        <td>task success, coordination quality, cascading-repair presence, cost/task</td>
+        <td>task-level rubric over span trees, shape-based failure detection, tree-wide budget checks</td>
+        <td>correctness is defined at the <em>task</em> level; the production trace is the eval sample</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout">In agent systems, correctness is defined at the task level; the production trace is the eval sample.</div>
+  <p class="note"><span class="label">Footnote &middot;</span> the runnable multi-agent lab is in <strong>L13</strong>.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- SECTION 05                                                          -->
+<!-- ================================================================== -->
+
+<section class="slide section-divider">
+  <p class="label">Section 05</p>
+  <h1>CI &middot; Telemetry &middot; Analysis &middot; Reporting</h1>
+</section>
+
+<section id="ci-gate" class="slide">
+  <h2>CI eval gate</h2>
+  <ul>
+    <li>Golden set + rubric judges run on every PR.</li>
+    <li>Budgets: tokens, wall-clock, dollars &mdash; fail the build if exceeded.</li>
+    <li>Regression check using <strong>confidence intervals</strong> (L8&ndash;L9), not raw means.</li>
+    <li>Pin dataset version, judge version, prompt version in the run artifact.</li>
+  </ul>
+  <p class="note"><span class="label">Code &middot;</span> <code>test_rubric_regression</code> pytest skeleton.</p>
+</section>
+
+<section id="telemetry" class="slide">
+  <h2>Telemetry: what makes remote monitoring possible</h2>
+  <ul>
+    <li>Definition: the operational act of <em>shipping</em> structured data (logs / metrics / spans) off the service to a remote backend.</li>
+    <li>Without telemetry you can only monitor by SSH'ing into the box.</li>
+    <li><strong>OTLP</strong> = vendor-neutral wire format &mdash; same spans go to Tempo / Jaeger / Phoenix / Langfuse.</li>
+    <li>Sampling: head-based (decide at trace start) vs. tail-based (keep all errors, 1% of successes).</li>
+    <li>Cardinality discipline &mdash; no user-generated strings in metric tags.</li>
+  </ul>
+  <p class="note"><span class="label">Code &middot;</span> ~3-line diff swapping <code>ConsoleSpanExporter</code> &rarr; <code>OTLPSpanExporter</code>.</p>
+</section>
+
+<section id="online-evals" class="slide">
+  <h2>Online evals</h2>
+  <ul>
+    <li><strong>Canary</strong> &mdash; small % of traffic on new prompt/model, side-by-side rubric/guardrail comparison.</li>
+    <li><strong>Shadow</strong> &mdash; new version sees real input, output judged but not shown.</li>
+    <li><strong>Sampled LLM-as-judge</strong> on production traffic (L7 caveats apply).</li>
+    <li><strong>Drift signals:</strong> rising reject-rate, embedding-distribution shift, output-length shift, tool-mix shift.</li>
+  </ul>
+</section>
+
+<section id="analysis" class="slide">
+  <h2>Analysis: turning telemetry into answers</h2>
+  <p>Monitoring tells you <em>what's happening now</em>. <strong>Analysis</strong> is the next step &mdash; <em>why is it happening, what's different, and what should we change?</em> &mdash; run on the same logged/traced data, usually offline.</p>
+  <p>Typical operations on the data:</p>
+  <ul>
+    <li><strong>Aggregation</strong> &mdash; summary stats per prompt version, model, user cohort, time window.</li>
+    <li><strong>Segmentation</strong> &mdash; slice by dimension and compare (prompt v2 vs v3; weekend vs weekday; cohort A vs B).</li>
+    <li><strong>A/B comparison</strong> &mdash; canary slice vs control; difference with <strong>confidence intervals</strong> (callback to L8&ndash;L9). Not just "which number is bigger."</li>
+    <li><strong>Drill-down</strong> &mdash; filter to a failing subset, pull the individual traces, read them.</li>
+    <li><strong>Trend detection</strong> &mdash; rolling windows to spot drift <em>before</em> an SLO breaks.</li>
+  </ul>
+  <p class="note"><span class="label">Tooling &middot;</span> notebook scripts against the exported JSON rows and spans &middot; analysis UIs built into Phoenix / Langfuse &middot; at scale, SQL against a logs warehouse &mdash; but for this lab we stay with scripts over files.</p>
+  <div class="callout">The same structured data powers live dashboards, CI gates, and after-the-fact analysis. Build the pipeline once.</div>
+</section>
+
+<section id="demo-7" class="slide interlude">
+  <p class="label">Interlude &middot; Demo 7</p>
+  <h2>Analysis / A-B comparison</h2>
+  <p class="demo-path">labs/09_monitoring/demos/7_ab_analysis/ &middot; <code>python analyze.py</code> &rarr; open <code>analysis_report.html</code></p>
+  <div class="demo-screen">TODO: screenshot</div>
+  <p><strong>What students see:</strong> the five Analysis operations applied to the same <code>llm_calls.ndjson</code> from Demo 4 plus the <code>task_judgments.ndjson</code> from Demo 6 &mdash; an executive one-liner with a CI, side-by-side bars with whiskers, and a drill-down list that deep-links into Demo 5's trace viewer for the 20 worst cases.</p>
+  <p><strong>Returns to the deck</strong> by setting up reporting cadences: <em>"same file &mdash; different audience, different cadence."</em></p>
+  <p class="demo-meta">Budget: ~10 minutes</p>
+</section>
+
+<section id="reporting" class="slide">
+  <h2>Reporting cadences</h2>
+  <ul>
+    <li><strong>Real-time</strong> &rarr; alerts on hard assertion breaks.</li>
+    <li><strong>Daily</strong> &rarr; team quality/cost summary.</li>
+    <li><strong>Weekly</strong> &rarr; PM/leadership: one quality number <strong>with CI</strong>, one cost number, one safety number, short prose "what changed and why."</li>
+  </ul>
+  <p class="note"><span class="label">Visual &middot;</span> the lab's 4-week weekly-report chart (quality w/ CI bars &middot; cost/request &middot; reject-rate).</p>
+</section>
+
+<section id="incidents" class="slide">
+  <h2>Incident reviews for AI systems</h2>
+  <ul>
+    <li>LLM failures are usually <strong>distribution shifts</strong>, not bugs.</li>
+    <li>Post-mortems look different from Software 1.0:
+      <ul>
+        <li>What new traffic pattern appeared?</li>
+        <li>What upstream model / prompt / tool changed?</li>
+        <li>What guardrail / rubric was silent when it shouldn't have been?</li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<section id="thesis-05" class="slide thesis-slide">
+  <p class="thesis-big"><em>CI gate, production dashboard, and post-hoc analysis all run the same assertions on the same structured data &mdash; only the cadence differs. Telemetry is what lets them share a pipeline.</em></p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CLOSING                                                             -->
+<!-- ================================================================== -->
+
+<section id="summary-matrix" class="slide">
+  <h2>Summary matrix</h2>
+  <table class="matrix">
+    <thead>
+      <tr><th></th><th>What we monitor</th><th>How</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">Traditional SW / SaaS</td>
+        <td>control flow, exceptions, latency, error rate, resource use</td>
+        <td><code>assert</code> + exceptions + structured logs + dashboards on RED/USE + SLOs</td>
+        <td>know when broken, restore fast, debug post-hoc, hit SLAs</td>
+      </tr>
+      <tr>
+        <td class="row-label">Classical ML</td>
+        <td>training-job health, serving latency, quality metrics</td>
+        <td>job-status checks, service metrics, held-out eval, drift tests</td>
+        <td>same as any service &mdash; plus "is the model still good?"</td>
+      </tr>
+      <tr>
+        <td class="row-label">Single LLM call</td>
+        <td>prompt/completion, latency, cost, schema validity, safety checks</td>
+        <td>structured log row per call, Pydantic output contract, sampled LLM-as-judge, guardrails</td>
+        <td>correctness measurable per-call; cost + safety first-class</td>
+      </tr>
+      <tr>
+        <td class="row-label">+ context / tool / memory</td>
+        <td>per-step spans, memory state, tool decisions, tool results, session cumulative</td>
+        <td>OTel spans + GenAI semconv, trace viewer, tree-aware rollups over flat rows</td>
+        <td>recover <em>which step</em> caused it &mdash; rows can't answer that</td>
+      </tr>
+      <tr>
+        <td class="row-label">Systems of agents</td>
+        <td>task success, coordination quality, cascading-repair presence, cost/task</td>
+        <td>task-level rubric over span trees, shape-based failure detection, tree-wide budget checks</td>
+        <td>correctness defined at the <em>task</em> level; the production trace is the eval sample</td>
+      </tr>
+    </tbody>
+  </table>
+  <aside class="notes">This is the one artifact to keep from today.</aside>
+</section>
+
+<section id="take-aways" class="slide">
+  <h2>Take-aways &amp; what's next</h2>
+  <ul>
+    <li>Logging is the primitive. Monitoring is continuous assertion-checking on top.</li>
+    <li>Assertions evolve with system complexity: code &rarr; statistical &rarr; semantic &rarr; trace &rarr; task.</li>
+    <li>Telemetry is what makes remote monitoring possible.</li>
+    <li>Same assertions, different cadences: CI gate &harr; production dashboard.</li>
+    <li>Humans <em>and</em> AI both monitor AI &mdash; operators read dashboards, agents check other agents.</li>
+  </ul>
+  <p>Next: <strong>L13</strong> &mdash; multi-agent systems in depth &middot; <strong>L15</strong> &mdash; long-term maintenance.</p>
+</section>
+
+</main>
+
+</body>
+</html>

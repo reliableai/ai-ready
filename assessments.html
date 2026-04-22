@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assessment & Project - AI-Ready Engineers</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header loaded dynamically -->
+
+  <main>
+    <h1>Assessment & Project</h1>
+    <p class="text-muted">Midterm exam (30%) and course project (70%)</p>
+
+    <h2>Grading Breakdown</h2>
+    <table class="grading-table">
+      <thead>
+        <tr>
+          <th>Assessment</th>
+          <th>Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Midterm Exam (Individual)</td>
+          <td>30%</td>
+        </tr>
+        <tr>
+          <td>Course Project</td>
+          <td>70%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Midterm Exam</h2>
+    <div class="card assessment-card">
+      <h3>Written Exam &mdash; April 17, 2026</h3>
+      <div class="assessment-meta mb-2">
+        <span>Duration: 60 minutes</span>
+        <span>Format: Individual, written, closed book</span>
+      </div>
+      <p><strong>Dry run: April 16</strong> &mdash; in-class practice session with ample time for Q&amp;A.</p>
+      <p><a href="mock_exams/ai_mock_midterm_w_sol.html" style="text-decoration: underline;">Mock Midterm</a></p>
+      <p><a href="mock_exams/additional_questions_w_sol.html" style="text-decoration: underline;">Additional Exercise Questions</a></p>
+
+      <h4>Scope: Evaluation of SW 2.0 and SW 3.0 Systems</h4>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Topic</th>
+            <th>Material</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. Evaluation of "traditional" ML systems</strong></td>
+            <td><a href="slides/21.Methodology1.annotated_short.pdf" target="_blank">MLVU Methodology lecture (annotated PDF)</a></td>
+          </tr>
+          <tr>
+            <td><strong>2. Probability and Bayes</strong></td>
+            <td><a href="https://chrispiech.github.io/probabilityForComputerScientists/en/" target="_blank">Probability for Computer Scientists</a> &mdash; from "Probability" to "Bayes' Theorem" (included), and "Many Coin Flips"</td>
+          </tr>
+          <tr>
+            <td><strong>3. Random variables</strong></td>
+            <td><a href="https://chrispiech.github.io/probabilityForComputerScientists/en/" target="_blank">Probability for Computer Scientists</a> &mdash; Part 2 up to "Binomial Distribution" (included), and "Normal Distribution"</td>
+          </tr>
+          <tr>
+            <td><strong>4. Beta and bootstrapping</strong></td>
+            <td><a href="https://chrispiech.github.io/probabilityForComputerScientists/en/" target="_blank">Probability for Computer Scientists</a> &mdash; Part 4 up to "Bootstrapping" (included)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="text-muted" style="margin-top: 0.5rem;">More subtopics and materials will be added as the course progresses.</p>
+    </div>
+
+    <h2>Course Project</h2>
+    <p>
+      Design, build, and evaluate an AI-powered system — and produce specific, defensible
+      findings about how it behaves. Both tracks culminate in a <strong>presentation +
+      discussion</strong>.
+    </p>
+
+    <h3>Tracks</h3>
+    <ul>
+      <li><strong>Track A — Class System.</strong> Team project (1–5 participants). Pick one of the project directions presented in class. In-class reviews, working sessions, and design clinics throughout.</li>
+      <li><strong>Track B — Capstone.</strong> Individual only. Work on one of the class projects individually, deliver at the exam.</li>
+    </ul>
+
+    <h3>Structure</h3>
+    <p>
+      <strong>Four sprints, plus one sprint to prepare the presentation.</strong> Each
+      sprint produces concrete output (issues, commits, a short sprint note, a one-slide
+      per-person update). Sprint-level specifics live in the project docs.
+    </p>
+
+    <h3>What every project ships</h3>
+    <ol>
+      <li>Working code with a UI</li>
+      <li>Project-specific data artifacts (versioned, replayable)</li>
+      <li>Findings — specific, quantified observations about the system's behavior</li>
+      <li>Technical report</li>
+      <li>Final presentation + discussion</li>
+    </ol>
+
+    <h3>Methodology</h3>
+    <p>
+      Every project is expected to meet a baseline on a shared scaffolding (architecture,
+      agent harness, memory/tools, logging, prompts as versioned files, resilience, cost,
+      quality spec, smoke tests, and the behavior study). Details and minimum bars are in
+      the universal scaffolding doc.
+    </p>
+
+    <h3>Grading (0–30, same rubric for both tracks)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Dimension (0–10 each)</th>
+          <th>Focus</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Engineering & System</strong></td>
+          <td>Working system + UI, clean module boundaries, versioned prompts, structured logging, reproducibility from a fresh clone.</td>
+        </tr>
+        <tr>
+          <td><strong>Science & Findings</strong></td>
+          <td>Specific findings (not feature lists), quantified uncertainty, honesty about negative or surprising results, scope matched to team size and time.</td>
+        </tr>
+        <tr>
+          <td><strong>Process & Communication</strong></td>
+          <td>Consistent per-sprint progress, individual accountability (per-person commits, defensible in-meeting), clear report and presentation with per-member contributions.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Project options</h3>
+    <ul>
+      <li><a href="projects/project_conversational_clustering/overview.md">Conversational Clustering</a> — cluster a dataset by talking to a human; the oracle is the sole judge of quality.</li>
+      <li><a href="projects/idea_04_multi_agent_personalities/overview.md">WhatsApp Personas</a> — instantiate real-person personas as LLM agents and test individual and group fidelity.</li>
+    </ul>
+
+    <h3>Project documents</h3>
+    <ul>
+      <li><a href="projects/deliverables.md">deliverables.md</a> — deliverables and sprint rules</li>
+      <li><a href="projects/universal_scaffolding.md">universal_scaffolding.md</a> — common scaffolding</li>
+      <li><a href="projects/proposal_template.md">proposal_template.md</a> — proposal template</li>
+    </ul>
+
+    <h2>Submission</h2>
+    <div class="card">
+      <h3>Midterm Exam</h3>
+      <p>Administered in class on April 17, 2026 (dry run April 16).</p>
+
+      <h3 class="mt-3">Project</h3>
+      <ul>
+        <li>Source code repository (GitHub)</li>
+        <li>Report</li>
+        <li>Presentation slides</li>
+        <li>Exam: presentation + discussion</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>
+    <p>AI-Ready Engineers &middot; Spring 2026</p>
+    <p class="text-small">Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a></p>
+  </footer>
+
+  <script src="scripts.js"></script>
+</body>
+</html>

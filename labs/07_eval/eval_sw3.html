@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L7: "Eval" in Software 3.0 (AI Agents)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L7: "Eval" in Software 3.0 (AI Agents)</div>
+    <ul>
+        <li><a href="#challenges">1. New Challenges</a></li>
+        <li><a href="#llm-judge">2. LLM-as-Judge</a></li>
+        <li><a href="#rubrics">3. Rubric Design</a></li>
+        <li><a href="#datasets">4. Eval Datasets</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <div class="title-section" id="intro">
+        <h1>"Eval" in Software 3.0 (AI Agents)</h1>
+        <p class="subtitle">When there is no right answer &mdash; LLM-as-judge, rubric design, and building eval datasets</p>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- NEW CHALLENGES -->
+    <!-- ================================================================ -->
+    <section id="challenges">
+        <div class="section-number">01 / NEW CHALLENGES</div>
+        <h2>What's different in AI-powered systems</h2>
+
+        <p>AI-powered systems generate <strong>open-ended outputs</strong>: summaries, conversations, decisions, code. Often there is no single "right answer" to compare against.</p>
+
+        <div class="content-card">
+            <h4>New challenges</h4>
+            <ul>
+                <li><strong>No ground truth</strong> for many tasks &mdash; what's the "correct" summary of a meeting?</li>
+                <li><strong>Human judgment is expensive</strong> and doesn't scale to thousands of test cases</li>
+                <li><strong>LLM-as-judge</strong> as a scalable proxy &mdash; with its own failure modes (position bias, verbosity bias, self-preference)</li>
+                <li><strong>Rubric design</strong> becomes a first-class engineering skill &mdash; vague rubrics produce unreliable judges</li>
+                <li><strong>Eval datasets are hard to build</strong> &mdash; you need representative, diverse, adversarial examples</li>
+                <li><strong>Evaluation is continuous</strong> &mdash; not a one-shot gate but an improvement loop</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key property</div>
+            <p>You often can't write down the expected output. Evaluation itself becomes an AI problem &mdash; you use LLMs to judge LLM outputs, and you need to evaluate your evaluator.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- LLM-AS-JUDGE -->
+    <!-- ================================================================ -->
+    <section id="llm-judge">
+        <div class="section-number">02 / LLM-AS-JUDGE</div>
+        <h2>LLM-as-Judge</h2>
+
+        <p>When human evaluation doesn't scale, we turn to LLMs as automated judges. The idea is simple: ask a (typically stronger) model to evaluate the output of another model against a rubric.</p>
+
+        <div class="content-card">
+            <h4>Why LLM-as-judge?</h4>
+            <ul>
+                <li><strong>Scale:</strong> Evaluate thousands of examples in minutes, not weeks</li>
+                <li><strong>Consistency:</strong> Same rubric applied uniformly (no annotator fatigue)</li>
+                <li><strong>Cost:</strong> Orders of magnitude cheaper than human annotation at scale</li>
+                <li><strong>Iteration speed:</strong> Fast feedback enables rapid development cycles</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>Known failure modes</h4>
+            <ul>
+                <li><strong>Position bias:</strong> Judges prefer the first (or last) response when comparing two outputs</li>
+                <li><strong>Verbosity bias:</strong> Longer responses are rated higher regardless of quality</li>
+                <li><strong>Self-preference:</strong> Models prefer outputs that match their own style</li>
+                <li><strong>Sycophancy:</strong> Judges may agree with confident-sounding but wrong outputs</li>
+                <li><strong>Inconsistency:</strong> Same judge, same input, different scores across runs</li>
+                <li><strong>Anchoring to surface features:</strong> Judges key on formatting, structure, or keyword presence rather than actual substance</li>
+                <li><strong>Inability to verify facts:</strong> Judges cannot reliably detect factual errors or hallucinations &mdash; a plausible-sounding but wrong claim often gets a high score</li>
+                <li><strong>Leniency / central tendency:</strong> Judges avoid extreme scores, clustering around the middle of the scale and compressing real quality differences</li>
+                <li><strong>Sensitivity to prompt phrasing:</strong> Small changes in rubric wording can cause large, systematic score shifts</li>
+                <li><strong>Lack of domain expertise:</strong> Judges struggle with specialized content (medical, legal, financial) where errors require expert knowledge to catch</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h4>When you still need human evaluators</h4>
+            <p>LLM-based judging is cheap and scalable, but there are situations where human evaluation remains necessary:</p>
+            <ul>
+                <li><strong>Subtle factual correctness in specialized domains.</strong> An LLM judge may lack the domain expertise to catch plausible-sounding but wrong claims &mdash; e.g., an incorrect drug interaction in a medical summary, or a wrong legal citation. A domain-expert human evaluator can verify facts the LLM has no reliable way to check.</li>
+                <li><strong>Tone, empathy, and cultural appropriateness.</strong> In sensitive contexts (crisis support, HR communications, cross-cultural interactions), whether a response "feels right" depends on social and emotional nuance that LLM judges handle poorly. They tend to reward surface-level politeness rather than genuine empathy, and may miss culturally inappropriate phrasing. Human raters who share the audience's context catch these failures.</li>
+                <li><strong>Validating the judge itself.</strong> You need humans as ground truth to know if your LLM judge is biased &mdash; there is no way to bootstrap trust in an automated judge without human agreement data.</li>
+                <li><strong>Subtle safety violations.</strong> Some safety failures require real-world reasoning and context that LLM judges miss &mdash; e.g., an output that is technically polite but manipulative, or advice that is harmful only given the user's specific situation.</li>
+                <li><strong>Open-ended creative quality.</strong> When "good" is inherently subjective and audience-dependent (marketing copy, creative writing, UX microcopy), LLM judges tend to reward generic fluency over the qualities that actually matter to the target audience.</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>An LLM judge is itself a system that needs evaluation. You need to measure agreement with human judgments, track inter-run consistency, and watch for systematic biases. The right question is not "LLM judge or human?" but "where in the loop do humans add irreplaceable value?"</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- RUBRIC DESIGN -->
+    <!-- ================================================================ -->
+    <section id="rubrics">
+        <div class="section-number">03 / RUBRIC DESIGN</div>
+        <h2>Rubric design as engineering</h2>
+
+        <p>The quality of your LLM judge is bounded by the quality of your rubric. A vague rubric produces noisy, unreliable scores. A precise rubric produces consistent, actionable signal.</p>
+
+        <div class="content-card">
+            <h4>What makes a good rubric?</h4>
+            <ul>
+                <li><strong>Specific criteria:</strong> "Is the summary accurate?" is vague. "Does the summary contain all key decisions from the meeting?" is actionable.</li>
+                <li><strong>Clear scale anchors:</strong> Define what a 1, 3, and 5 look like with concrete examples</li>
+                <li><strong>Independent dimensions:</strong> Score accuracy, completeness, and tone separately &mdash; not as one muddled number</li>
+                <li><strong>Negative examples:</strong> Show the judge what failure looks like, not just success</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Rubric design is prompt engineering for evaluation. Invest as much care in your judge prompt as you do in your system prompt.</p>
+        </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- EVAL DATASETS -->
+    <!-- ================================================================ -->
+    <section id="datasets">
+        <div class="section-number">04 / EVAL DATASETS</div>
+        <h2>Building evaluation datasets</h2>
+
+        <p>Your eval is only as good as the data you evaluate on. A biased or unrepresentative eval set will systematically mislead you.</p>
+
+        <div class="content-card">
+            <h4>Dataset design principles</h4>
+            <ul>
+                <li><strong>Representative:</strong> Cover the real distribution of inputs your system will see in production</li>
+                <li><strong>Diverse:</strong> Include edge cases, adversarial inputs, and different user intents</li>
+                <li><strong>Versioned:</strong> Track changes to your eval set &mdash; changing the test changes the score</li>
+                <li><strong>Sized appropriately:</strong> Too small and your metrics have wide confidence intervals; too large and you waste resources</li>
+            </ul>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Eval datasets are a product, not an afterthought. They need curation, versioning, and continuous improvement &mdash; just like the system they evaluate.</p>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Designing Large Scale AI Systems &middot; Spring 2026</p>
+</footer>
+
+<script>hljs.highlightAll();</script>
+</body>
+</html>

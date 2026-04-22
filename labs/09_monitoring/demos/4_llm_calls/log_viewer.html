@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo 4 · LLM call log viewer</title>
+<style>
+  :root {
+    --bg: #0E1726; --panel: #182436; --teal: #1C7293; --accent: #F4A261;
+    --text: #E8F1F5; --muted: #8A9BB5; --err: #E07A5F; --ok: #6B9080;
+    --amber: #E0A458; --grid: #22304688; --border: #2a3a55;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+  }
+  header { padding: 16px 28px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-weight: 500; font-size: 20px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .sub a { color: var(--teal); text-decoration: none; }
+  .sub a:hover { text-decoration: underline; }
+
+  /* Filter bar */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 8px 14px;
+    align-items: center; padding: 14px 28px;
+    border-bottom: 1px solid var(--border); background: var(--panel);
+  }
+  .filters label { color: var(--muted); font-size: 12px; margin-right: 4px; }
+  .filters select, .filters input {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 8px; border-radius: 4px;
+    font-size: 12px; font-family: inherit;
+  }
+  .filters input[type=text] { min-width: 260px; }
+  .filters .stat { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .filters .stat b { color: var(--text); font-weight: 500; }
+  .filters button {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 5px 10px; border-radius: 4px; cursor: pointer;
+    font-size: 11px; font-family: inherit;
+  }
+  .filters button:hover { color: var(--text); border-color: var(--text); }
+
+  /* Table */
+  .table-wrap { padding: 0 28px 28px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td {
+    text-align: left; padding: 7px 10px; font-size: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--teal); font-weight: 600; text-transform: uppercase;
+       letter-spacing: 0.5px; font-size: 11px; background: var(--panel); }
+  tbody tr { cursor: pointer; transition: background 0.08s; }
+  tbody tr:hover { background: var(--panel); }
+  tbody tr.expanded { background: var(--panel); }
+  td code { font-family: "SF Mono", Consolas, monospace; font-size: 11px; }
+
+  .pill {
+    display: inline-block; padding: 1px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pill.ok            { background: #6B908033; color: var(--ok); }
+  .pill.schema_fail   { background: #E07A5F33; color: var(--err); }
+  .pill.timeout       { background: #E07A5F33; color: var(--err); }
+  .pill.api_error     { background: #E07A5F33; color: var(--err); }
+  .pill.blocked_pii   { background: #E0A45833; color: var(--amber); }
+  .pill.blocked_toxic { background: #E0A45833; color: var(--amber); }
+
+  .truncate {
+    max-width: 340px; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; color: var(--muted);
+  }
+
+  /* Expanded row drawer */
+  .detail td { background: var(--bg); padding: 16px 20px 20px; }
+  .detail .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px 24px; font-size: 12px; margin-bottom: 16px;
+  }
+  .detail .grid div { color: var(--muted); }
+  .detail .grid b { color: var(--text); font-weight: 500; }
+  .detail h4 {
+    margin: 14px 0 4px; font-size: 11px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .detail pre {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px 14px; margin: 0; font-family: "SF Mono", Consolas, monospace;
+    font-size: 11.5px; color: var(--text); white-space: pre-wrap; word-break: break-word;
+    max-height: 220px; overflow-y: auto; line-height: 1.5;
+  }
+  .detail pre.guardrail-fail { border-color: var(--err); }
+
+  .page { padding: 12px 28px; color: var(--muted); font-size: 12px; }
+  .page button {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 4px 12px; border-radius: 4px; cursor: pointer;
+    margin-right: 6px;
+  }
+  .page button:hover { color: var(--text); border-color: var(--text); }
+  .page button:disabled { opacity: 0.3; cursor: default; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Demo 4 · <span>LLM call log viewer</span></h1>
+  <div class="sub">
+    3000 rows of <code>llm_calls.ndjson</code> · click a row to see the full
+    prompt, completion, and guardrail state. Deep-link from the
+    <a href="dashboard.html">aggregation dashboard</a>.
+  </div>
+</header>
+
+<div class="filters">
+  <label>prompt_version</label>
+  <select id="f_pv">
+    <option value="">(any)</option>
+  </select>
+
+  <label>model</label>
+  <select id="f_model">
+    <option value="">(any)</option>
+  </select>
+
+  <label>outcome</label>
+  <select id="f_outcome">
+    <option value="">(any)</option>
+  </select>
+
+  <label>day</label>
+  <select id="f_day">
+    <option value="">(any)</option>
+  </select>
+
+  <label>search</label>
+  <input type="text" id="f_q" placeholder="text in prompt / completion / request_id">
+
+  <button id="f_reset">reset</button>
+
+  <div class="stat">
+    <b id="match_count">—</b> matching · <b id="total_count">—</b> total
+  </div>
+</div>
+
+<div class="page">
+  <button id="prev">← prev</button>
+  <button id="next">next →</button>
+  page <b id="page_info">—</b>
+  <span style="margin-left:14px">showing <b id="page_slice">—</b> rows per page</span>
+</div>
+
+<div class="table-wrap">
+  <table id="tbl">
+    <thead>
+      <tr>
+        <th style="width:180px">ts</th>
+        <th>request_id</th>
+        <th>model</th>
+        <th>pv</th>
+        <th>outcome</th>
+        <th style="text-align:right">latency</th>
+        <th style="text-align:right">cost</th>
+        <th>prompt → completion</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<script src="calls.js"></script>
+<script>
+  const DATA = window.__CALLS__;
+  if (!DATA) {
+    document.body.innerHTML = `<pre style="padding:32px;color:#E07A5F">
+Could not load calls.js. Run:  python gen_calls.py
+</pre>`;
+    throw new Error("no data");
+  }
+
+  const WINDOW_START = new Date(Math.min(...DATA.map(r => new Date(r.ts).getTime())));
+  const dayOf = ts => Math.floor((new Date(ts) - WINDOW_START) / 86400000);
+
+  // Populate filter dropdowns from the data itself.
+  function uniq(field) {
+    return [...new Set(DATA.map(r => field(r)))].sort();
+  }
+  function fillSelect(id, values) {
+    const el = document.getElementById(id);
+    for (const v of values) {
+      const o = document.createElement("option");
+      o.value = String(v); o.textContent = String(v);
+      el.appendChild(o);
+    }
+  }
+  fillSelect("f_pv",      uniq(r => r.prompt_version));
+  fillSelect("f_model",   uniq(r => r.model));
+  fillSelect("f_outcome", uniq(r => r.outcome));
+  fillSelect("f_day",     Array.from({length: 14}, (_, i) => i));
+
+  // Read filters from URL query string — enables deep-linking from dashboard.
+  const params = new URLSearchParams(location.search);
+  for (const id of ["f_pv", "f_model", "f_outcome", "f_day", "f_q"]) {
+    const name = id.slice(2);
+    if (params.has(name)) document.getElementById(id).value = params.get(name);
+  }
+
+  // State
+  const PAGE_SIZE = 50;
+  let page = 0;
+  let filtered = DATA.slice();
+
+  function applyFilters() {
+    const pv      = document.getElementById("f_pv").value;
+    const model   = document.getElementById("f_model").value;
+    const outcome = document.getElementById("f_outcome").value;
+    const day     = document.getElementById("f_day").value;
+    const q       = document.getElementById("f_q").value.trim().toLowerCase();
+
+    filtered = DATA.filter(r =>
+      (!pv      || r.prompt_version === pv)
+   && (!model   || r.model === model)
+   && (!outcome || r.outcome === outcome)
+   && (day === "" || dayOf(r.ts) === +day)
+   && (!q || r.prompt.toLowerCase().includes(q)
+          || r.completion.toLowerCase().includes(q)
+          || r.request_id.toLowerCase().includes(q))
+    );
+    page = 0;
+    render();
+  }
+
+  function fmtCost(x) { return "$" + x.toFixed(4); }
+  function fmtTs(ts)  { return ts.slice(5, 19).replace("T", " "); }
+
+  function render() {
+    document.getElementById("total_count").textContent = DATA.length.toLocaleString();
+    document.getElementById("match_count").textContent = filtered.length.toLocaleString();
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (page >= totalPages) page = totalPages - 1;
+    document.getElementById("page_info").textContent = `${page + 1} / ${totalPages}`;
+    document.getElementById("page_slice").textContent = PAGE_SIZE;
+    document.getElementById("prev").disabled = page === 0;
+    document.getElementById("next").disabled = page >= totalPages - 1;
+
+    const tbody = document.getElementById("rows");
+    tbody.innerHTML = "";
+    const slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+    for (const r of slice) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${fmtTs(r.ts)}</td>
+        <td><code>${r.request_id}</code></td>
+        <td>${r.model}</td>
+        <td>${r.prompt_version}</td>
+        <td><span class="pill ${r.outcome}">${r.outcome}</span></td>
+        <td style="text-align:right">${r.latency_ms.toLocaleString()} ms</td>
+        <td style="text-align:right">${fmtCost(r.cost_usd)}</td>
+        <td class="truncate">${r.completion.slice(0, 80).replace(/\n/g, " ")}</td>
+      `;
+      tr.onclick = () => toggleRow(tr, r);
+      tbody.appendChild(tr);
+    }
+  }
+
+  function toggleRow(tr, r) {
+    // Collapse if already expanded.
+    if (tr.nextSibling && tr.nextSibling.classList &&
+        tr.nextSibling.classList.contains("detail")) {
+      tr.classList.remove("expanded");
+      tr.parentNode.removeChild(tr.nextSibling);
+      return;
+    }
+    // Close any other open detail rows.
+    document.querySelectorAll("tr.detail").forEach(d => d.remove());
+    document.querySelectorAll("tr.expanded").forEach(t => t.classList.remove("expanded"));
+
+    tr.classList.add("expanded");
+    const detail = document.createElement("tr");
+    detail.className = "detail";
+    const td = document.createElement("td");
+    td.colSpan = 8;
+    const guardrailFail = !r.guardrail.schema_ok || !r.guardrail.toxicity_ok
+                       || r.guardrail.pii_blocked;
+    td.innerHTML = `
+      <div class="grid">
+        <div>request_id: <b>${r.request_id}</b></div>
+        <div>ts: <b>${r.ts}</b></div>
+        <div>model: <b>${r.model}</b></div>
+        <div>prompt_version: <b>${r.prompt_version}</b></div>
+        <div>temperature: <b>${r.temperature}</b></div>
+        <div>input_tokens: <b>${r.input_tokens}</b></div>
+        <div>output_tokens: <b>${r.output_tokens}</b></div>
+        <div>latency_ms: <b>${r.latency_ms.toLocaleString()}</b></div>
+        <div>cost_usd: <b>${fmtCost(r.cost_usd)}</b></div>
+        <div>outcome: <b class="pill ${r.outcome}">${r.outcome}</b></div>
+      </div>
+      <h4>prompt</h4>
+      <pre>${escapeHtml(r.prompt)}</pre>
+      <h4>completion</h4>
+      <pre>${escapeHtml(r.completion)}</pre>
+      <h4>guardrail</h4>
+      <pre class="${guardrailFail ? 'guardrail-fail' : ''}">${JSON.stringify(r.guardrail, null, 2)}</pre>
+    `;
+    detail.appendChild(td);
+    tr.parentNode.insertBefore(detail, tr.nextSibling);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+  }
+
+  // Wire up events
+  for (const id of ["f_pv", "f_model", "f_outcome", "f_day", "f_q"]) {
+    document.getElementById(id).addEventListener(
+      id === "f_q" ? "input" : "change", applyFilters
+    );
+  }
+  document.getElementById("f_reset").onclick = () => {
+    for (const id of ["f_pv", "f_model", "f_outcome", "f_day", "f_q"]) {
+      document.getElementById(id).value = "";
+    }
+    applyFilters();
+  };
+  document.getElementById("prev").onclick = () => { page--; render(); };
+  document.getElementById("next").onclick = () => { page++; render(); };
+
+  applyFilters();
+</script>
+</body>
+</html>

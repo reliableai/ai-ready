@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterating in the Dark: Organizational Blindness in AI Evaluations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        img {
+            max-width: 70%;
+            height: auto;
+            margin: 2em auto;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        blockquote {
+            border-left: 4px solid #38b2ac;
+            margin: 2em 0;
+            padding: 1em 1.5em;
+            color: #4a5568;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+        .aside-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #d97706;
+            border-radius: 0 12px 12px 0;
+            padding: 1.2em 1.5em;
+            margin: 2em 0;
+            font-size: 0.92em;
+        }
+        .aside-box h4 {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: #92400e;
+            margin: 0 0 0.8em 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .aside-box p {
+            margin: 0.8em 0;
+            color: #78350f;
+        }
+        .aside-box ul {
+            margin: 0.6em 0;
+            padding-left: 1.4em;
+            color: #78350f;
+        }
+        .aside-box li {
+            margin: 0.3em 0;
+        }
+        .aside-box .attribution {
+            font-style: italic;
+            font-size: 0.9em;
+            margin-top: 1em;
+            color: #a16207;
+        }
+
+        /* --- Course CTA (inline) --- */
+        .course-cta{
+            border:2px solid rgba(0,0,0,.18);
+            border-radius:14px;
+            padding:14px 18px;
+            margin:40px 0;
+            background:rgba(0,0,0,.02);
+        }
+        .course-cta h3{
+            margin:0 0 6px;
+            font-size:1.1rem;
+        }
+        .course-cta > p{ margin:4px 0; line-height:1.4; font-size:0.95rem; }
+        .cta-grid{
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            margin-top:10px;
+        }
+        .cta-card{
+            border:1px solid rgba(0,0,0,.10);
+            border-radius:10px;
+            padding:10px 14px;
+            background:#fff;
+            display:flex;
+            flex-wrap:wrap;
+            align-items:baseline;
+            gap:4px 12px;
+        }
+        .cta-card h4{
+            margin:0;
+            font-size:0.95rem;
+            font-weight:500;
+        }
+        .cta-link{ margin:0; font-size:0.95rem; }
+        .cta-footnote{
+            margin-top:10px;
+            font-size:.9rem;
+            opacity:.85;
+        }
+
+        /* Deep dive styling */
+        .deep-dive {
+            margin: 0.8em 0 1.8em 1.5em;
+            padding: 0.6em 1em;
+            background: #fff;
+            border-left: 3px solid #38b2ac;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        .deep-dive-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.9em;
+            color: #319795;
+            margin-right: 0.3em;
+        }
+        .deep-dive a {
+            font-weight: 600;
+        }
+        .deep-dive-desc {
+            color: #718096;
+            font-size: 0.95em;
+        }
+
+    </style>
+</head>
+<body>
+<h1>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</h1>
+<p style="font-style: italic; color: #718096; margin-top: 0.5em;">(or, as a colleague suggests, "Obvious Things that Need to be Said")</p>
+
+<hr />
+<p><em>A five-part series on the hidden uncertainty in AI evaluation metrics</em></p>
+<hr />
+
+<blockquote>
+<p><strong>Executive Summary</strong></p>
+<ol>
+<li><strong>In agentic AI, evaluation is the bottleneck.</strong> Agentic AI systems can iterate on development far faster than organizations can learn from them. The limiting factor is evaluation.</li>
+<li><strong>Evaluation is hard because it is an experiment design problem, not a software testing problem.</strong> Each evaluation embeds many consequential design decisions — about data, judges, aggregation, selection, and reporting — that can dramatically change the apparent outcome.</li>
+<li><strong>Most organizations are neither equipped nor incentivized to manage agentic evaluation.</strong> Tooling, methods, training, and reporting structures systematically hide uncertainty and overstate progress.</li>
+<li><strong>This is primarily a leadership failure, not a technical one.</strong> The questions executives ask — and the dev-heavy way teams are structured rather than eval-heavy — shape what teams feel able to report, leading to biased summaries that hide evaluation uncertainty.</li>
+<li><strong>This is fixable</strong> — failure modes are not inherent to AI. They require better evaluation practices, reporting standards, and decision discipline — not stricter mandates, frozen benchmarks, or the illusion that ground truth solves anything.</li>
+</ol>
+</blockquote>
+
+<hr />
+
+<img src="./images/image1.png" alt="Technical Accuracy 89% meeting slide" style="max-width: 40%; float: right; margin: 0 0 1em 1.5em;" />
+
+<p><strong style="font-size: 1.2em;">You have all been in this room.</strong> A slide goes up. There's a metric—"Technical Accuracy", a number: 89%, and a color—green.</p>
+
+<p>Getting these metrics, numbers, and even the colors "right" are foundational to the success of a product. These numbers - and colors - are the final output of a complex process of decisions and actions.</p>
+
+<p>This output is very consequential. Not only does it determine ship/no-ship decisions, but it tells engineers where to focus their energy, where to improve. The metrics act like a loss profile and give us axes along which we need to improve our product.</p>
+
+<img src="./images/loss_flat.png" alt="Loss profile optimization landscape" />
+
+<p>And as AI takes more of a leading role in development, getting the right metrics and the right measures is central to effective product improvement iterations - possibly even automating the entire process. Conversely, if we get these wrong, we iterate in the wrong directions, we ship things that make our customers lose trust in us, we hold back great features that could help us win deals.</p>
+
+<img src="./images/image3.png" alt="AI-Human loop" />
+
+<p>As I sit in the room at a customers' site and listen to presentation after presentation and report after report, I can't help but wonder: <em>how reliable are these numbers? Do the team reporting on the results know? And do we, and the executives sitting in the room with me, know? Do we grasp what that means for the decision we're about to make?</em></p>
+
+<p>This series explores a structural problem in how organizations evaluate AI systems: we are building highly consequential systems, making decisions based on evaluation numbers, and systematically both <em>underestimating</em> and <em>ignoring</em> the bias and uncertainty in those numbers.</p>
+
+<hr />
+<h2>The Series</h2>
+
+<h3><a href="./part-1-structural-flaw.html">Part 1: A Structural Flaw in Judgment</a></h3>
+<p>The problem statement. Why "89% accuracy" might be meaningless—or worse, misleading. The three facets of the problem: visibility, culture, and action.</p>
+
+<h3><a href="./part-2-cost-of-ignorance.html">Part 2: The Cost of Ignorance</a></h3>
+<p>The real costs of ignoring uncertainty: wasted cycles, misallocated portfolios, and production failures that were predictable all along. How bias and noise compound across organizations.</p>
+<div class="deep-dive">
+    <span class="deep-dive-label">↳ Deep Dive:</span>
+    <a href="./part-2b-uncertainty-vs-variability.html">Uncertainty vs Variability</a>
+    <span class="deep-dive-desc">— The critical distinction between uncertainty (reducible) and variability (real differences).</span>
+</div>
+
+<h3><a href="./part-3-value-of-better-measurement.html">Part 3: Better "Evals" Beats Better Dev</a></h3>
+<p>The value of better measurement. Why better eval leads to better quality even without touching the system.</p>
+<div class="deep-dive">
+    <span class="deep-dive-label">↳ Deep Dive:</span>
+    <a href="./part-3b-from-value-to-scorecard.html">From Value to Scorecards</a>
+    <span class="deep-dive-desc">— Breaking down value into scorecard dimensions to define axes of iterative improvements.</span>
+</div>
+
+<h3><a href="./part-4-sources-of-error.html">Part 4: Where and Why "Eval" Goes Wrong</a></h3>
+<p>The technical deep dive. From sample size effects to multiple hypothesis testing, from developer-induced overfitting to noisy LLM judges, from rubric mapping artifacts to prompt sensitivity. Each source alone can flip your decisions. Together, they compound.</p>
+
+<h3><a href="./part-5-what-to-do.html">Part 5: Simple Actions that Work: Setting Your Org Up for Success</a></h3>
+<p>The path forward. Addressing visibility (awareness, estimation, reporting), action (reducing uncertainty, building observability), and culture (naming things right, asking the questions, making accountability explicit). Practical tools including evaluation worksheets and AI-powered methodology assistants.</p>
+
+<hr />
+<h2>Key Themes</h2>
+<ul>
+<li><p><strong>Every score has two error terms</strong>: bias (systematic) and noise (random). Together they constitute the uncertainty we ignore. Bias is harder to see but often more dangerous.</p></li>
+<li><p><strong>Selection turns noise into bias</strong>: Even unbiased evaluations become optimistic when you pick winners. The math is real.</p></li>
+<li><p><strong>Small differences are noise</strong>: If per-system measurement noise is σ ≈ 4 points, a true 4-point gap still gives you a ~24% chance of picking the wrong one (independent Normal noise).</p></li>
+<li><p><strong>The uncertainty is larger than you think</strong>: Sample size alone gives you a ~16-point-wide 95% confidence interval on 100 examples at 82% accuracy (≈82% ± 8). And that's the <em>optimistic</em> case.</p></li>
+<li><p><strong>Better eval beats more dev effort</strong>: Investing in measurement first enables better deployment decisions and directed improvement—even before touching the agents.</p></li>
+<li><p><strong>Culture matters</strong>: Organizations prefer harmony. Point estimates feel decisive. Uncertainty feels like weakness. But pretending certainty where none exists—<em>that's</em> weakness.</p></li>
+</ul>
+<hr />
+<h2>Who This Is For</h2>
+<ul>
+<li><strong>Engineering leaders</strong> making ship/no-ship decisions based on evaluation metrics</li>
+<li><strong>ML/AI practitioners</strong> designing and running evaluation pipelines</li>
+<li><strong>Product managers</strong> interpreting and reporting quality numbers</li>
+<li><strong>Executives</strong> who see scorecards and need to know what questions to ask</li>
+</ul>
+
+<!-- ===== Course CTA (inline) ===== -->
+<section class="course-cta" aria-label="Course call to action">
+  <h3>Want a hands-on playbook for this?</h3>
+  <p>
+    I teach two <strong>100% free, in-person</strong> (with remote options)
+    complementary practitioner courses:
+  </p>
+
+  <div class="cta-grid">
+    <div class="cta-card">
+      <h4>Designing and shipping AI systems →</h4>
+      <p class="cta-link"><a href="https://reliableai.github.io/ai-design-2026/"><strong>Designing Large Scale AI Systems</strong></a></p>
+    </div>
+    <div class="cta-card">
+      <h4>Data/knowledge health, hallucinations, RAG failures →</h4>
+      <p class="cta-link"><a href="https://reliableai.github.io/knowledge_management_2026/"><strong>Knowledge Management for AI Systems</strong></a></p>
+    </div>
+  </div>
+
+  <p class="cta-footnote">
+    Classes and materials become available as the courses start in <strong>mid-February</strong>.<br />
+    Contact me for <strong>free remote attendance options</strong> (<a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>).
+  </p>
+</section>
+<!-- ===== /Course CTA ===== -->
+
+<hr />
+<p><em>"Any measurement, without knowledge of the uncertainty, is meaningless."</em><br />
+— Walter Lewin, MIT</p>
+<hr />
+<p><strong><a href="./glossary.html">Glossary and Notation</a></strong> — Key terms and notation used throughout this series.</p>
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+
+</body>
+</html>

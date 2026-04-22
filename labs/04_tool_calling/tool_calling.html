@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L4: Tools &amp; Agentic Loops</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="../../lecture-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+<nav>
+    <div class="logo"><a href="../../../index.html" style="color: var(--accent); text-decoration: none;">&larr; Home</a> &middot; L4: Tools &amp; Agentic Loops</div>
+    <ul>
+        <li><a href="#why">Why</a></li>
+        <li><a href="#approaches">1. Approaches</a></li>
+        <li><a href="#api">2. API</a></li>
+        <li><a href="#loop">3. Loop</a></li>
+        <li><a href="#control">4. Control</a></li>
+        <li><a href="#clarification">5. Clarify</a></li>
+        <li><a href="#design">6. Design</a></li>
+        <li><a href="#takeaways">Takeaways</a></li>
+    </ul>
+</nav>
+
+<main>
+
+    <!-- TITLE -->
+    <div class="title-section" id="why">
+        <h1>Tools &amp; Agentic Loops</h1>
+        <p class="subtitle">Tool calling turns an LLM from a text generator into a controller of external capabilities.</p>
+    </div>
+
+    <!-- WHY TOOL CALLING -->
+    <section>
+        <h3>Why tool calling?</h3>
+
+        <p>LLMs are powerful at language &mdash; but they can't do everything alone. Tool calling lets the model <strong>delegate</strong> to systems better suited for each sub-task.</p>
+
+        <div class="content-card">
+            <h4>What tools enable</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th>Examples</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Computation</strong></td><td>Math, statistics, precise calculations</td></tr>
+                    <tr><td><strong>Live data</strong></td><td>APIs, databases, current information</td></tr>
+                    <tr><td><strong>Actions</strong></td><td>Send emails, update records, trigger workflows</td></tr>
+                    <tr><td><strong>Structured ops</strong></td><td>SQL queries, file operations, system commands</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Example: weather forecast</h3>
+
+        <pre><code class="language-text">1. User:    "What's the weather in Paris tomorrow?"
+2. LLM:     → tool_call: get_weather(city="Paris", date="tomorrow")
+3. Tool:    → {"forecast": "Partly cloudy, 18C, 30% chance of rain"}
+4. LLM:     "Tomorrow in Paris: partly cloudy, around 18C with a 30% chance of rain."</code></pre>
+
+        <p>The model can't check the weather &mdash; but it can call a tool that does, then synthesize the result into a natural answer.</p>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Tool calling is not just an output format problem. It is a <strong>control problem</strong> &mdash; the system must decide <em>when</em> to call a tool, <em>which</em> tool, and <em>when to stop</em>.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 1: TWO APPROACHES -->
+    <section id="approaches">
+        <div class="section-number">01 / TWO APPROACHES</div>
+        <h2>Manual vs API-native tool calling</h2>
+
+        <div class="content-card">
+            <h4>Manual (Prompt + Parse)</h4>
+            <ol>
+                <li>Describe tools in the <strong>system prompt</strong></li>
+                <li>Ask model to output <strong>JSON</strong></li>
+                <li><strong>Parse</strong> JSON from text response</li>
+                <li>Execute function, feed result back</li>
+            </ol>
+            <p><strong>Strengths:</strong> Provider-agnostic, transparent, you control everything.</p>
+            <p><strong>Weaknesses:</strong> Fragile &mdash; model may wrap JSON in code blocks, add conversational text, use wrong field names, or invent ad-hoc formats for multiple calls.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>API-Native Tool Calling</h4>
+            <ol>
+                <li>Register tools with <strong>JSON schemas</strong></li>
+                <li>Model returns structured <code>tool_calls</code> objects</li>
+                <li>Execute function, send result back as <code>tool</code> message</li>
+                <li>Repeat until model answers in text</li>
+            </ol>
+            <p><strong>Strengths:</strong> Guaranteed structure, multi-tool support, consistent across models and temperatures.</p>
+            <p><strong>Weaknesses:</strong> Tied to provider API conventions.</p>
+        </div>
+
+        <h3>Side by side</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Manual</th>
+                    <th>API tool calling</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Format</strong></td><td>Hope model outputs valid JSON</td><td>Guaranteed structured objects</td></tr>
+                <tr><td><strong>Parsing</strong></td><td>Custom regex / JSON extraction</td><td><code>msg.tool_calls[0].function.name</code></td></tr>
+                <tr><td><strong>Multi-tool</strong></td><td>Model invents ad-hoc format</td><td>Returns a list of <code>tool_calls</code></td></tr>
+                <tr><td><strong>Reliability</strong></td><td>Breaks with temp &amp; model changes</td><td>Consistent across models</td></tr>
+                <tr><td><strong>Code</strong></td><td>~30 lines of fragile parsing</td><td>~5 lines of structured access</td></tr>
+            </tbody>
+        </table>
+
+        <p>Native tool calling gives you better plumbing. It does <strong>not</strong> eliminate the orchestration problem.</p>
+    </section>
+
+    <!-- SECTION 2: API TOOL CALLING -->
+    <section id="api">
+        <div class="section-number">02 / API TOOL CALLING</div>
+        <h2>Registering tools &amp; the single-call round trip</h2>
+
+        <h3>Tool schemas</h3>
+
+        <p>You describe each tool as a JSON schema. The model never sees your Python code &mdash; only these descriptions.</p>
+
+        <pre><code class="language-json">{
+  "type": "function",
+  "function": {
+    "name": "explore_data",
+    "description": "Inspect dataset schema, missing values, and candidate targets. Call first when the dataset structure is unknown.",
+    "parameters": {
+      "properties": {
+        "sample_rows": {"type": "integer", "description": "Number of sample rows to return"}
+      },
+      "required": ["sample_rows"]
+    }
+  }
+}</code></pre>
+
+        <h3>The round trip (single tool call)</h3>
+
+        <pre><code class="language-python"># Step 1: send query + tool schemas
+response = client.chat.completions.create(
+    model=MODEL,
+    messages=[{"role": "user", "content": user_query}],
+    tools=TOOL_SCHEMAS,
+    tool_choice="auto",
+)
+msg = response.choices[0].message
+
+# Step 2: model wants to call a tool
+tc = msg.tool_calls[0]
+args = json.loads(tc.function.arguments)
+result = explore_data(**args)
+
+# Step 3: send result back → model produces final answer
+response2 = client.chat.completions.create(
+    model=MODEL,
+    messages=[
+        {"role": "user", "content": user_query},
+        msg,
+        {"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)},
+    ],
+    tools=TOOL_SCHEMAS,
+)
+print(response2.choices[0].message.content)</code></pre>
+
+        <h3>Built-in tools</h3>
+
+        <p>LLM providers also offer <strong>ready-made tools</strong> executed on their infrastructure &mdash; zero tool code from you:</p>
+
+        <table>
+            <thead>
+                <tr><th>Provider</th><th>Built-in tools</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>OpenAI</td><td><code>web_search</code>, <code>code_interpreter</code>, <code>file_search</code></td></tr>
+                <tr><td>Anthropic</td><td><code>computer_use</code>, <code>text_editor</code>, <code>bash</code></td></tr>
+            </tbody>
+        </table>
+
+        <p>Convenient for general capabilities, but for domain-specific work you need your own tools.</p>
+    </section>
+
+    <!-- SECTION 3: THE MULTI-TOOL LOOP -->
+    <section id="loop">
+        <div class="section-number">03 / THE MULTI-TOOL LOOP</div>
+        <h2>Observe &rarr; Decide &rarr; Act &rarr; Observe &rarr; &hellip;</h2>
+
+        <p>Real questions often need <strong>multiple tool calls</strong> before the model can answer.</p>
+
+        <pre><code class="language-python">while has_budget:
+    response = LLM(messages, tools)
+    if response has tool_calls:
+        execute each tool; append results
+    else:
+        return response.text  # model decided it's done</code></pre>
+
+        <p>Two critical design choices:</p>
+        <ol>
+            <li><strong>Max iterations</strong> &mdash; prevent infinite loops</li>
+            <li><strong>The model decides when to stop</strong> &mdash; it produces text (not a tool call) when it has enough info</li>
+        </ol>
+
+        <h3>Example: data analyst agent</h3>
+
+        <p>Three tools with natural <strong>preconditions and dependencies</strong>:</p>
+
+        <table>
+            <thead>
+                <tr><th>Tool</th><th>Purpose</th><th>Precondition</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>explore_data</code></td><td>Inspect schema, missing values, candidate targets</td><td>None &mdash; safe first step</td></tr>
+                <tr><td><code>cluster_data</code></td><td>Discover natural segments (unsupervised)</td><td>Needs numeric column names</td></tr>
+                <tr><td><code>classify_data</code></td><td>Predict a label like churn (supervised)</td><td>Needs a valid target column</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Different queries &rarr; different tool traces</h3>
+
+        <pre><code class="language-text">"What kind of data is this?"
+  → explore_data → ANSWER
+
+"Are there natural customer segments?"
+  → explore_data → cluster_data → ANSWER
+
+"Segments AND churn prediction for age=29, income=42k..."
+  → explore_data → cluster_data → classify_data → ANSWER</code></pre>
+
+        <p>The model must reason about <em>which tool to call next</em> based on what it's learned so far.</p>
+    </section>
+
+    <!-- SECTION 4: THE CONTROL PROBLEM -->
+    <section id="control">
+        <div class="section-number">04 / THE CONTROL PROBLEM</div>
+        <h2>When to continue, when to stop</h2>
+
+        <p>APIs solve the <strong>syntax</strong> of tool calling. The hard part is the <strong>control policy</strong>.</p>
+
+        <p>After each tool result, continue only if <strong>all three</strong> are true:</p>
+        <ol>
+            <li>Some part of the original goal is still <strong>unresolved</strong></li>
+            <li>Another available tool can <strong>resolve</strong> it</li>
+            <li>The next tool call is <strong>necessary</strong>, not merely interesting</li>
+        </ol>
+
+        <h3>Common failure modes</h3>
+
+        <div class="content-card">
+            <h4>Tool obsession</h4>
+            <p>Calling tools because they exist, not because they're needed.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>Skipping preconditions</h4>
+            <p>Trying classification before checking that a target label exists. <code>explore_data</code> shows <code>candidate_targets: []</code> &mdash; the model should stop and explain.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>Looping without gain</h4>
+            <p>Repeating near-identical calls that don't change the answer.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>No termination</h4>
+            <p>The agent never decides it has enough evidence. Always set a <code>max_iterations</code> budget.</p>
+        </div>
+
+        <div class="thesis-block">
+            <div class="label">The right question</div>
+            <p>"Do I <strong>need</strong> another tool?" &mdash; not "Can I call another tool?"</p>
+        </div>
+    </section>
+
+    <!-- SECTION 5: CLARIFICATION -->
+    <section id="clarification">
+        <div class="section-number">05 / STOPPING FOR USER INPUT</div>
+        <h2>Asking instead of guessing</h2>
+
+        <p>The model has three options at each step:</p>
+
+        <ol>
+            <li><strong>Call a tool</strong> &mdash; if it knows which tool and has all parameters</li>
+            <li><strong>Ask a question</strong> &mdash; if information is missing or ambiguous</li>
+            <li><strong>Answer directly</strong> &mdash; if it already has enough information</li>
+        </ol>
+
+        <h3>Without vs with clarification instructions</h3>
+
+        <table>
+            <thead>
+                <tr><th>User says</th><th>Without clarification</th><th>With clarification</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>"Find some clusters."</td>
+                    <td><strong>GUESSES:</strong> <code>cluster_data(["age","income"], k=3)</code></td>
+                    <td><strong>ASKS:</strong> "Which features? How many clusters?"</td>
+                </tr>
+                <tr>
+                    <td>"Predict something."</td>
+                    <td><strong>GUESSES:</strong> <code>classify_data("churned", ...)</code></td>
+                    <td><strong>ASKS:</strong> "What should I predict? For which customer?"</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>This is just a system prompt instruction &mdash; the model chooses to produce text (a question) instead of a tool call:</p>
+
+        <pre><code class="language-text">IMPORTANT: If the user's request is ambiguous or missing required information
+(e.g., which columns to use, what to predict, how many clusters), ask a
+clarification question instead of guessing. Respond with text, not a tool call.</code></pre>
+
+        <h3>Full clarification flow</h3>
+
+        <pre><code class="language-text">User:      "Predict something for a customer."
+Assistant: "What should I predict? And what are the customer's details?"
+User:      "Predict churn. age=29, income=42k, spend=180, visits=4, tickets=3."
+Assistant: → explore_data(...)  → classify_data(...)  → "This customer has a 73% churn risk."</code></pre>
+
+        <div class="thesis-block">
+            <div class="label">Key insight</div>
+            <p>Asking back is itself a "tool" &mdash; the model's ability to produce text is its most flexible capability. A tool call requires exact parameters; a clarification question can handle any ambiguity.</p>
+        </div>
+    </section>
+
+    <!-- SECTION 6: TOOL DESIGN -->
+    <section id="design">
+        <div class="section-number">06 / TOOL DESIGN MATTERS</div>
+        <h2>Good names and descriptions directly impact accuracy</h2>
+
+        <p>The model picks tools based on their <strong>name</strong>, <strong>description</strong>, and <strong>parameter names</strong>. Bad metadata = wrong tool calls.</p>
+
+        <h3>Good vs bad</h3>
+
+        <table>
+            <thead>
+                <tr><th></th><th>Good</th><th>Bad</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Names</strong></td>
+                    <td><code>explore_data</code>, <code>cluster_data</code>, <code>classify_data</code></td>
+                    <td><code>run_check</code>, <code>process_data</code>, <code>get_result</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Descriptions</strong></td>
+                    <td>"Inspect schema, missing values, candidate targets. Call first when unknown."</td>
+                    <td>"Checks the data."</td>
+                </tr>
+                <tr>
+                    <td><strong>Parameters</strong></td>
+                    <td><code>feature_columns</code>, <code>target</code>, <code>new_row</code></td>
+                    <td><code>cols</code>, <code>col</code>, <code>row</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Best practices</h3>
+
+        <table>
+            <thead>
+                <tr><th>Practice</th><th>Why</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Descriptive function names</strong></td><td><code>explore_data</code> vs <code>run_check</code> &mdash; model matches intent to name</td></tr>
+                <tr><td><strong>Self-explaining parameters</strong></td><td><code>feature_columns</code> vs <code>cols</code> &mdash; maps user concepts to params</td></tr>
+                <tr><td><strong>Rich descriptions with preconditions</strong></td><td><em>"Call explore_data first if unsure"</em> guides the tool sequence</td></tr>
+                <tr><td><strong>Type constraints</strong></td><td><code>k: integer (2-10)</code> prevents invalid values</td></tr>
+                <tr><td><strong>Consistent naming patterns</strong></td><td>If tools follow a convention, the model learns it</td></tr>
+            </tbody>
+        </table>
+
+        <details>
+            <summary><strong>Handling errors &amp; edge cases</strong></summary>
+            <div class="details-content">
+                <ul>
+                    <li><strong>Tool returns error:</strong> <code>search_hotels("Atlantis") &rarr; {"error": "City not found"}</code> &mdash; the model should explain, not retry blindly</li>
+                    <li><strong>Missing preconditions:</strong> <code>classify_data</code> with no target label &mdash; stop and explain that supervised prediction isn't possible</li>
+                    <li><strong>Ambiguous request:</strong> "Compare hotels" &mdash; which cities? what dates? Ask clarification questions instead of guessing</li>
+                </ul>
+            </div>
+        </details>
+    </section>
+
+    <!-- TAKEAWAYS -->
+    <section id="takeaways">
+        <div class="section-number">TAKEAWAYS</div>
+        <h2>Key points</h2>
+
+        <ol>
+            <li><strong>Tool calling turns an LLM into a controller</strong> of external capabilities.</li>
+            <li><strong>Provider APIs</strong> give you reliable structure &mdash; no more parsing JSON from text.</li>
+            <li><strong>The real challenge is the loop:</strong> when to call another tool, when to stop, when to ask the user.</li>
+            <li><strong>Preconditions matter:</strong> explore first, then decide which tools are valid.</li>
+            <li><strong>Good tool names and descriptions</strong> directly impact model accuracy.</li>
+            <li><strong>Asking for clarification</strong> is itself a powerful capability &mdash; the model's most flexible "tool."</li>
+        </ol>
+
+        <div class="thesis-block">
+            <div class="label">The bottom line</div>
+            <p>The key design challenge is not how to call tools, but how to decide when the job is finished.</p>
+        </div>
+
+        <div class="content-card">
+            <h4>Lab</h4>
+            <p>Open <code>session5_tool_calling.py</code> to walk through each concept with live API calls. Covers: built-in tools, manual vs API tool calling, the multi-tool loop, control policy, clarification mode, and tool naming experiments.</p>
+            <p>Three support modules: <code>data_tools.py</code> (good tools), <code>data_tools_bad.py</code> (bad naming), and prompt templates in <code>prompt_templates/</code>.</p>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Designing Large Scale AI Systems &middot; Spring 2026</p>
+</footer>
+
+<script>hljs.highlightAll();</script>
+</body>
+</html>

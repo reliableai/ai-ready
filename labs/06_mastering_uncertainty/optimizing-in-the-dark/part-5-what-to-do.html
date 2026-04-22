@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterating in the Dark - Part 5: Simple Actions that Work</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 750px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        .series-title {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1em;
+            font-weight: 500;
+            color: #718096;
+            margin-bottom: 0.3em;
+            letter-spacing: 0.02em;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-top: 0.2em;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2.5em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+            padding-bottom: 0.4em;
+            border-bottom: 2px solid #38b2ac;
+        }
+        h3 {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.05em;
+            font-weight: 500;
+            margin-top: 1.8em;
+            color: #319795;
+        }
+        p {
+            margin: 1.3em 0;
+        }
+        img {
+            max-width: 90%;
+            height: auto;
+            margin: 2em auto;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        blockquote {
+            border-left: 4px solid #38b2ac;
+            margin: 2em 0;
+            padding: 1em 1.5em;
+            color: #4a5568;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0.5em 0;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5em 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        td:nth-child(n+2) {
+            text-align: center;
+        }
+        ul, ol {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        .addresses {
+            font-size: 0.9em;
+            color: #718096;
+            margin-top: 1em;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+        .tags code {
+            background: #e6fffa;
+            color: #234e52;
+            margin-right: 0.5em;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Simple Actions that Work</h1>
+<p style="font-size: 1.25em; color: #4a5568; margin-top: -0.3em; margin-bottom: 0.8em;">Setting Your Org Up for Success</p>
+<p class="series-title">Part 5 of <em>Iterating in the Dark:<br>Organizational Blindness in AI Evaluations</em></p>
+
+<p>&larr; <a href="./part-4-sources-of-error.html">Part 4: Where and Why "Eval" Goes Wrong</a> | <a href="./index.html">Series Index</a></p>
+
+<hr>
+
+<p>Recall the three facets of the problem we identified:</p>
+
+<ol>
+    <li><strong>The visibility problem</strong> (epistemic): People don't see the uncertainty. It's not reported, not computed, not surfaced.</li>
+    <li><strong>The culture problem</strong> (organizational): Even when people could see uncertainty, the organization doesn't ask. There's no upside to surfacing it.</li>
+    <li><strong>The action problem</strong> (methodological): Even when uncertainty is visible and the culture asks about it, people don't know what to do.</li>
+</ol>
+
+<p>The solutions must address all three. But first, let's be clear about what doesn't work.</p>
+
+<p><em>A note: The company I work for, ServiceNow, handles eval well. But not every company has the luxury of teams that have been bred with agility in mind and the ability to adapt rapidly to a new paradigm. And even for us—this was not easy. At all. The practices in this section are achievable, but they require sustained effort and cultural change.</em></p>
+
+<hr>
+
+<h2>Examples of non-solutions (or, ideas that make things worse)</h2>
+
+<h3>Mandates and Best Practices on AI Evaluation</h3>
+
+<p>Every org on the planet is probably sending out best practices, guidelines and mandates on AI evaluation. I do too - with this series :)</p>
+
+<p>A common mandate is "you must have at least 100 ground truth examples", or "you must use the standard rubric"  (I do suggest a checklist, by the way).</p>
+
+<p>Sending mandates and best practices is not wrong (except mandating ground truth, which is extremely risky as discussed later). Mandates are in many cases a good thing and a response to the fact that a large number of people are developing AI systems and don't necessarily know how to assess them properly.</p>
+
+<p>What is wrong - and counterproductive - is 1. when we give the impression - in emails, in meetings, in dashboards - that following the mandates is sufficient to deliver reliable results and 2. when we relieve the dev team from accountability for the quality of their eval.</p>
+
+<p>You need to make the dev team (or QA, if you so decide) accountable for <strong>the quality of their eval</strong>, you need a team that can stand by what they report, not because they follow a mandate but because they are aware of how good evals are done and reported and are clearly outlining what they know and what is uncertain.</p>
+
+<p>Without this, the mandate becomes a shield: "We followed the process." Accountability shifts from <em>delivering reliable results</em> to <em>complying with requirements</em>. And compliance is much easier to game than reliability.</p>
+
+<p>Best practices have the same failure mode. They are useful as starting points. They become harmful when they replace judgment and accountability — when teams stop asking "is this right?" and start asking "did we follow the steps?"</p>
+
+<h3>Collecting Ground Truth</h3>
+
+<p>Nothing against ground truth - but I want to put this in the "what does not work" section, because <strong>in practice</strong> what happens is that teams both overfit and test multiple hypotheses on the same ground truth.</p>
+
+<p>There are few alternatives to testing solutions at scale on actual customer data, and we often don't have the chance to do so.</p>
+
+<p>An additional danger of ground truth is that it brings a "test case" and regression test culture. AI "eval" is not testing.</p>
+
+<p>If a team uses ground truth, that's fine, but do make sure to ask hard questions.</p>
+
+<hr>
+
+<h2>The Solutions</h2>
+
+<p>Here's what actually works. Each solution addresses one or more of the three problems:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Solution</th>
+            <th>Visibility</th>
+            <th>Culture</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>1. Name things right</td><td>✓</td><td>✓</td><td></td></tr>
+        <tr><td>2. Ask the right questions</td><td>✓</td><td>✓</td><td></td></tr>
+        <tr><td>3. Make RACI clear</td><td></td><td>✓</td><td>✓</td></tr>
+        <tr><td>4. Show, don't tell</td><td>✓</td><td>✓</td><td></td></tr>
+        <tr><td>5. Report uncertainty by default</td><td>✓</td><td>✓</td><td></td></tr>
+        <tr><td>6. Reduce uncertainty at the source</td><td>✓</td><td></td><td>✓</td></tr>
+        <tr><td>7. Build observability</td><td>✓</td><td></td><td>✓</td></tr>
+        <tr><td>8. Use worksheets as thinking tools</td><td>✓</td><td></td><td>✓</td></tr>
+        <tr><td>9. AI methodology assistants</td><td>✓</td><td></td><td>✓</td></tr>
+    </tbody>
+</table>
+
+<hr>
+
+<h2>Solution 1: Name Things Right</h2>
+
+<p>This is an <em>instant</em> way to address the issue. Naming always gets you a third of the way there.</p>
+
+<p>If we stop calling this "eval" and start calling it <strong>"estimation of a random variable"</strong> or <strong>"estimating the distribution of value"</strong>, by itself this will cause teams and executives to put attention in the right place.</p>
+
+<p>"Eval" brings a test-case culture: pass/fail, green/red, 89%. It implies there's a right answer and we're checking if we got it.</p>
+
+<p>"Estimation" brings uncertainty thinking: confidence intervals, sample size, measurement error. It implies we're trying to learn something we don't fully know.</p>
+
+<p>The shift is immediate. When someone says "our eval shows 85%", it sounds like a fact. When someone says "our estimate of accuracy is 85%", the next question is naturally "how confident are you in that estimate?"</p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (frames the problem correctly), Culture (sets expectations)</p>
+
+<hr>
+
+<h2>Solution 2: Ask the Right Questions</h2>
+
+<p>In every presentation, every review, every decision, train yourself to ask:</p>
+
+<ol>
+    <li><strong>"Can you stand behind these numbers?"</strong> — Not "are they good" but "would you bet on them?"</li>
+    <li><strong>"Are you giving me a number or a range?"</strong> — A point estimate without uncertainty is not information.</li>
+    <li><strong>"How did you reduce uncertainty?"</strong> — What did you do to make this measurement reliable? More samples? Better judges? Multiple evaluators?</li>
+    <li><strong>"What measures have you taken against bias?"</strong> — How do you know your eval isn't systematically optimistic? Have you checked for overfitting? For multiple hypothesis testing—picking the best of many runs?</li>
+    <li><strong>"Is that range uncertainty or variability?"</strong> — Are we unsure about the average, or certain that it varies across customers?</li>
+</ol>
+
+<p>Today, most presenters cannot answer these questions. That's the problem. But you don't need to understand all the sources of error to start asking. <strong>Start asking.</strong></p>
+
+<p>Having executives ask these questions gets you another third of the way there. It instantly creates the right culture. <strong>Instantly.</strong></p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (surfaces hidden uncertainty), Culture (makes it safe and expected to discuss)</p>
+
+<hr>
+
+<h2>Solution 3: Make RACI Clear</h2>
+
+<p>For every evaluation, someone must be <strong>Accountable</strong>—not for following the process, but for the <em>reliability of the statement they make about their agent and system</em>. This person should be able to answer:</p>
+
+<ul>
+    <li>Would you stand behind these metrics, numbers or ranges?</li>
+    <li>How did you estimate the uncertainty, and account for biases? How did you prevent overfitting to a set of ground truth examples or manage the testing of multiple hypotheses?</li>
+</ul>
+
+<p>When accountability is clear, mandates become tools rather than shields. "We have 100 ground truth examples" becomes "We have 100 ground truth examples, and here's why I believe they're representative and here is how we translate the evals over these 100 examples into an uncertainty window." The checklist becomes a starting point, not an endpoint.</p>
+
+<p><strong>Mandate the questions, not the answers.</strong> Require teams to answer "what's your uncertainty window?" and "how do you know your data is representative?"—but let them own the answers.</p>
+
+<p class="addresses"><strong>Addresses:</strong> Culture (accountability), Action (who acts on what)</p>
+
+<hr>
+
+<h2>Solution 4: Show, Don't Tell</h2>
+
+<p>Let people see the variability in their own work. One demonstration on your own data is worth ten explanations of the theory.</p>
+
+<p><strong>Run experiments:</strong></p>
+<ul>
+    <li>Take an existing eval. Run it with three reasonable variations of the eval prompt. Show the team the spread.</li>
+    <li>If the scores are stable, that's reassuring. If they diverge by 15 points, that's a lesson no lecture can match.</li>
+    <li>The same can be done with different samples from the same dataset, or with different judges.</li>
+</ul>
+
+<p>When teams see their own numbers wobble, uncertainty stops being an abstract concept. It becomes visceral.</p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (see variability firsthand), Culture (builds intuition)</p>
+
+<hr>
+
+<h2>Solution 5: Report Uncertainty by Default</h2>
+
+<p>When dashboards and reports show confidence intervals rather than point estimates, awareness becomes unavoidable. People cannot ignore what is in front of them. Changing the defaults changes the culture.</p>
+
+<p><strong>Instead of this:</strong></p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Metric</th>
+            <th>Score</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>Technical Accuracy</td><td>89% ✓</td></tr>
+        <tr><td>Completeness</td><td>84% ✓</td></tr>
+        <tr><td>Calling Correctness</td><td>72% ⚠</td></tr>
+    </tbody>
+</table>
+
+<p><strong>Consider this:</strong></p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Metric</th>
+            <th>Estimated Range</th>
+            <th>Confidence Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>Technical Accuracy</td><td>80–94%</td><td>Based on 100 samples; prompt sensitivity adds ~5 pts</td></tr>
+        <tr><td>Completeness</td><td>75–90%</td><td>Synthetic data may not reflect production diversity</td></tr>
+        <tr><td>Calling Correctness</td><td>62–82%</td><td>Small sample (n=50); wide interval expected</td></tr>
+    </tbody>
+</table>
+
+<p>The second table says less with false precision and more with honest information. It invites the right conversations: "Can we get more data to narrow the Technical Accuracy range?" "What would it take to validate on real production samples?"</p>
+
+<p><strong>A common objection is that "executives would not understand it."</strong> This is not true. Executives routinely deal with uncertainty in financial forecasts, market projections, and risk assessments. They may ask hard questions—"Why is the range so wide?" or "What would it take to narrow it?"—but these are exactly the questions that should be asked.</p>
+
+<p>To make this concrete, see the <strong><a href="#minimum-evaluation-reporting-standard">Minimum Evaluation Reporting Standard</a></strong> at the end of this document—a checklist of what every evaluation report should include.</p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (uncertainty is visible), Culture (normalizes uncertainty discussions)</p>
+
+<hr>
+
+<h2>Solution 6: Reduce Uncertainty at the Source</h2>
+
+<p>Some uncertainty is actually avoidable. Before accepting bias and uncertainty, ask: can we reduce them? The answer is that in most cases—yes, we can.</p>
+
+<p><strong>Eval at scale on customer data:</strong> Uncertainty (and bias) in sample size and data representativeness can be reduced by running evaluations on customer data, and at scale. Sometimes this is not possible, but often this is not done as it may be time consuming, or due to the belief that we need human labelers to generate ground truth.</p>
+
+<p>In practice, we have very rarely seen humans be better judges than LLMs for evaluating ⟨input, output⟩ pairs. When that happens, it is likely that eval guidelines are not well specified, or that the eval is subjective.</p>
+
+<p>I am also yet to see a case where synthetic data is as nuanced as actual, production data. It may be—but that is a feat hard to achieve.</p>
+
+<p>Notice that if we eval at scale, we also greatly reduce the multiple hypotheses testing problem. If we have data at scale, we can have many holdout datasets, but in general a large and diverse test set by itself reduces the problem.</p>
+
+<p><strong>Calibrate LLM judges:</strong> We can spend more cycles on calibrating an LLM judge so that the noise due to errors in the eval judge is reduced. This implies effort and dedicated, qualified resources.</p>
+
+<p><strong>Doing this takes effort—and if the impact of uncertainty and bias is recognized, then leadership can ask to put more resources on this.</strong></p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (understand how much uncertainty remains), Action (direct methods to reduce error)</p>
+
+<hr>
+
+<h2>Solution 7: Define Business Assertions</h2>
+
+<p><strong>The biggest problem in agentic deployments today is silent failure.</strong> The system runs. It returns something. No errors. But it's not doing what you expected—and nobody notices until months later, if ever.</p>
+
+<p>Why? Because <em>nobody stated what they expected</em>.</p>
+
+<p><strong>Business Assertions</strong> are explicit, quantifiable expectations about how your system should behave. They come from PMs, domain experts, and stakeholders—not just engineers. They represent your beliefs about what "working" looks like.</p>
+
+<p>Examples:</p>
+<ul>
+    <li><em>"I expect 60-80% of incidents to return similar closed incidents"</em></li>
+    <li><em>"I expect half of support requests to be solvable by existing KB articles"</em></li>
+    <li><em>"The agent should call the search tool before the summarize tool in 90%+ of cases"</em></li>
+    <li><em>"Average execution path length should be 3-5 steps, not 15"</em></li>
+    <li><em>"Less than 5% of responses should trigger the fallback handler"</em></li>
+</ul>
+
+<p>These are not just monitoring thresholds—they are <strong>statements of belief about your system</strong>. Writing them down forces clarity:</p>
+
+<ul>
+    <li>What do you actually expect this system to do?</li>
+    <li>What does "working correctly" look like, beyond "no errors"?</li>
+    <li>What would concern you if you saw it in production?</li>
+</ul>
+
+<p><strong>Why this matters:</strong></p>
+
+<ol>
+    <li><strong>Makes the implicit explicit.</strong> Most teams have unstated expectations. When reality deviates, there's no baseline to compare against.</li>
+    <li><strong>Creates a contract between product and engineering.</strong> The PM says "I expect X." Engineering instruments for X. When X doesn't happen, both sides learn something.</li>
+    <li><strong>Turns silent failures into visible alerts.</strong> If you expected 70% KB matches and you're seeing 30%, that's a signal—even though nothing "failed."</li>
+    <li><strong>Informs your observability infrastructure.</strong> You can't monitor what you haven't defined. Business assertions tell your tracing and analysis systems <em>what to watch for</em>.</li>
+</ol>
+
+<p>Start with 3-5 assertions. Review them weekly. Adjust as you learn. The goal isn't to be right—it's to be explicit about what you believe, so you can learn when reality differs.</p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (makes expectations explicit), Action (enables deviation detection), Culture (creates shared understanding of "working")</p>
+
+<hr>
+
+<h2>Solution 8: Build Observability</h2>
+
+<p>We can borrow lessons from software engineering and apply them to AI systems to understand where low quality and unexpected behaviors occur.</p>
+
+<p><strong>Agentic Assertions on inputs and outputs:</strong></p>
+<ul>
+    <li>Define expectations for what an agent or tool should receive and produce</li>
+    <li>These can be structural (format, schema) or semantic (intent, purpose)</li>
+    <li>When assertions fail, you learn something—either about your system or about your expectations</li>
+</ul>
+
+<p><strong>Introduce the concept of desirable (vs undesirable) agentic execution paths:</strong></p>
+<ul>
+    <li>For agent-based systems, some execution paths are expected, others are concerning</li>
+    <li>Define these explicitly. Monitor which paths are taken in production</li>
+    <li>Analyze at scale: in which cases do desirable paths get followed? What predicts failure?</li>
+</ul>
+
+<p><strong>Exception handling:</strong></p>
+<ul>
+    <li>What should happen when an agent encounters something unexpected?</li>
+    <li>Define fallback behaviors. Make failures visible rather than silent.</li>
+</ul>
+
+<p><strong>Logging with appropriate granularity:</strong></p>
+<ul>
+    <li><strong>TRACE</strong>: Structured execution traces, including: inputs and outputs, tool calls and parameters, retrieved documents or context, intermediate structured state, and a brief rationale or decision summary when needed. (Debugging only; never log secrets/PII—add redaction.)</li>
+    <li><strong>EXECUTION</strong>: Key decision points and tool calls (standard production)</li>
+    <li><strong>OUTCOME</strong>: Final result and assertion violations</li>
+    <li><strong>EXCEPTION</strong>: Errors, fallbacks, undesirable paths</li>
+    <li><strong>AUDIT</strong>: Security-relevant events</li>
+</ul>
+
+<p><em>Raw chain-of-thought should not be logged by default due to safety, privacy, and compliance concerns.</em></p>
+
+<p>This layer doesn't directly improve your eval scores. But it gives you ongoing visibility into whether your system is behaving as expected—and helps you catch problems that offline evaluation might miss.</p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (ongoing production insight), Action (feedback loops for improvement)</p>
+
+<hr>
+
+<h2>Solution 9: Use Worksheets as Thinking Tools</h2>
+
+<img src="./images/image17.png" alt="Evaluation worksheet example">
+
+<p>Worksheets are great tools to help thinking. They do not shift accountability or responsibility, but they help teams think about how the evaluation has been done. A good worksheet has three "columns": a question, an answer, and a request for evidence: <strong>how do we know?</strong></p>
+
+<p><strong><a href="./worksheet.md">Download the AI Evaluation Worksheet</a></strong> — a template covering experiment definition, datasets, ground truth, metrics, execution, and reporting.</p>
+
+<p>It is ok to answer questions with an "I don't know" or "it's just my best guess"—but at least we know what we don't know.</p>
+
+<p>This isn't about catching people out. It's about making the gaps visible—to yourself and to others.</p>
+
+<p><em>The worksheet can be easily filled automatically by an agent, given a report or a presentation.</em> Then PMs can be aware of which parts are missing and complete them.</p>
+
+<img src="./images/image18.png" alt="Worksheet filled by agent">
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (forces estimation), Action (structured approach)</p>
+
+<hr>
+
+<h2>Solution 10: AI Methodology Assistants</h2>
+
+<p>A Center of Excellence is valuable: experts who can review evaluation methodology, ask hard questions, and catch blind spots. But a small team of experts cannot review hundreds of evaluations across a large organization. The expertise becomes a bottleneck.</p>
+
+<p>One approach: encode the function of the Center of Excellence into an AI assistant. An agent that:</p>
+
+<ul>
+    <li>Knows the principles of rigorous evaluation</li>
+    <li>Is aware of your organization's standards and practices</li>
+    <li>Guides teams through the worksheet, asking probing questions</li>
+    <li>Flags gaps and suggests improvements</li>
+    <li>Helps fill in evidence or highlights where evidence is missing</li>
+</ul>
+
+<p>This is not a replacement for human judgment. But it can scale the <em>questioning</em>—the part where someone asks "how do you know?" and "have you considered...?"</p>
+
+<p>Think of it as a <strong>Center of Excellence at your fingertips</strong>. Not a rubber stamp, but a thinking partner that helps teams be more rigorous than they would be on their own.</p>
+
+<p class="addresses"><strong>Addresses:</strong> Visibility (surfaces issues), Action (helps estimate and improve)</p>
+
+<hr>
+
+<h2 id="minimum-evaluation-reporting-standard">Minimum Evaluation Reporting Standard</h2>
+
+<p>To make the principles in this series actionable, we propose a <strong>Minimum Evaluation Reporting Standard</strong>.</p>
+
+<p>Any evaluation result used for comparison, optimization, or decision-making must report the information below. This standard is intentionally minimal: it does not guarantee correctness, but it makes uncertainty and risk visible by default.</p>
+
+<p><strong>The goal is not to block decisions, but to prevent decisions from being made on numbers whose reliability is unknown.</strong></p>
+
+<h3>Required Fields</h3>
+
+<p>Every evaluation report MUST include:</p>
+
+<p><strong>1. Metric and point estimate</strong></p>
+<ul>
+    <li>Metric name</li>
+    <li>Point estimate</li>
+    <li>Directionality (higher is better / lower is better)</li>
+</ul>
+
+<p><strong>2. Uncertainty</strong></p>
+<ul>
+    <li>Confidence or uncertainty interval (default: 95%)</li>
+    <li>Method used (e.g., binomial CI, bootstrap, repeated runs)</li>
+    <li>Assumptions, if any (e.g., independence)</li>
+</ul>
+
+<p><em>Rough uncertainty estimates are acceptable; absence of uncertainty is not.</em></p>
+
+<p><strong>3. Sample size and population</strong></p>
+<ul>
+    <li>Sample size (n)</li>
+    <li>How samples were obtained</li>
+    <li>Intended population (or acknowledgement that the sample is a proxy)</li>
+</ul>
+
+<p><strong>4. Comparison structure</strong></p>
+<ul>
+    <li>Paired or unpaired comparison</li>
+    <li>Whether the same inputs and judges were used</li>
+    <li>Any expected correlation between measurements</li>
+</ul>
+
+<p><strong>5. Optimization exposure (K)</strong></p>
+<ul>
+    <li>Number of variants evaluated on this dataset</li>
+    <li>Whether the reported result was selected as best-of-K</li>
+</ul>
+
+<p><em>If K is unknown, it must be stated explicitly.</em></p>
+
+<p><strong>6. Holdout and reuse discipline</strong></p>
+<ul>
+    <li>Dataset role (development / validation / test)</li>
+    <li>Whether the dataset has been reused across iterations</li>
+    <li>Any peeking or adaptive changes</li>
+</ul>
+
+<p><strong>7. Known risks and blind spots</strong></p>
+<ul>
+    <li>Known sources of bias or mismatch</li>
+    <li>Known failure modes not covered by the evaluation</li>
+</ul>
+
+<p><strong>8. Decision readiness</strong></p>
+<ul>
+    <li>One of:
+        <ul>
+            <li>☐ Exploratory signal</li>
+            <li>☐ Directional evidence</li>
+            <li>☐ Deployment-ready</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>Why This Standard Works</h3>
+
+<p>This standard directly attacks the three systemic failures:</p>
+
+<table>
+    <tr><th>Failure</th><th>How the standard intervenes</th></tr>
+    <tr><td><strong>Opacity</strong></td><td>Forces uncertainty, population, and assumptions into the open</td></tr>
+    <tr><td><strong>Incentives</strong></td><td>Makes uncertainty a compliance item, not a personal choice</td></tr>
+    <tr><td><strong>Theater</strong></td><td>Forces disclosure of K, reuse, and holdout exposure</td></tr>
+</table>
+
+<p>This is not about statistical correctness. It's about making <strong>epistemic risk legible</strong>.</p>
+
+<hr>
+
+<h2>Why This All Matters</h2>
+
+<p>Better eval gives you two things:</p>
+
+<p><strong>1. Better decisions.</strong> Deploy what works, hold what's uncertain, disable what harms. This improves value immediately, without touching the agents.</p>
+
+<p><strong>2. Effective improvement cycles.</strong> You know the gradient—which dimensions to optimize, which agents need work, which customers are underserved. Your iterations move in the right direction, and you waste fewer cycles on changes that don't matter.</p>
+
+<p>This is analogous to knowing the gradient in ML: you can always iterate, but without the gradient you're doing random search.</p>
+
+<p>And here's why this matters even more now: <strong>AI can write the code.</strong> The engineering bottleneck is dissolving. What remains is knowing <em>what</em> to build. The teams with better eval will compound improvements. The teams without it will spin, whether they have 2 engineers or 20.</p>
+
+<hr>
+
+<h2>The Questions to Ask</h2>
+
+<p>The next time you see a scorecard with a green 89%, ask:</p>
+
+<blockquote>
+<p><em>What range would you sign your name to?</em></p>
+<p><em>What would you tell a customer if they asked—and you had to stand behind the answer?</em></p>
+<p><em>What range would you be comfortable owning when this goes to production?</em></p>
+</blockquote>
+
+<p><strong>If the team can't answer, the number isn't ready. And neither is the decision.</strong></p>
+
+<hr>
+
+<p><em>Back to: <a href="./index.html">Series Index</a></em></p>
+
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+</body>
+</html>

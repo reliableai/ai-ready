@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<!--
+  Content by Fabio Casati
+  https://www.linkedin.com/in/sphoebs/
+  https://x.com/sphoebs
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glossary and Notation - Iterating in the Dark</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 24px;
+            color: #2d3748;
+            background: #f7fafc;
+        }
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2.4em;
+            font-weight: 600;
+            margin-bottom: 0.3em;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            color: #1a202c;
+        }
+        h2 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-top: 2em;
+            margin-bottom: 0.6em;
+            color: #2d3748;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2em 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #edf2f7;
+            font-weight: 600;
+            color: #1a202c;
+        }
+        tr:hover {
+            background: #f7fafc;
+        }
+        td:first-child {
+            font-weight: 500;
+            color: #319795;
+            white-space: nowrap;
+        }
+        ul {
+            margin: 1.3em 0;
+            padding-left: 1.6em;
+        }
+        li {
+            margin: 0.25em 0;
+        }
+        code {
+            font-family: 'DM Mono', monospace;
+            background: #e6fffa;
+            padding: 0.2em 0.45em;
+            border-radius: 6px;
+            font-size: 0.88em;
+            color: #234e52;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2.5em 0;
+        }
+        a {
+            color: #319795;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #285e5e;
+        }
+        em {
+            font-style: italic;
+            color: #4a5568;
+        }
+        strong {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+<h1>Glossary and Notation</h1>
+
+<p>Key terms and notation used throughout this series.</p>
+
+<hr />
+
+<h2>Glossary</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Term</th>
+            <th>Definition</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Noise</td>
+            <td>Random variation across repeated measurements</td>
+        </tr>
+        <tr>
+            <td>Uncertainty</td>
+            <td>Lack of confidence in an estimate due to noise, sampling, or bias</td>
+        </tr>
+        <tr>
+            <td>Variability</td>
+            <td>Genuine differences across users, contexts, or inputs</td>
+        </tr>
+        <tr>
+            <td>Bias</td>
+            <td>Systematic error that does not average out</td>
+        </tr>
+        <tr>
+            <td>Variance</td>
+            <td>Quantitative measure of spread</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr />
+
+<h2>Notation</h2>
+
+<ul>
+    <li>Scores are in <strong>percentage points</strong> ("points").</li>
+    <li><code>σ</code> = standard deviation of <strong>one-run measurement noise</strong> for a single system (random error).</li>
+    <li><code>±h</code> = approximate <strong>95% confidence interval half-width</strong> (so CI width is <code>2h</code>).</li>
+    <li>When comparing two systems with independent noise <code>σ</code>, the noise on the difference is <code>√2 · σ</code>.</li>
+</ul>
+
+<hr />
+
+<p><em>Back to: <a href="./index.html">Series Index</a></em></p>
+
+<footer>
+    Content by Fabio Casati · <a href="https://www.linkedin.com/in/sphoebs/">LinkedIn</a> · <a href="https://x.com/sphoebs">X</a>
+</footer>
+</body>
+</html>

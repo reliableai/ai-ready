@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo 5 · OTel trace viewer</title>
+<style>
+  :root {
+    --bg: #0E1726; --panel: #182436; --teal: #1C7293; --accent: #F4A261;
+    --text: #E8F1F5; --muted: #8A9BB5; --err: #E07A5F; --ok: #6B9080;
+    --amber: #E0A458; --grid: #22304688; --border: #2a3a55;
+    --row-hover: #1f2d44;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px; }
+  header { padding: 16px 28px; border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-weight: 500; font-size: 20px; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .sub code { background: var(--panel); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
+  .layout { display: grid; grid-template-columns: 360px 1fr 380px; gap: 0;
+    height: calc(100vh - 72px); }
+
+  /* Left: trace list */
+  .tracelist { background: var(--panel); border-right: 1px solid var(--border);
+    overflow-y: auto; }
+  .tracelist h2, .waterfall h2, .detail h2 { margin: 0; padding: 12px 16px;
+    font-size: 11px; color: var(--teal); text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .trace-row { padding: 10px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; }
+  .trace-row:hover { background: var(--row-hover); }
+  .trace-row.selected { background: var(--row-hover); border-left: 3px solid var(--accent); }
+  .trace-row .q { font-size: 12px; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; max-width: 320px; }
+  .trace-row .meta { color: var(--muted); font-size: 11px; margin-top: 3px;
+    display: flex; gap: 10px; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 10px; font-weight: 600; }
+  .badge.ok { background: #1d3a2d; color: #9cc0aa; }
+  .badge.err { background: #3a1d1d; color: #e8a79a; }
+
+  /* Middle: waterfall */
+  .waterfall { overflow-y: auto; }
+  .waterfall .content { padding: 12px 16px; }
+  .waterfall .empty { color: var(--muted); padding: 40px 16px; text-align: center; }
+  .span-row { display: grid; grid-template-columns: 200px 80px 1fr; gap: 12px;
+    padding: 6px 0; border-bottom: 1px dashed var(--border); align-items: center;
+    cursor: pointer; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; }
+  .span-row:hover { background: var(--row-hover); }
+  .span-row.selected { background: var(--row-hover); }
+  .span-row .name { color: var(--text); overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; }
+  .span-row .dur { color: var(--muted); text-align: right; }
+  .span-row .bar-wrap { position: relative; height: 14px; background: var(--grid); border-radius: 2px; }
+  .span-row .bar { position: absolute; top: 0; bottom: 0; background: var(--teal);
+    border-radius: 2px; }
+  .span-row .bar.err { background: var(--err); }
+  .span-row .bar.llm { background: var(--accent); }
+  .span-row .bar.retrieval { background: var(--amber); }
+  .span-row .bar.tool { background: #9b8ab0; }
+  .span-row .bar.root { background: var(--ok); }
+
+  .indent-1 .name { padding-left: 14px; border-left: 2px solid var(--border); }
+  .indent-2 .name { padding-left: 28px; border-left: 2px solid var(--border); }
+
+  /* Right: detail panel */
+  .detail { background: var(--panel); border-left: 1px solid var(--border);
+    overflow-y: auto; }
+  .detail .content { padding: 12px 16px; }
+  .detail .empty { color: var(--muted); padding: 40px 16px; text-align: center; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
+    margin-bottom: 14px; }
+  .kv .k { color: var(--muted); }
+  .kv .v { color: var(--text); word-break: break-all; }
+  .detail h3 { margin: 0 0 8px; font-size: 10px; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Demo 5 · <span>OTel trace viewer</span></h1>
+  <div class="sub">
+    Reads <code>spans.ndjson</code> produced by <code>gen_spans.py</code>.
+    Click a trace on the left to see its waterfall; click a span in the
+    waterfall to see its full attributes. URL stays in sync
+    (<code>?trace_id=…</code>) — bookmarkable.
+  </div>
+</header>
+
+<div class="layout">
+  <div class="tracelist">
+    <h2 id="tl-title">Traces</h2>
+    <div id="tracelist"></div>
+  </div>
+  <div class="waterfall">
+    <h2>Waterfall</h2>
+    <div id="waterfall" class="content"><div class="empty">Pick a trace on the left.</div></div>
+  </div>
+  <div class="detail">
+    <h2>Span detail</h2>
+    <div id="detail" class="content"><div class="empty">Pick a span in the waterfall.</div></div>
+  </div>
+</div>
+
+<script src="spans.js"></script>
+<script>
+  const DATA = window.__SPANS__;
+  if (!DATA) {
+    document.body.innerHTML = `<pre style="padding:32px;color:#E07A5F">
+Could not load spans.js. Run:  python gen_spans.py
+</pre>`;
+    throw new Error("no data");
+  }
+
+  // -------- Group spans by trace ------------------------------------
+  const TRACES = {};
+  for (const s of DATA) {
+    (TRACES[s.trace_id] ||= []).push(s);
+  }
+  const TRACE_LIST = Object.entries(TRACES).map(([tid, spans]) => {
+    const root = spans.find(s => s.parent_span_id === null) || spans[0];
+    const start = Math.min(...spans.map(s => s.start_ns));
+    const end   = Math.max(...spans.map(s => s.end_ns));
+    return {
+      trace_id: tid,
+      root,
+      start, end,
+      dur_ms: Math.round((end - start) / 1e6),
+      question: (root.attributes || {})["user.question"] || "(no question)",
+      status: root.status || "OK",
+      span_count: spans.length,
+    };
+  }).sort((a, b) => a.start - b.start);
+
+  const tlTitle = document.getElementById("tl-title");
+  tlTitle.textContent = `Traces (${TRACE_LIST.length})`;
+
+  // -------- Render trace list --------------------------------------
+  const tlEl = document.getElementById("tracelist");
+  TRACE_LIST.forEach(t => {
+    const d = document.createElement("div");
+    d.className = "trace-row";
+    d.dataset.traceId = t.trace_id;
+    const badge = t.status === "ERROR"
+      ? '<span class="badge err">ERROR</span>'
+      : '<span class="badge ok">OK</span>';
+    d.innerHTML = `
+      <div class="q" title="${escape(t.question)}">${escape(t.question)}</div>
+      <div class="meta">
+        ${badge}
+        <span>${t.dur_ms} ms</span>
+        <span>${t.span_count} spans</span>
+      </div>`;
+    d.onclick = () => selectTrace(t.trace_id);
+    tlEl.appendChild(d);
+  });
+
+  // -------- Waterfall rendering ------------------------------------
+  function selectTrace(tid) {
+    document.querySelectorAll(".trace-row").forEach(r =>
+      r.classList.toggle("selected", r.dataset.traceId === tid));
+
+    const spans = TRACES[tid];
+    if (!spans) return;
+
+    // Build parent map + order spans by tree traversal.
+    const byId = {};
+    for (const s of spans) byId[s.span_id] = s;
+    const kids = {};
+    for (const s of spans) (kids[s.parent_span_id] ||= []).push(s);
+    const root = spans.find(s => s.parent_span_id === null) || spans[0];
+
+    // DFS in start_ns order.
+    const ordered = [];
+    const walk = (s, depth) => {
+      ordered.push({ s, depth });
+      (kids[s.span_id] || [])
+        .sort((a, b) => a.start_ns - b.start_ns)
+        .forEach(c => walk(c, depth + 1));
+    };
+    walk(root, 0);
+
+    const t0 = root.start_ns;
+    const total = root.end_ns - t0;
+
+    const wf = document.getElementById("waterfall");
+    wf.innerHTML = "";
+    ordered.forEach(({ s, depth }) => {
+      const offPct = ((s.start_ns - t0) / total) * 100;
+      const widPct = Math.max(0.5, ((s.end_ns - s.start_ns) / total) * 100);
+      const dur = Math.round((s.end_ns - s.start_ns) / 1e6);
+      const kind =
+        depth === 0 ? "root" :
+        s.name === "llm.call" ? "llm" :
+        s.name === "retrieval.search" ? "retrieval" :
+        s.name.startsWith("tool.") ? "tool" : "";
+      const errCls = s.status === "ERROR" ? " err" : "";
+
+      const step = (s.attributes || {})["gen_ai.step"];
+      const suffix = step ? ` (${step})` : "";
+
+      const row = document.createElement("div");
+      row.className = `span-row indent-${Math.min(depth, 2)}`;
+      row.dataset.spanId = s.span_id;
+      row.innerHTML = `
+        <div class="name" title="${escape(s.name + suffix)}">${escape(s.name + suffix)}</div>
+        <div class="dur">${dur} ms</div>
+        <div class="bar-wrap">
+          <div class="bar ${kind}${errCls}"
+               style="left:${offPct}%;width:${widPct}%"></div>
+        </div>`;
+      row.onclick = () => selectSpan(s.span_id, tid);
+      wf.appendChild(row);
+    });
+
+    // Update URL.
+    history.replaceState(null, "", `?trace_id=${tid}`);
+    document.getElementById("detail").innerHTML =
+      '<div class="empty">Pick a span in the waterfall.</div>';
+  }
+
+  // -------- Span detail panel --------------------------------------
+  function selectSpan(spanId, tid) {
+    const spans = TRACES[tid];
+    const s = spans.find(x => x.span_id === spanId);
+    if (!s) return;
+    document.querySelectorAll(".span-row").forEach(r =>
+      r.classList.toggle("selected", r.dataset.spanId === spanId));
+
+    const detail = document.getElementById("detail");
+    const dur = Math.round((s.end_ns - s.start_ns) / 1e6);
+    const startIso = new Date(s.start_ns / 1e6).toISOString();
+
+    const core = [
+      ["name",           s.name],
+      ["status",         s.status],
+      ["duration",       `${dur} ms`],
+      ["start",          startIso],
+      ["span_id",        s.span_id],
+      ["parent_span_id", s.parent_span_id || "(root)"],
+      ["trace_id",       s.trace_id],
+    ];
+
+    const attrs = Object.entries(s.attributes || {})
+      .filter(([, v]) => v !== null && v !== undefined);
+
+    detail.innerHTML = `
+      <h3>Core</h3>
+      <div class="kv">
+        ${core.map(([k, v]) =>
+          `<div class="k">${escape(k)}</div><div class="v">${escape(String(v))}</div>`
+        ).join("")}
+      </div>
+      <h3>Attributes</h3>
+      <div class="kv">
+        ${attrs.length === 0
+          ? '<div class="k">(none)</div><div class="v"></div>'
+          : attrs.map(([k, v]) =>
+              `<div class="k">${escape(k)}</div><div class="v">${escape(String(v))}</div>`
+            ).join("")}
+      </div>`;
+  }
+
+  function escape(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  // -------- Deep-link: ?trace_id=... --------------------------------
+  const qs = new URLSearchParams(location.search);
+  const wanted = qs.get("trace_id");
+  if (wanted && TRACES[wanted]) {
+    selectTrace(wanted);
+  }
+</script>
+</body>
+</html>
