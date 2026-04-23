@@ -66,9 +66,11 @@ By the end of this course, you will:
 
 **Slides**
 
-- Excalidraw follow-along from Karpathy: [https://drive.google.com/file/d/1EZh5hNDzxMMy05uLhVryk061QYQGTxiN/view](https://drive.google.com/file/d/1EZh5hNDzxMMy05uLhVryk061QYQGTxiN/view)
+- *TBD*
 
 **Resources**
+
+- Excalidraw follow-along from Karpathy: [https://drive.google.com/file/d/1EZh5hNDzxMMy05uLhVryk061QYQGTxiN/view](https://drive.google.com/file/d/1EZh5hNDzxMMy05uLhVryk061QYQGTxiN/view)
 
 *The best intro is Andrej Karpathy's videos and materials:*
 
