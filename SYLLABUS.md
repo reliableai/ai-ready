@@ -280,7 +280,7 @@ By the end of this course, you will:
 
 **Slides**
 
-- *TBD*
+- `[session9_mastering_uncertainty.pdf](labs/06_mastering_uncertainty/session9_mastering_uncertainty.pdf)`
 
 **Resources**
 
@@ -330,13 +330,13 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 ### S11 — Agentic Patterns
 
 **Page:** `[labs/10_complex_systems/1_councils/councils.html](labs/10_complex_systems/1_councils/councils.html)`
-**Tagline:** Council of Agents and Other Agentic Patterns.
+**Tagline:** A tour of agentic patterns — ensemble shapes, orchestration shapes, and control/reasoning patterns within a single agent — and how to pick the right shape for the problem.
 
 **Learning objectives**
 
-- Recognize the main council/ensemble patterns — self-consistency, role-based panels, multi-model ensembles, diverse-judge — and what each buys you
-- Understand when disagreement is a *feature* (calibrated uncertainty from independent errors) vs. a *failure mode* (correlated errors)
-- Reason about the core design questions of multi-agent systems: diversity, aggregation, cost, and evaluation
+- Map the pattern landscape across three axes: **ensemble** (many agents on the same task), **orchestration** (decompose the task across stages/agents), and **control/reasoning patterns within an agent** (how a single agent reasons and acts)
+- Recognize the main patterns in each family — councils / majority vote / debate; pipelines / routers / supervisor-worker; ReAct / plan-and-execute / reflect — and what each buys you (and when it fails: correlated errors, step compounding, loop divergence)
+- Reason about the core design questions of multi-agent systems: diversity, aggregation, routing, budget, and evaluation
 
 **Slides**
 
