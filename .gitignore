@@ -42,3 +42,6 @@ labs/**/datasets/
 .vscode/
 .idea/
 .claude/
+
+# Personal / unshared notes
+TODO.md
