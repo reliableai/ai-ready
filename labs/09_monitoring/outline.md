@@ -166,7 +166,7 @@ The operational closing section. This is where "assertions" become a system.
 
 1. **`monitoring.html`** — rewrite to 5 sections above, preserving L7 template (nav, content-cards, thesis-blocks, highlight.js).
 2. **`monitoring_slides.pptx`** — rebuild to mirror the 5 new sections; keep Ocean Gradient palette.
-3. **`monitoring_lab.ipynb` + `*.py`** — **code stays valid** (it's a Stage-A + Stage-B + Stage-C lab already: API call + memory + tool loop, with schema/toxicity guardrails and a golden-set rubric). Light edits to notebook narration to use the assertions vocabulary.
+3. **`06_observing_and_diagnosing.ipynb` + `*.py`** — **code stays valid** (it's a Stage-A + Stage-B + Stage-C lab already: API call + memory + tool loop, with schema/toxicity guardrails and a golden-set rubric). Light edits to notebook narration to use the assertions vocabulary.
 4. **`trace_viewer.py`**, **`weekly_report_demo.py`**, **`golden_set.json`**, **`minimal_agent.py`** — no changes needed.
 5. **`index.html`** L10 card already points here — no edit.
 

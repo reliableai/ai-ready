@@ -48,8 +48,8 @@ No API keys. No OpenTelemetry SDK. Every demo seeds a deterministic
 RNG and a frozen `NOW = 2026-04-27T18:00`, so the outputs are
 byte-stable across machines.
 
-> **Legacy notebook only:** `monitoring_lab.py` and
-> `monitoring_lab.ipynb` are kept for backward compatibility and
+> **Legacy notebook only:** `06_observing_and_diagnosing.py` and
+> `06_observing_and_diagnosing.ipynb` are kept for backward compatibility and
 > import `pydantic` and `opentelemetry`. If you actually want to run
 > them, `pip install pydantic opentelemetry-api opentelemetry-sdk`.
 > The current `demos/` + `exercises/` layout does not need either.
@@ -128,7 +128,7 @@ students ship.
   `monitoring_slides.html`.
 - `monitoring_slides.pptx` — earlier PowerPoint export, also
   superseded.
-- `monitoring_lab.ipynb` / `monitoring_lab.py` — earlier
+- `06_observing_and_diagnosing.ipynb` / `06_observing_and_diagnosing.py` — earlier
   single-notebook version. See the "Legacy notebook only" note in
   the **Install** section above for its extra requirements.
 - `trace_viewer.py` — stdlib-only span-tree renderer. The

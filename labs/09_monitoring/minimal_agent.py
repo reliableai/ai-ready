@@ -6,7 +6,7 @@ answer directly or to call the tool and then answer. We use a deterministic
 *mock* LLM so the lab runs offline (no API keys). A commented block below
 shows how to swap in a real provider.
 
-Everything observability-related lives in `monitoring_lab.py`. This file is
+Everything observability-related lives in `06_observing_and_diagnosing.py`. This file is
 kept intentionally small so the pedagogical core — the agent loop itself —
 fits on one page.
 

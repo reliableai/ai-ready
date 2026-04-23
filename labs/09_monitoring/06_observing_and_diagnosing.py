@@ -1,5 +1,5 @@
 """
-monitoring_lab.py — instrument `minimal_agent.run_agent` three ways:
+06_observing_and_diagnosing.py — instrument `minimal_agent.run_agent` three ways:
 
   1. Structured JSON logging (stdlib logging + a JsonFormatter)
   2. OpenTelemetry tracing (GenAI semantic conventions, ConsoleSpanExporter
@@ -11,7 +11,7 @@ Also runs the agent on `golden_set.json`, scores it with a mock rubric
 judge, and emits `report.json` with aggregate metrics.
 
 Run:
-    python monitoring_lab.py --prompt-version v1
+    python 06_observing_and_diagnosing.py --prompt-version v1
     python trace_viewer.py spans.jsonl --out trace.html
 """
 from __future__ import annotations

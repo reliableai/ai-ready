@@ -2,7 +2,7 @@
 trace_viewer.py — a ~150-line HTML renderer for OTel spans.
 
 Reads a JSONL file of spans (as produced by `JsonlFileExporter` in
-monitoring_lab.py) and emits a single self-contained HTML file with a
+06_observing_and_diagnosing.py) and emits a single self-contained HTML file with a
 collapsible span tree per trace. Pure stdlib — no external deps.
 
 Usage:

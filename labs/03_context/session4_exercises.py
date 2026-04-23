@@ -1,7 +1,7 @@
 # %% [markdown]
 # # Session 4: Exercises — Managing Context
 #
-# These exercises build on the session. Run `session4_managing_context.py` first
+# These exercises build on the session. Run `04_managing_context_and_memory.py` first
 # so you understand the patterns, then come back here.
 
 # %%

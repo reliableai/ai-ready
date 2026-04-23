@@ -47,7 +47,7 @@ By the end of this course, you will:
 
 **Labs**
 
-- Master notebook: `[session1_demo.ipynb](labs/01_hello_world/session1_demo.ipynb)`
+- Master notebook: `[01_hello_ai_world.ipynb](labs/01_hello_world/01_hello_ai_world.ipynb)`
 - Setup instructions: `[SETUP.md](SETUP.md)` — clone, install `uv`, configure API keys, install Ollama for the homework
 
 ---
@@ -107,7 +107,7 @@ By the end of this course, you will:
 
 **Labs**
 
-- Master notebook: `[session3_demo.ipynb](labs/02_standalone_agents/session3_demo.ipynb)`
+- Master notebook: `[03_mastering_individual_calls.ipynb](labs/02_standalone_agents/03_mastering_individual_calls.ipynb)`
 - Topic notebooks: `[session3_singlecall.ipynb](labs/02_standalone_agents/session3_singlecall.ipynb)`, `[session3_stateful.ipynb](labs/02_standalone_agents/session3_stateful.ipynb)`, `[session3_testing.ipynb](labs/02_standalone_agents/session3_testing.ipynb)`, `[session3_testing_and_metrics.ipynb](labs/02_standalone_agents/session3_testing_and_metrics.ipynb)`
 - Exercises: `[session3_exercises.ipynb](labs/02_standalone_agents/session3_exercises.ipynb)`
 - Answers: `[session3_answers.ipynb](labs/02_standalone_agents/session3_answers.ipynb)`
@@ -138,7 +138,7 @@ By the end of this course, you will:
 
 **Labs**
 
-- Master notebook: `[session4_managing_context.ipynb](labs/03_context/session4_managing_context.ipynb)` (Python mirror: `session4_managing_context.py`)
+- Master notebook: `[04_managing_context_and_memory.ipynb](labs/03_context/04_managing_context_and_memory.ipynb)` (Python mirror: `04_managing_context_and_memory.py`)
 - Exercises: `[session4_exercises.ipynb](labs/03_context/session4_exercises.ipynb)`
 - Solutions: `[session4_solutions.ipynb](labs/03_context/session4_solutions.ipynb)`
 - Review-loop tests: `[labs/tests/test_session4_review_loop.py](labs/tests/test_session4_review_loop.py)`
@@ -167,7 +167,7 @@ By the end of this course, you will:
 
 **Labs**
 
-- Master notebook: `[session5_tool_calling.ipynb](labs/04_tool_calling/session5_tool_calling.ipynb)` (Python mirror: `session5_tool_calling.py`)
+- Master notebook: `[05_tools_and_agentic_loops.ipynb](labs/04_tool_calling/05_tools_and_agentic_loops.ipynb)` (Python mirror: `05_tools_and_agentic_loops.py`)
 - Exercises: `[session5_exercises.ipynb](labs/04_tool_calling/session5_exercises.ipynb)`
 - Solutions: `[session5_solutions.ipynb](labs/04_tool_calling/session5_solutions.ipynb)`
 
@@ -205,7 +205,7 @@ By the end of this course, you will:
 
 **Labs**
 
-- Master notebook: `[monitoring_lab.ipynb](labs/09_monitoring/monitoring_lab.ipynb)` (Python mirror: `monitoring_lab.py`)
+- Master notebook: `[06_observing_and_diagnosing.ipynb](labs/09_monitoring/06_observing_and_diagnosing.ipynb)` (Python mirror: `06_observing_and_diagnosing.py`)
 
 ---
 
@@ -291,7 +291,7 @@ By the end of this course, you will:
 
 **Labs**
 
-- Master notebook: `[session9_uncertainty_sandbox.ipynb](labs/06_mastering_uncertainty/session9_uncertainty_sandbox.ipynb)` — overarching, code-first companion to the playground. Four runnable experiments (sampling noise, sampling bias, multiple hypothesis testing, judge compounding) with bootstrap CIs and Beta posteriors. Synthetic data, no API calls — iterate fast.
+- Master notebook: `[09_understanding_uncertainty.ipynb](labs/06_mastering_uncertainty/09_understanding_uncertainty.ipynb)` — overarching, code-first companion to the playground. Four runnable experiments (sampling noise, sampling bias, multiple hypothesis testing, judge compounding) with bootstrap CIs and Beta posteriors. Synthetic data, no API calls — iterate fast.
 
 ---
 
@@ -473,7 +473,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 **Labs**
 
-- Master notebook: `[agent_comparison.ipynb](labs/14_frameworks/agent_comparison.ipynb)`
+- Master notebook: `[15_using_ai_frameworks.ipynb](labs/14_frameworks/15_using_ai_frameworks.ipynb)`
 
 ---
 

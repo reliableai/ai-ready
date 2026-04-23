@@ -1,7 +1,7 @@
 # %% [markdown]
 # # Session 5: Exercises — Tool Calling
 #
-# These exercises build on the session. Run `session5_tool_calling.py` first
+# These exercises build on the session. Run `05_tools_and_agentic_loops.py` first
 # so you understand the patterns, then come back here.
 #
 # We use **open APIs that require no API keys**:
