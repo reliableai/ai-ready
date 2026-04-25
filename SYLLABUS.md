@@ -488,7 +488,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S16 — Programming in English (and why it is tough)
+### S16 — Developing at the Speed of AI Without Losing Control
 
 **Page:** `[labs/13_programming_in_english/programming_in_english.html](labs/13_programming_in_english/programming_in_english.html)`
 **Tagline:** Without Losing Control (and Mental Health) — using AI to build software, without ceding the engineering judgment that keeps systems sane.
