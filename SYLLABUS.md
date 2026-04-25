@@ -2,7 +2,7 @@
 
 > AI-Ready Engineers is dedicated to engineers and practitioners who want to be ready to build complex systems with AI — and for AI. It lays the foundations for building reliable systems efficiently, and for mastering the evaluation and improvement process that keeps them reliable as they grow.
 
-**Format:** 17 sessions, organized in 4 skillsets.
+**Format:** 18 sessions, organized in 4 skillsets.
 
 **Convention:** each session has a page (HTML, serves as the in-class walkthrough) and a master Jupyter notebook alongside it in the same folder. Supporting `.py` scripts, exercises, solutions, and slides live in the same folder.
 
@@ -173,11 +173,11 @@ By the end of this course, you will:
 - Exercises: `[session5_exercises.ipynb](labs/04_tool_calling/session5_exercises.ipynb)`
 - Solutions: `[session5_solutions.ipynb](labs/04_tool_calling/session5_solutions.ipynb)`
 
-**Safety crosslink:** Tool allow-lists, scoping, and adversarial tool use (tool abuse, destructive-action gating) are covered in depth in **S14 — Safety, Security, and Guardrails**.
+**Safety crosslink:** Tool allow-lists, scoping, and adversarial tool use (tool abuse, destructive-action gating) are covered in depth in **S12 — Safety, Security, and Guardrails**.
 
 ---
 
-## Skillset 2 — Understanding Your System Through Observation and Experimentation
+## Skillset 2 — Mastering Observability, Quality, Security — Before Scaling Up
 
 ---
 
@@ -325,11 +325,71 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
+### S11 — Reinterpreting Test-Driven Development in the Age of AI
+
+**Page:** *TBD*
+**Tagline:** Test-first thinking when the unit under test is stochastic — flipping evals, golden sets, and assertions over distributions into a development discipline.
+
+**Learning objectives**
+
+- Understand how classical TDD (red-green-refactor on deterministic units) needs to be reframed when the unit under test is stochastic
+- Apply test-first thinking with evals, golden sets, and assertions over distributions instead of point assertions
+- Establish a development feedback loop where the eval is written before the prompt/agent change — and scales with the system
+
+**Slides**
+
+- *TBD*
+
+**Resources**
+
+- *TBD*
+
+**Labs**
+
+- *TBD*
+
+---
+
+### S12 — Safety, Security, and Guardrails
+
+**Page:** *TBD*
+**Folder:** `[labs/13_safety/](labs/13_safety/)` (to be populated)
+**Tagline:** End-to-end threat model for AI systems — content safety, system security, and operational guardrails that keep agents useful without letting them become liabilities.
+
+**Learning objectives**
+
+- Distinguish the three layers of AI safety: *content safety* (harmful, biased, or dangerously wrong outputs), *system security* (prompt injection, data exfiltration, tool abuse, supply-chain risk), and *operational guardrails* (rate limits, human-in-the-loop gates, blast-radius control, auditability)
+- Apply a threat model to an agentic system — what can a malicious input, a compromised tool, or a confused agent do, and which defenses are worth their cost
+- Implement practical defenses: input/output filters, tool allow-lists and scoping, sandboxing, approval gates for high-impact actions, anomaly detection and auditing
+- Red-team your own system: design attack scenarios, run them, and harden the system against what you find
+
+**Slides**
+
+- *TBD*
+
+**Resources**
+
+- OWASP Top 10 for LLM Applications — canonical threat taxonomy for LLM-powered systems
+- Simon Willison's writeups on prompt injection and the "lethal trifecta" (private data + untrusted content + external communication channels)
+- Anthropic — Responsible Scaling Policy and agent-safety research
+- NIST AI Risk Management Framework (AI RMF) — for regulated/enterprise contexts
+- *TBD — red-team scenario playbook and defense pattern catalogue*
+
+**Labs**
+
+- Red-team lab: take the tool-using agent from S5, craft adversarial inputs to exfiltrate data, escalate tool access, or trigger a destructive action — then harden it and re-run the attacks
+- Guardrail integration lab: wrap an existing agent with an input filter, a tool allow-list, and an approval gate for high-impact actions; measure the cost (latency, false-positive rate) of each layer
+- *TBD — notebooks and exercises*
+
+**Crosslinks:** Builds on **S5** (tool design) and **S6** (observability as a safety primitive). Feeds into **S15** (reliable architectures — architectural realization of these constraints) and **S18** (when AI is the user — the adversary's view of the same interfaces).
+
+---
+
 ## Skillset 3 — Building and Managing Complex Systems
 
 ---
 
-### S11 — Foundational Programming Abstractions for Complex Systems
+### S13 — Foundational Programming Abstractions for Complex Systems
 
 **Pages:**
 
@@ -364,7 +424,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S12 — Architectural Patterns At Work
+### S14 — Architectural Patterns At Work
 
 **Page:** `[labs/10_complex_systems/1_councils/councils.html](labs/10_complex_systems/1_councils/councils.html)`
 **Tagline:** A tour of agentic patterns — ensemble shapes, orchestration shapes, and control/reasoning patterns within a single agent — and how to pick the right shape for the problem.
@@ -392,7 +452,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S13 — Driving for Consistent, Predictable Outcomes: Reliable Architectures and Engineering Practices 
+### S15 — Driving for Consistent, Predictable Outcomes: Reliable Architectures and Engineering Practices 
 
 **Pages:**
 
@@ -419,42 +479,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 - *No notebook yet.*
 
-**Safety crosslink:** Defensive architecture patterns (approval gates, blast-radius control, circuit-breakers for runaway agents) are covered end-to-end in **S14 — Safety, Security, and Guardrails**.
-
----
-
-### S14 — Failure Modes, Safety, Security, Guardrails
-
-**Page:** *TBD*
-**Folder:** `[labs/13_safety/](labs/13_safety/)` (to be populated)
-**Tagline:** End-to-end threat model for AI systems — content safety, system security, and operational guardrails that keep agents useful without letting them become liabilities.
-
-**Learning objectives**
-
-- Distinguish the three layers of AI safety: *content safety* (harmful, biased, or dangerously wrong outputs), *system security* (prompt injection, data exfiltration, tool abuse, supply-chain risk), and *operational guardrails* (rate limits, human-in-the-loop gates, blast-radius control, auditability)
-- Apply a threat model to an agentic system — what can a malicious input, a compromised tool, or a confused agent do, and which defenses are worth their cost
-- Implement practical defenses: input/output filters, tool allow-lists and scoping, sandboxing, approval gates for high-impact actions, anomaly detection and auditing
-- Red-team your own system: design attack scenarios, run them, and harden the system against what you find
-
-**Slides**
-
-- *TBD*
-
-**Resources**
-
-- OWASP Top 10 for LLM Applications — canonical threat taxonomy for LLM-powered systems
-- Simon Willison's writeups on prompt injection and the "lethal trifecta" (private data + untrusted content + external communication channels)
-- Anthropic — Responsible Scaling Policy and agent-safety research
-- NIST AI Risk Management Framework (AI RMF) — for regulated/enterprise contexts
-- *TBD — red-team scenario playbook and defense pattern catalogue*
-
-**Labs**
-
-- Red-team lab: take the tool-using agent from S5, craft adversarial inputs to exfiltrate data, escalate tool access, or trigger a destructive action — then harden it and re-run the attacks
-- Guardrail integration lab: wrap an existing agent with an input filter, a tool allow-list, and an approval gate for high-impact actions; measure the cost (latency, false-positive rate) of each layer
-- *TBD — notebooks and exercises*
-
-**Crosslinks:** Builds on **S5** (tool design), **S6** (observability as a safety primitive), **S13** (reliable architectures). Feeds into **S17** (when AI is the user — the adversary's view of the same interfaces).
+**Safety crosslink:** Defensive architecture patterns (approval gates, blast-radius control, circuit-breakers for runaway agents) are the architectural realization of the principles covered earlier in **S12 — Safety, Security, and Guardrails**.
 
 ---
 
@@ -462,7 +487,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S15 — Developing at the Speed of AI Without Losing Control
+### S16 — Developing at the Speed of AI Without Losing Control
 
 **Page:** `[labs/13_programming_in_english/programming_in_english.html](labs/13_programming_in_english/programming_in_english.html)`
 **Tagline:** Without Losing Control (and Mental Health) — using AI to build software, without ceding the engineering judgment that keeps systems sane.
@@ -487,7 +512,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S16 — Standards, Frameworks, and When to Use Them
+### S17 — Standards, Frameworks, and When to Use Them
 
 **Page:** `[labs/14_frameworks/frameworks.html](labs/14_frameworks/frameworks.html)`
 **Tagline:** When and why to use frameworks; LangChain as a case study.
@@ -514,7 +539,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S17 — When AI is the User of Our System
+### S18 — When AI is the User of Our System
 
 **Page:** *TBD*
 **Tagline:** Designing systems for AI consumers — what changes when the user is an agent, not a human: API ergonomics for agents, failure modes unique to agent consumers, and the shift from human-centred to agent-centred system design.
@@ -537,7 +562,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 - *TBD*
 
-**Safety crosslink:** This session covers the *design* side of agent-as-consumer failure modes. The *defense* side — red-teaming, guardrails, and hardening — is covered end-to-end in **S14 — Safety, Security, and Guardrails**.
+**Safety crosslink:** This session covers the *design* side of agent-as-consumer failure modes. The *defense* side — red-teaming, guardrails, and hardening — is covered end-to-end in **S12 — Safety, Security, and Guardrails**.
 
 ---
 
