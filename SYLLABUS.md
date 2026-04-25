@@ -344,7 +344,8 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 - Complex systems are like grandious, sophisticated, and gradually evolving buildings — learn how the concepts of building blocks, components and compositions, has changed throughout a brief history of software architectures
 - Understand which foundational abstractions we want to carry from the past and are still valid today, and what is fundamentally new with AI agents
 - Explore hands on the similarities and differences when composing AI-less systems, when the components are AI agents, when the orchestration is driven by AI agents, and finally where AI is present throughout the entire architecture
-- 
+- Understand the difference between UI, APIs, agentic interfaces and agentic systems
+- Which are the aspects for which we need abstractions, and those for which we need standards
 
 **Slides**
 
@@ -422,7 +423,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S14 — Safety, Security, and Guardrails
+### S14 — Failure Modes, Safety, Security, Guardrails
 
 **Page:** *TBD*
 **Folder:** `[labs/13_safety/](labs/13_safety/)` (to be populated)
@@ -457,7 +458,36 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S15 — Standards, Frameworks, and When to Use Them
+## Skillset 4 — Building ++*with*++ AI and ++*for*++ AI — at AI Speed
+
+---
+
+### S15 — Developing at the Speed of AI Without Losing Control
+
+**Page:** `[labs/13_programming_in_english/programming_in_english.html](labs/13_programming_in_english/programming_in_english.html)`
+**Tagline:** Without Losing Control (and Mental Health) — using AI to build software, without ceding the engineering judgment that keeps systems sane.
+
+**Learning objectives**
+
+- Use AI to accelerate software development (code generation, review, refactoring) without losing the engineering judgment that keeps systems sane
+- Understand why natural language is a lossy specification medium — and what that means for correctness, control, and debuggability
+- Establish a sustainable working style for AI-assisted development: when to trust, when to verify, when to step in
+
+**Slides**
+
+- *TBD*
+
+**Resources**
+
+- *Talk by Claude Code team: [https://x.com/codewithimanshu/status/2046415534523306303/video/1?s=46](https://x.com/codewithimanshu/status/2046415534523306303/video/1?s=46)*
+
+**Labs**
+
+- *No notebook yet.*
+
+---
+
+### S16 — Standards, Frameworks, and When to Use Them
 
 **Page:** `[labs/14_frameworks/frameworks.html](labs/14_frameworks/frameworks.html)`
 **Tagline:** When and why to use frameworks; LangChain as a case study.
@@ -481,35 +511,6 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 **Labs**
 
 - Master notebook: `[15_using_ai_frameworks.ipynb](labs/14_frameworks/15_using_ai_frameworks.ipynb)`
-
----
-
-## Skillset 4 — Building ++*with*++ AI and ++*for*++ AI
-
----
-
-### S16 — Developing at the Speed of AI Without Losing Control
-
-**Page:** `[labs/13_programming_in_english/programming_in_english.html](labs/13_programming_in_english/programming_in_english.html)`
-**Tagline:** Without Losing Control (and Mental Health) — using AI to build software, without ceding the engineering judgment that keeps systems sane.
-
-**Learning objectives**
-
-- Use AI to accelerate software development (code generation, review, refactoring) without losing the engineering judgment that keeps systems sane
-- Understand why natural language is a lossy specification medium — and what that means for correctness, control, and debuggability
-- Establish a sustainable working style for AI-assisted development: when to trust, when to verify, when to step in
-
-**Slides**
-
-- *TBD*
-
-**Resources**
-
-- *Talk by Claude Code team: [https://x.com/codewithimanshu/status/2046415534523306303/video/1?s=46](https://x.com/codewithimanshu/status/2046415534523306303/video/1?s=46)*
-
-**Labs**
-
-- *No notebook yet.*
 
 ---
 
