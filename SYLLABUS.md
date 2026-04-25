@@ -329,32 +329,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S11 — Agentic Patterns
-
-**Page:** `[labs/10_complex_systems/1_councils/councils.html](labs/10_complex_systems/1_councils/councils.html)`
-**Tagline:** A tour of agentic patterns — ensemble shapes, orchestration shapes, and control/reasoning patterns within a single agent — and how to pick the right shape for the problem.
-
-**Learning objectives**
-
-- Map the pattern landscape across three axes: **ensemble** (many agents on the same task), **orchestration** (decompose the task across stages/agents), and **control/reasoning patterns within an agent** (how a single agent reasons and acts)
-- Recognize the main patterns in each family — councils / majority vote / debate; pipelines / routers / supervisor-worker; ReAct / plan-and-execute / reflect — and what each buys you (and when it fails: correlated errors, step compounding, loop divergence)
-- Reason about the core design questions of multi-agent systems: diversity, aggregation, routing, budget, and evaluation
-
-**Slides**
-
-- `[agentic_patterns.slides.md](labs/10_complex_systems/1_councils/agentic_patterns.slides.md)`
-
-**Resources**
-
-- `[councils_concept.md](labs/10_complex_systems/1_councils/councils_concept.md)`
-
-**Labs**
-
-- *No notebook yet.*
-
----
-
-### S12 — Foundational Programming Abstractions
+### S11 — Foundational Programming Abstractions for Complex Systems
 
 **Pages:**
 
@@ -366,9 +341,10 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 **Learning objectives**
 
-- Identify the foundational abstractions for AI systems — agentic loops, autonomy sliders, context/memory, tool-integration surfaces — and know when to reach for each
-- Understand what MCP is, what problem it solves, and how agent-system integration is standardizing
-- Map a concrete AI feature to the right abstractions, so code stays manageable as the system grows
+- Complex systems are like grandious, sophisticated, and gradually evolving buildings — learn how the concepts of building blocks, components and compositions, has changed throughout a brief history of software architectures
+- Understand which foundational abstractions we want to carry from the past and are still valid today, and what is fundamentally new with AI agents
+- Explore hands on the similarities and differences when composing AI-less systems, when the components are AI agents, when the orchestration is driven by AI agents, and finally where AI is present throughout the entire architecture
+- 
 
 **Slides**
 
@@ -387,7 +363,35 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S13 — Reliable Architectures and Structuring for Production
+### S12 — Architectural Patterns At Work
+
+**Page:** `[labs/10_complex_systems/1_councils/councils.html](labs/10_complex_systems/1_councils/councils.html)`
+**Tagline:** A tour of agentic patterns — ensemble shapes, orchestration shapes, and control/reasoning patterns within a single agent — and how to pick the right shape for the problem.
+
+**Learning objectives**
+
+- Map a concrete AI feature to the right abstractions, so code stays manageable as the system grows
+- Identify the foundational abstractions for AI systems — agentic loops, autonomy sliders, context/memory, tool-integration surfaces — and know when to reach for each
+- Understand what MCP is, what problem it solves, and how agent-system integration is standardizing
+- Map the pattern landscape across three axes: **ensemble** (many agents on the same task), **orchestration** (decompose the task across stages/agents), and **control/reasoning patterns within an agent** (how a single agent reasons and acts)
+- Recognize the main patterns in each family — councils / majority vote / debate; pipelines / routers / supervisor-worker; ReAct / plan-and-execute / reflect — and what each buys you (and when it fails: correlated errors, step compounding, loop divergence)
+- Reason about the core design questions of multi-agent systems: diversity, aggregation, routing, budget, and evaluation
+
+**Slides**
+
+- `[agentic_patterns.slides.md](labs/10_complex_systems/1_councils/agentic_patterns.slides.md)`
+
+**Resources**
+
+- `[councils_concept.md](labs/10_complex_systems/1_councils/councils_concept.md)`
+
+**Labs**
+
+- *No notebook yet.*
+
+---
+
+### S13 — Driving for Consistent, Predictable Outcomes: Reliable Architectures and Engineering Practices 
 
 **Pages:**
 
@@ -397,6 +401,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 **Learning objectives**
 
+- Structuring for Production
 - Apply architecture patterns that keep AI systems reliable under real traffic (timeouts, fallbacks, budgets, graceful degradation)
 - Structure projects for shipping into existing products and maintaining them across model and prompt versions
 - Plan for multi-version considerations — prompts, tools, schemas, datasets — so upgrades don't silently regress behaviour
@@ -452,7 +457,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S15 — Using AI Frameworks
+### S15 — Standards, Frameworks, and When to Use Them
 
 **Page:** `[labs/14_frameworks/frameworks.html](labs/14_frameworks/frameworks.html)`
 **Tagline:** When and why to use frameworks; LangChain as a case study.
