@@ -177,7 +177,7 @@ By the end of this course, you will:
 
 ---
 
-## Skillset 2 — Mastering Observability, Quality, Security — Before Scaling Up
+## Skillset 2 — Preparing the Foundations: Observability, Quality, and Security
 
 ---
 
@@ -421,7 +421,7 @@ By the end of this course, you will:
 
 
 
-## Skillset 3 — Building and Managing Complex Systems
+## Skillset 3 — Scaling up to Complex, Large Scale Systems
 
 ---
 
