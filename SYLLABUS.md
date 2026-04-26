@@ -2,7 +2,7 @@
 
 > AI-Ready Engineers is dedicated to engineers and practitioners who want to be ready to build complex systems with AI — and for AI. It lays the foundations for building reliable systems efficiently, and for mastering the evaluation and improvement process that keeps them reliable as they grow.
 
-**Format:** 18 sessions, organized in 4 skillsets.
+**Format:** 16 sessions, organized in 4 skillsets, with an optional 3-chapter deep dive on uncertainty foundations for students without a stats background.
 
 **Convention:** each session has a page (HTML, serves as the in-class walkthrough) and a master Jupyter notebook alongside it in the same folder. Supporting `.py` scripts, exercises, solutions, and slides live in the same folder.
 
@@ -173,7 +173,7 @@ By the end of this course, you will:
 - Exercises: `[session5_exercises.ipynb](labs/04_tool_calling/session5_exercises.ipynb)`
 - Solutions: `[session5_solutions.ipynb](labs/04_tool_calling/session5_solutions.ipynb)`
 
-**Safety crosslink:** Tool allow-lists, scoping, and adversarial tool use (tool abuse, destructive-action gating) are covered in depth in **S12 — Safety, Security, and Guardrails**.
+**Safety crosslink:** Tool allow-lists, scoping, and adversarial tool use (tool abuse, destructive-action gating) are covered in depth in **S10 — Safety, Security, and Guardrails**.
 
 ---
 
@@ -255,7 +255,7 @@ By the end of this course, you will:
 - Recognize common errors and how to make your eval robust and reliable — minimize surprises in production
 - Recognize organizational patterns that produce blind spots (incentive misalignment, reporting, metric ownership)
 
-> **No stats background?** Work through the **Mastering Uncertainty Deep Dive (D1–D3)** below before this session.
+> **No stats background?** Work through the **Mastering Uncertainty Deep Dive (D1–D3)** at the end of Skillset 2 before this session.
 
 **Slides**
 
@@ -276,7 +276,7 @@ By the end of this course, you will:
 
 ---
 
-### S11 — Reinterpreting Test-Driven Development in the Age of AI
+### S9 — Reinterpreting Test-Driven Development in the Age of AI
 
 **Page:** *TBD*
 **Tagline:** Test-first thinking when the unit under test is stochastic — flipping evals, golden sets, and assertions over distributions into a development discipline.
@@ -301,7 +301,7 @@ By the end of this course, you will:
 
 ---
 
-### S12 — Safety, Security, and Guardrails
+### S10 — Safety, Security, and Guardrails
 
 **Page:** *TBD*
 **Folder:** `[labs/13_safety/](labs/13_safety/)` (to be populated)
@@ -332,7 +332,7 @@ By the end of this course, you will:
 - Guardrail integration lab: wrap an existing agent with an input filter, a tool allow-list, and an approval gate for high-impact actions; measure the cost (latency, false-positive rate) of each layer
 - *TBD — notebooks and exercises*
 
-**Crosslinks:** Builds on **S5** (tool design) and **S6** (observability as a safety primitive). Feeds into **S15** (reliable architectures — architectural realization of these constraints) and **S18** (when AI is the user — the adversary's view of the same interfaces).
+**Crosslinks:** Builds on **S5** (tool design) and **S6** (observability as a safety primitive). Feeds into **S13** (reliable architectures — architectural realization of these constraints) and **S16** (when AI is the user — the adversary's view of the same interfaces).
 
 ---
 
@@ -425,7 +425,7 @@ By the end of this course, you will:
 
 ---
 
-### S13 — Foundational Programming Abstractions for Complex Systems
+### S11 — Foundational Programming Abstractions for Complex Systems
 
 **Pages:**
 
@@ -440,8 +440,8 @@ By the end of this course, you will:
 - Complex systems are like grandious, sophisticated, and gradually evolving buildings — learn how the concepts of building blocks, components and compositions, has changed throughout a brief history of software architectures
 - Understand which foundational abstractions we want to carry from the past and are still valid today, and what is fundamentally new with AI agents
 - Explore hands on the similarities and differences when composing AI-less systems, when the components are AI agents, when the orchestration is driven by AI agents, and finally where AI is present throughout the entire architecture
-- Understand the difference between UI, APIs, agentic interfaces and agentic systems
-- Which are the aspects for which we need abstractions, and those for which we need standards
+- Distinguish UI, APIs, agentic interfaces, and agentic systems — and reason about how the contract between caller and callee shifts when the consumer is human, code, or another agent (signature, error semantics, autonomy, retries, observability surface)
+- Decide which parts of a system call for *abstractions* (custom, internal, optimized for the problem at hand) versus *standards* (shared protocols like MCP, OpenAPI, OAuth — buying ecosystem leverage at the cost of compliance overhead) — and recognize when picking the wrong one becomes technical debt
 
 **Slides**
 
@@ -460,7 +460,7 @@ By the end of this course, you will:
 
 ---
 
-### S14 — Architectural Patterns At Work
+### S12 — Architectural Patterns At Work
 
 **Page:** `[labs/10_complex_systems/1_councils/councils.html](labs/10_complex_systems/1_councils/councils.html)`
 **Tagline:** A tour of agentic patterns — ensemble shapes, orchestration shapes, and control/reasoning patterns within a single agent — and how to pick the right shape for the problem.
@@ -488,7 +488,7 @@ By the end of this course, you will:
 
 ---
 
-### S15 — Driving for Consistent, Predictable Outcomes: Reliable Architectures and Engineering Practices
+### S13 — Driving for Consistent, Predictable Outcomes: Reliable Architectures and Engineering Practices
 
 **Pages:**
 
@@ -515,7 +515,7 @@ By the end of this course, you will:
 
 - *No notebook yet.*
 
-**Safety crosslink:** Defensive architecture patterns (approval gates, blast-radius control, circuit-breakers for runaway agents) are the architectural realization of the principles covered earlier in **S12 — Safety, Security, and Guardrails**.
+**Safety crosslink:** Defensive architecture patterns (approval gates, blast-radius control, circuit-breakers for runaway agents) are the architectural realization of the principles covered earlier in **S10 — Safety, Security, and Guardrails**.
 
 ---
 
@@ -523,7 +523,7 @@ By the end of this course, you will:
 
 ---
 
-### S16 — Developing at the Speed of AI Without Losing Control
+### S14 — Developing at the Speed of AI Without Losing Control
 
 **Page:** `[labs/13_programming_in_english/programming_in_english.html](labs/13_programming_in_english/programming_in_english.html)`
 **Tagline:** Without Losing Control (and Mental Health) — using AI to build software, without ceding the engineering judgment that keeps systems sane.
@@ -548,7 +548,7 @@ By the end of this course, you will:
 
 ---
 
-### S17 — Standards, Frameworks, and When to Use Them
+### S15 — Standards, Frameworks, and When to Use Them
 
 **Page:** `[labs/14_frameworks/frameworks.html](labs/14_frameworks/frameworks.html)`
 **Tagline:** When and why to use frameworks; LangChain as a case study.
@@ -575,7 +575,7 @@ By the end of this course, you will:
 
 ---
 
-### S18 — When AI is the User of Our System
+### S16 — When AI is the User of Our System
 
 **Page:** *TBD*
 **Tagline:** Designing systems for AI consumers — what changes when the user is an agent, not a human: API ergonomics for agents, failure modes unique to agent consumers, and the shift from human-centred to agent-centred system design.
@@ -598,7 +598,7 @@ By the end of this course, you will:
 
 - *TBD*
 
-**Safety crosslink:** This session covers the *design* side of agent-as-consumer failure modes. The *defense* side — red-teaming, guardrails, and hardening — is covered end-to-end in **S12 — Safety, Security, and Guardrails**.
+**Safety crosslink:** This session covers the *design* side of agent-as-consumer failure modes. The *defense* side — red-teaming, guardrails, and hardening — is covered end-to-end in **S10 — Safety, Security, and Guardrails**.
 
 ---
 
