@@ -189,40 +189,12 @@
             <summary>Learning objectives</summary>
             <ul>
               <li>Frame an AI eval as an <em>estimator</em> of a random variable (the system's true behaviour on a population of inputs) — not a point measurement</li>
-              <li>Design experiments that separate signal from noise, and quantify uncertainty in the estimate (confidence intervals, bootstrapping, Beta posteriors)</li>
-              <li>Choose metrics and reporting formats that expose variance rather than hide it, and decide which uncertainty is worth reducing vs. accepting</li>
+              <li>Understand the different sources of uncertainty and how they impact measures in practice</li>
+              <li>Recognize common errors and how to make your eval robust and reliable — minimize surprises in production</li>
+              <li>Recognize organizational patterns that produce blind spots (incentive misalignment, reporting, metric ownership)</li>
             </ul>
           </details>
-        </div>
-        <div class="module-card">
-          <a class="module-link" href="coming_soon.html">
-            <div class="number">S9</div>
-            <div class="title">Understanding Uncertainty and how to Manage it</div>
-            <p class="description">"Every measure, without knowledge of its uncertainty, is meaningless"</p>
-          </a>
-          <details class="objectives" open>
-            <summary>Learning objectives</summary>
-            <ul>
-              <li><em>Understand the sources of uncertainty</em></li>
-              <li><em>Measure their impact: are they a real concerns or a theoretical and remote risk?</em></li>
-              <li><em>Recognize organizational patterns that produce blind spots (incentive misalignment, reporting, metric ownership);</em></li>
-            </ul>
-          </details>
-        </div>
-        <div class="module-card">
-          <a class="module-link" href="coming_soon.html">
-            <div class="number">S10</div>
-            <div class="title">Designing Reliable Experiments and Reporting Results</div>
-            <p class="description">Structural flaws, uncertainty vs. variability confusion, and the cost of ignorance — how well-intentioned eval pipelines go wrong.</p>
-          </a>
-          <details class="objectives" open>
-            <summary>Learning objectives</summary>
-            <ul>
-              <li>Recognize the most common structural flaws in AI evals (leakage, selection bias, confounding with prompt changes, scorecard gaming)</li>
-              <li>Distinguish <em>uncertainty</em> from <em>variability</em> — and know which tools address each</li>
-              <li>Diagnose eval failures in your own pipelines and design processes that make blind spots visible before they ship</li>
-            </ul>
-          </details>
+          <p class="deep-dive-link"><strong>No stats background?</strong> Work through the <a href="#deep-dive">Optional foundations (D1–D3)</a> below before this session.</p>
         </div>
         <div class="module-card">
           <a class="module-link" href="coming_soon.html">
@@ -256,6 +228,44 @@
           </details>
         </div>
       </div>
+
+      <details id="deep-dive" class="deep-dive">
+        <summary>
+          <span class="deep-dive-badge">Optional foundations</span>
+          <span class="deep-dive-title">Mastering Uncertainty — Deep Dive</span>
+          <span class="deep-dive-hint">No stats background required — work through these before S8 if needed; otherwise treat as reference.</span>
+        </summary>
+        <div class="deep-dive-grid">
+          <article class="deep-dive-card">
+            <div class="deep-dive-label">D1</div>
+            <h4>Probability and Random Variables for AI Evaluations</h4>
+            <ul>
+              <li>Probability and random variables</li>
+              <li>Useful random variables for measuring AI systems</li>
+              <li>Adding (and averaging) random variables</li>
+              <li>Standard errors and confidence intervals</li>
+            </ul>
+          </article>
+          <article class="deep-dive-card">
+            <div class="deep-dive-label">D2</div>
+            <h4>Estimating Distributions of AI Systems Quality through Experimentation</h4>
+            <ul>
+              <li>Conditional probability — the theory behind ML</li>
+              <li>Bayes and Beta made easy</li>
+              <li>Beta distributions vs. standard errors and confidence intervals</li>
+            </ul>
+          </article>
+          <article class="deep-dive-card">
+            <div class="deep-dive-label">D3</div>
+            <h4>Bootstrapping and Simulations</h4>
+            <ul>
+              <li>A trick to rule them all</li>
+              <li>Statistical significance</li>
+              <li>Simulate systems, experiments, and the errors behind experiments — to build confidence and robustness</li>
+            </ul>
+          </article>
+        </div>
+      </details>
 
       <h3><span class="phase phase-3">Skillset 3</span> Building and Managing Complex Systems</h3>
       <div class="modules-grid">

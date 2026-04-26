@@ -242,7 +242,7 @@ By the end of this course, you will:
 
 ---
 
-### S8 — Approaching "AI Evals" as Estimation of Random Variables **:**
+### S8 — Approaching "AI Evals" as Estimation of Random Variables
 
 - `[labs/08_automating_improvement/design_of_experiments.html](labs/08_automating_improvement/design_of_experiments.html)` — Part I: designing experiments, sources of uncertainty
 - `[labs/08_automating_improvement/design_of_experiments_2.html](labs/08_automating_improvement/design_of_experiments_2.html)` — Part II: deeper into uncertainty and brittleness
@@ -251,8 +251,11 @@ By the end of this course, you will:
 **Learning objectives**
 
 - Frame an AI eval as an *estimator* of a random variable (the system's true behaviour on a population of inputs) — not a point measurement
-- Design experiments that separate signal from noise, and quantify uncertainty in the estimate (confidence intervals, bootstrapping, Beta posteriors)
-- Choose metrics and reporting formats that expose variance rather than hide it, and decide which uncertainty is worth reducing vs. accepting
+- Understand the different sources of uncertainty and how they impact measures in practice
+- Recognize common errors and how to make your eval robust and reliable — minimize surprises in production
+- Recognize organizational patterns that produce blind spots (incentive misalignment, reporting, metric ownership)
+
+> **No stats background?** Work through the **Mastering Uncertainty Deep Dive (D1–D3)** below before this session.
 
 **Slides**
 
@@ -269,59 +272,7 @@ By the end of this course, you will:
 
 ---
 
-### S9 — Understanding Uncertainty and how to Manage it
 
-**Page:** *TBD*
-**Tagline:** "Every measure, without knowledge of its uncertainty, is meaningless" 
-
-**Learning objectives**
-
-- *Understand the sources of uncertainty*
-- *Measure their impact: are they a real concerns or a theoretical and remote risk?*
-- *Recognize organizational patterns that produce blind spots (incentive misalignment, reporting , metric ownership);*
-
-**Slides**
-
-- `[session9_mastering_uncertainty.pdf](labs/06_mastering_uncertainty/session9_mastering_uncertainty.pdf)`
-
-**Resources**
-
-- Interactive playground: `[AI Evaluation Playgrounds](playground/index.html)` — the full index; each play lets you *feel* a source of uncertainty and see how to *fix* it
-- Statistics foundations: `[N Coin Flips / CLT](playground/convolution_of_independent_random_variables.html)`, `[Bootstrap Lab](playground/bootstrap_lab.html)`, `[Distribution Explorer](playground/distribution_explorer.html)`
-- Sources of uncertainty (pick through these in class): `[Sampling Noise](playground/sampling_noise.html)`, `[Sampling Bias](playground/sampling_bias.html)`, `[Multiple Hypothesis Testing](playground/multiple_hypothesis_testing.html)`, `[Variance Across Domains](playground/domain_variance.html)`, `[Choice of Metric](playground/metric_choice.html)`, `[Temporal Drift](playground/temporal_drift.html)`, `[LLM Evolution](playground/llm_evolution.html)`, `[Judges & Compounding](playground/judges_and_compounding.html)`
-- `[Accuracy Estimator](playground/accuracy_estimator.html)` — Beta-posterior point estimate + credible interval for a pass-rate
-
-**Labs**
-
-- Master notebook: `[09_understanding_uncertainty.ipynb](labs/06_mastering_uncertainty/09_understanding_uncertainty.ipynb)` — overarching, code-first companion to the playground. Four runnable experiments (sampling noise, sampling bias, multiple hypothesis testing, judge compounding) with bootstrap CIs and Beta posteriors. Synthetic data, no API calls — iterate fast.
-
----
-
-### S10 — Designing Reliable Experiments and Reporting Results
-
-**Page:** `[labs/06_mastering_uncertainty/optimizing-in-the-dark/index.html](labs/06_mastering_uncertainty/optimizing-in-the-dark/index.html)`
-**Tagline:** Structural flaws, uncertainty vs. variability confusion, and the cost of ignorance — how well-intentioned eval pipelines go wrong.
-
-**Learning objectives**
-
-- Detecting and Avoiding Common Traps in AI "Eval"
-Recognize the most common structural flaws in AI evals (leakage, selection bias, confounding with prompt changes, scorecard gaming)
-- Distinguish *uncertainty* from *variability* — and know which tools address each
-- Diagnose eval failures in your own pipelines and design processes that make blind spots visible before they ship
-
-**Slides**
-
-- *TBD*
-
-**Resources**
-
-- Parts: `[part-1-structural-flaw.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-1-structural-flaw.md)`, `[part-2-cost-of-ignorance.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-2-cost-of-ignorance.md)`, `[part-2b-uncertainty-vs-variability.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-2b-uncertainty-vs-variability.md)`
-- `[glossary.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/glossary.md)`
-- `[Optimizing in the Dark.docx](labs/06_mastering_uncertainty/Optimizing%20in%20the%20Dark.docx)`
-
-**Labs**
-
-- *No notebook yet — content is narrative HTML/markdown. TBD whether to add one.*
 
 ---
 
@@ -384,6 +335,91 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 **Crosslinks:** Builds on **S5** (tool design) and **S6** (observability as a safety primitive). Feeds into **S15** (reliable architectures — architectural realization of these constraints) and **S18** (when AI is the user — the adversary's view of the same interfaces).
 
 ---
+
+
+
+## Mastering Uncertainty Deep Dive (No stats background required)
+
+### D1 — Probability and Random Variables for AI Evaluations
+
+**Page:** *TBD*  
+**Tagline:** "Every measure, without knowledge of its uncertainty, is meaningless" 
+
+**Learning objectives**
+
+- *Probability and Random Variables*
+- *Useful random variables for measuring AI systems*
+- Adding (and averaging) random variables
+- Standard errors and confidence intervals
+
+**Slides**
+
+- `[session9_mastering_uncertainty.pdf](labs/06_mastering_uncertainty/session9_mastering_uncertainty.pdf)`
+
+**Resources**
+
+- Interactive playground: `[AI Evaluation Playgrounds](playground/index.html)` — the full index; each play lets you *feel* a source of uncertainty and see how to *fix* it
+- Statistics foundations: `[N Coin Flips / CLT](playground/convolution_of_independent_random_variables.html)`, `[Bootstrap Lab](playground/bootstrap_lab.html)`, `[Distribution Explorer](playground/distribution_explorer.html)`
+- Sources of uncertainty (pick through these in class): `[Sampling Noise](playground/sampling_noise.html)`, `[Sampling Bias](playground/sampling_bias.html)`, `[Multiple Hypothesis Testing](playground/multiple_hypothesis_testing.html)`, `[Variance Across Domains](playground/domain_variance.html)`, `[Choice of Metric](playground/metric_choice.html)`, `[Temporal Drift](playground/temporal_drift.html)`, `[LLM Evolution](playground/llm_evolution.html)`, `[Judges & Compounding](playground/judges_and_compounding.html)`
+- `[Accuracy Estimator](playground/accuracy_estimator.html)` — Beta-posterior point estimate + credible interval for a pass-rate
+
+**Labs**
+
+- Master notebook: `[09_understanding_uncertainty.ipynb](labs/06_mastering_uncertainty/09_understanding_uncertainty.ipynb)` — overarching, code-first companion to the playground. Four runnable experiments (sampling noise, sampling bias, multiple hypothesis testing, judge compounding) with bootstrap CIs and Beta posteriors. Synthetic data, no API calls — iterate fast.
+
+---
+
+### D2 — Estimating Distributions of AI Systems Quality through Experimentation
+
+**Page:** `[labs/06_mastering_uncertainty/optimizing-in-the-dark/index.html](labs/06_mastering_uncertainty/optimizing-in-the-dark/index.html)`  
+**Tagline:** Structural flaws, uncertainty vs. variability confusion, and the cost of ignorance — how well-intentioned eval pipelines go wrong.
+
+**Learning objectives**
+
+- Conditional Probability - the theory behind ML
+- Bayes and Beta made easy
+- Beta distributions vs standard errors and confidence intervals
+
+**Slides**
+
+- *TBD*
+
+**Resources**
+
+- Parts: `[part-1-structural-flaw.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-1-structural-flaw.md)`, `[part-2-cost-of-ignorance.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-2-cost-of-ignorance.md)`, `[part-2b-uncertainty-vs-variability.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-2b-uncertainty-vs-variability.md)`
+- `[glossary.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/glossary.md)`
+- `[Optimizing in the Dark.docx](labs/06_mastering_uncertainty/Optimizing%20in%20the%20Dark.docx)`
+
+**Labs**
+
+- *No notebook yet — content is narrative HTML/markdown. TBD whether to add one.*
+
+### D3 — Bootstrapping and Simulations
+
+**Page:** `[labs/06_mastering_uncertainty/optimizing-in-the-dark/index.html](labs/06_mastering_uncertainty/optimizing-in-the-dark/index.html)`  
+**Tagline:** Structural flaws, uncertainty vs. variability confusion, and the cost of ignorance — how well-intentioned eval pipelines go wrong.
+
+**Learning objectives**
+
+- A trick to rule them all 
+- Statistical significance
+- Simulate systems, experiments, and the errors behind experiments to build confidence and robustness
+
+**Slides**
+
+- *TBD*
+
+**Resources**
+
+- Parts: `[part-1-structural-flaw.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-1-structural-flaw.md)`, `[part-2-cost-of-ignorance.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-2-cost-of-ignorance.md)`, `[part-2b-uncertainty-vs-variability.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/part-2b-uncertainty-vs-variability.md)`
+- `[glossary.md](labs/06_mastering_uncertainty/optimizing-in-the-dark/glossary.md)`
+- `[Optimizing in the Dark.docx](labs/06_mastering_uncertainty/Optimizing%20in%20the%20Dark.docx)`
+
+**Labs**
+
+- *No notebook yet — content is narrative HTML/markdown. TBD whether to add one.*
+
+
 
 ## Skillset 3 — Building and Managing Complex Systems
 
@@ -452,7 +488,7 @@ Recognize the most common structural flaws in AI evals (leakage, selection bias,
 
 ---
 
-### S15 — Driving for Consistent, Predictable Outcomes: Reliable Architectures and Engineering Practices 
+### S15 — Driving for Consistent, Predictable Outcomes: Reliable Architectures and Engineering Practices
 
 **Pages:**
 

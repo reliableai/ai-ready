@@ -658,3 +658,119 @@ footer a:hover { color: var(--color-primary); }
 
   footer { flex-direction: column; }
 }
+
+/* Deep Dive — optional foundations track (parallel to numbered sessions) */
+.deep-dive {
+  margin: 1.5rem 0 2.5rem;
+  background: #fffbeb;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  padding: 1rem 1.5rem;
+}
+.deep-dive > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+}
+.deep-dive > summary::-webkit-details-marker { display: none; }
+.deep-dive > summary::after {
+  content: '▸';
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+.deep-dive[open] > summary::after { content: '▾'; }
+.deep-dive-badge {
+  background: #f59e0b;
+  color: #ffffff;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.deep-dive-title {
+  font-size: 1.05rem;
+}
+.deep-dive-hint {
+  color: var(--color-text-muted);
+  font-weight: 400;
+  font-size: 0.9rem;
+  flex-basis: 100%;
+  margin-left: 0;
+}
+.deep-dive-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 800px) {
+  .deep-dive-grid { grid-template-columns: 1fr; }
+}
+.deep-dive-card {
+  background: #ffffff;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 1rem;
+}
+.deep-dive-label {
+  display: inline-block;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 0.1rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+.deep-dive-card h4 {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.deep-dive-card ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.92rem;
+  color: var(--color-text);
+}
+.deep-dive-card li {
+  margin-bottom: 0.3rem;
+}
+
+/* Inline link from a session card to the Deep Dive band */
+.deep-dive-link {
+  margin: 0.75rem 1rem 1rem;
+  padding: 0.6rem 0.85rem;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+.deep-dive-link a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+/* Reused for in-session callouts (e.g., S8 deep-dive pointer) */
+.callout-soft {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+.callout-soft a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
