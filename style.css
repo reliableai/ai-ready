@@ -696,10 +696,12 @@ footer a:hover { color: var(--color-primary); }
   flex: 0 0 auto;
 }
 .skillset:not([open]) > summary::before { content: '▶'; }
+.skillset > summary h2,
 .skillset > summary h3 {
   margin: 0;
   display: inline-block;
   font-size: 1.25rem;
+  font-weight: 700;
 }
 .skillset > summary:hover {
   background: var(--color-surface);
