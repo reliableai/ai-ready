@@ -697,13 +697,11 @@ footer a:hover { color: var(--color-primary); }
   background: var(--color-surface);
 }
 
-/* Deep Dive — optional foundations track. Same shape as a Skillset section,
-   distinguished only by the yellow background and "Optional" pill. */
+/* Deep Dive — optional foundations track. Identical layout to a Skillset section,
+   distinguished only by the yellow background, amber chevron, and "Optional" pill. */
 .deep-dive {
   margin: 1.25rem 0 1.75rem;
   background: #fffbeb;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
 }
 .deep-dive > summary {
   cursor: pointer;
@@ -712,7 +710,7 @@ footer a:hover { color: var(--color-primary); }
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.25rem;
-  border-bottom: 1px solid #fde68a;
+  border-bottom: 1px solid var(--color-border);
 }
 .deep-dive > summary::-webkit-details-marker { display: none; }
 .deep-dive > summary::before {
