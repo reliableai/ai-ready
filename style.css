@@ -328,17 +328,25 @@ a.module-card:hover {
   cursor: pointer;
   list-style: none;
   border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .module-card details.objectives summary::-webkit-details-marker { display: none; }
 
 .module-card details.objectives summary::before {
-  content: '▸ ';
+  content: '▶';
   color: var(--color-primary);
+  font-size: 0.95rem;
+  line-height: 1;
+  width: 1em;
+  text-align: center;
+  flex: 0 0 auto;
 }
 
 .module-card details.objectives[open] summary::before {
-  content: '▾ ';
+  content: '▼';
 }
 
 .module-card details.objectives[open] summary {
