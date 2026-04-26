@@ -659,6 +659,36 @@ footer a:hover { color: var(--color-primary); }
   footer { flex-direction: column; }
 }
 
+/* Skillset section — collapsible group of session cards */
+.skillset {
+  margin: 1.25rem 0 1.75rem;
+}
+.skillset > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.skillset > summary::-webkit-details-marker { display: none; }
+.skillset > summary::after {
+  content: '▾';
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+.skillset:not([open]) > summary::after { content: '▸'; }
+.skillset > summary h3 {
+  margin: 0;
+  display: inline-block;
+  font-size: 1.25rem;
+}
+.skillset > summary:hover {
+  background: var(--color-surface);
+}
+
 /* Deep Dive — optional foundations track (parallel to numbered sessions) */
 .deep-dive {
   margin: 1.5rem 0 2.5rem;
