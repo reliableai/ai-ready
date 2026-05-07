@@ -285,6 +285,43 @@ def get_or_create_dm(
     return conv
 
 
+def get_topic_id(db: Connection, conversation_id: int) -> int | None:
+    """Return the topic id this conversation belongs to via ``in_topic``,
+    or ``None`` if it has no topic linkage (i.e., it's a DM).
+
+    Single source of truth for the topic-vs-DM structural distinction —
+    used by ``is_accessible_by`` for authorization and by
+    ``api/agents._responders_for`` for dispatch scope.
+    """
+    row = db.execute(
+        "SELECT tgt_id FROM rels "
+        "WHERE src_type = 'conversation' AND src_id = ? "
+        "  AND rel_type = 'in_topic' AND tgt_type = 'topic' "
+        "  AND deleted_at IS NULL "
+        "LIMIT 1",
+        (conversation_id,),
+    ).fetchone()
+    return row["tgt_id"] if row else None
+
+
+def get_participant_ids(db: Connection, conversation_id: int) -> list[int]:
+    """User ids of all live ``participates_in`` rels for this conversation.
+
+    For DMs this is exactly two ids; for topic-default conversations it
+    can be empty (no participation rels are written for topics today).
+    """
+    rows = db.execute(
+        "SELECT src_id FROM rels "
+        "WHERE src_type = 'user' "
+        "  AND tgt_type = 'conversation' AND tgt_id = ? "
+        "  AND rel_type = 'participates_in' "
+        "  AND deleted_at IS NULL "
+        "ORDER BY src_id ASC",
+        (conversation_id,),
+    ).fetchall()
+    return [r["src_id"] for r in rows]
+
+
 def is_accessible_by(
     db: Connection,
     *,
@@ -317,30 +354,12 @@ def is_accessible_by(
     # Lazy-imported to avoid pulling topics into module-load time.
     from wazzup.api import topics
 
-    in_topic_row = db.execute(
-        "SELECT tgt_id AS topic_id FROM rels "
-        "WHERE src_type = 'conversation' AND src_id = ? "
-        "  AND rel_type = 'in_topic' AND tgt_type = 'topic' "
-        "  AND deleted_at IS NULL "
-        "LIMIT 1",
-        (conversation_id,),
-    ).fetchone()
-    if in_topic_row is not None:
-        return topics.can_access(
-            db, user_id=user_id, topic_id=in_topic_row["topic_id"],
-        )
+    topic_id = get_topic_id(db, conversation_id)
+    if topic_id is not None:
+        return topics.can_access(db, user_id=user_id, topic_id=topic_id)
 
     # Otherwise: DM-shaped — caller must be a participant.
-    participates = db.execute(
-        "SELECT 1 FROM rels "
-        "WHERE src_type = 'user' AND src_id = ? "
-        "  AND tgt_type = 'conversation' AND tgt_id = ? "
-        "  AND rel_type = 'participates_in' "
-        "  AND deleted_at IS NULL "
-        "LIMIT 1",
-        (user_id, conversation_id),
-    ).fetchone()
-    return participates is not None
+    return user_id in get_participant_ids(db, conversation_id)
 
 
 def query(

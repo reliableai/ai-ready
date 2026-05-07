@@ -107,13 +107,44 @@ def client(db, monkeypatch):
     monkeypatch.setattr(deps_module, "AUTH_DISABLED", True)
 
     def _override_get_db():
-        # Yield, don't return — FastAPI dep with yield mirrors the
-        # production lifecycle. The outer `db` fixture handles close.
-        yield db
+        # Mirror the production ``get_db`` wrapper: commit on clean
+        # return, rollback on exception. Without this, a strict-mode
+        # ``deviation()`` raised inside a route would *not* unwind the
+        # connection's pending writes — the test would see persisted
+        # rows that production would have rolled back, masking real
+        # rollback bugs (the agent-reply v0.3 work surfaced this).
+        #
+        # The pre-yield ``db.commit()`` is the test-only shim. In
+        # production, every request opens its own connection, so
+        # nothing committed-elsewhere can be rolled back here. Tests
+        # share *one* connection across the test body and all the
+        # requests it makes, so any uncommitted setup state (e.g.
+        # ``users.create()`` called from the test code) sits on the
+        # same connection as the route. Without this commit, a route
+        # that raises rolls back everything since the last commit,
+        # including the test's setup. Committing here makes prior
+        # state durable so per-request rollback only affects per-
+        # request writes — matching production semantics.
+        # The outer `db` fixture handles close.
+        db.commit()
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
     app.dependency_overrides[get_db] = _override_get_db
     try:
-        with TestClient(app) as c:
+        # ``raise_server_exceptions=False`` means an unhandled exception
+        # inside a route returns the 500 response the production server
+        # would emit, instead of being re-raised at the test boundary.
+        # Tests can then assert ``resp.status_code == 500`` for
+        # error-path coverage (notably the agent-reply strict-mode
+        # durability test). Tests that don't expect 500 still see their
+        # specific status codes — the flag only affects unhandled
+        # exceptions, not normal responses.
+        with TestClient(app, raise_server_exceptions=False) as c:
             yield c
     finally:
         app.dependency_overrides.clear()

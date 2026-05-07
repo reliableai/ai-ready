@@ -28,6 +28,11 @@ htmlcov/
 *.db
 *.db-journal
 
+# Log files (RotatingFileHandler, see wazzup/logging_setup.py)
+logs/
+*.log
+*.log.[0-9]*
+
 # IDE
 .vscode/
 .idea/

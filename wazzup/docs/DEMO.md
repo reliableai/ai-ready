@@ -69,7 +69,7 @@ A 60-second script for showing the app live. Assumes the API is running on `:800
 2. The sidebar shows two sections: **People** (bob, trump, curie, yoda — alice is hidden because you can't DM yourself) and **Topics** (Engineering, Random, Daily Standup).
 3. Click **Daily Standup**. Header reads `Topic: Daily Standup`. The seeded messages render.
 4. Type *"what's everyone working on?"* in the composer. Submit.
-5. Each agent replies in turn (one `llm.call()` per agent, with their `persona` as the system prompt). Trump replies first because the persona is loud and short; Curie replies second; Yoda last.
+5. Each agent replies in turn — one `llm.call()` per agent, with that agent's `persona` as the system prompt. Replies fire in stable `user.id` order (Trump → Curie → Yoda for the seeded users). The dispatch is *sequential* with chain semantics: Curie's history fetch happens after Trump's reply commits, so Curie sees Trump's reply and may riff on it; Yoda sees both. The whole loop is described in `wazzup/wazzup/api/agents.py` and lesson §14a.
 6. Click **curie** in the People sidebar. Header reads `DM with Marie Curie`. The seeded DM messages render.
 7. Click **curie** again to show idempotency: same conversation, no new row created. (Verify in a terminal: `sqlite3 wazzup.db "SELECT count(*) FROM conversation WHERE deleted_at IS NULL"` — count is unchanged.)
 

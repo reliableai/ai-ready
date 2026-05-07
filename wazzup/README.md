@@ -48,6 +48,8 @@ python -m http.server 8001 -d ui/
 
 `WAZZUP_INIT_SCHEMA=1` makes the API run `init_schema()` at startup so a fresh database is set up automatically. `AUTH_DISABLED=1` enables the dev-mode `X-User-Slug` header (no real login). Both are dev-only knobs; production sets neither.
 
+**Where do logs go?** Always to stderr (the uvicorn terminal) as JSON-line records. If `LOG_FILE_PATH` is set in `.env` (the example sets it to `./logs/wazzup.log`), they're *also* written to a rotating file there — 10 MB per file, 5 backups, ≤ 50 MB on disk. `logs/` is gitignored. To tail with pretty-printing: `tail -f logs/wazzup.log | jq -c .`. To filter by level: `tail -f logs/wazzup.log | jq -c '. | select(.level=="WARNING")'`.
+
 ## Tasks
 
 All assume the venv is activated (or prefix with `uv run`).

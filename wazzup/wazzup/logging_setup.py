@@ -50,6 +50,7 @@ import os
 import sys
 from contextvars import ContextVar
 from datetime import UTC, datetime
+from logging.handlers import RotatingFileHandler
 
 # Per-request UUID. Middleware in http/main.py sets and resets it;
 # log lines emitted during the request pick it up automatically via
@@ -147,6 +148,16 @@ def configure_logging(level: int | str | None = None) -> None:
     Called at module import in ``http/main.py``; tests can call
     directly. ``level`` defaults to the ``LOG_LEVEL`` env var, then
     ``INFO``.
+
+    **Sinks:**
+    - Always: stderr (uvicorn's terminal output). One JSON record per
+      line via ``JSONLineFormatter``.
+    - Optional: a rotating file at ``$LOG_FILE_PATH`` if that env var
+      is set. Same formatter, so the file is grep/jq-able with the same
+      shape as stderr. Rotation is size-based: ``maxBytes=10 MB``,
+      ``backupCount=5`` (≤ 50 MB on disk). Parent directory is created
+      on demand. Opt-in via env so tests don't accidentally write log
+      files; the seeded ``.env.example`` enables it for the demo.
     """
     global _configured
     if _configured:
@@ -155,15 +166,33 @@ def configure_logging(level: int | str | None = None) -> None:
     if level is None:
         level = os.environ.get("LOG_LEVEL", "INFO")
 
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(JSONLineFormatter())
+    formatter = JSONLineFormatter()
+
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler.setFormatter(formatter)
 
     root = logging.getLogger()
     # Replace any existing handlers (basicConfig from a previous import,
     # pytest's caplog plugin attachments, …) so we get a single,
     # known-shape stream.
     root.handlers.clear()
-    root.addHandler(handler)
+    root.addHandler(stderr_handler)
+
+    log_file_path = os.environ.get("LOG_FILE_PATH")
+    if log_file_path:
+        # Auto-create the parent directory; rotating-file handler doesn't.
+        parent = os.path.dirname(os.path.abspath(log_file_path))
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        file_handler = RotatingFileHandler(
+            log_file_path,
+            maxBytes=10 * 1024 * 1024,    # 10 MB per file
+            backupCount=5,                # → 5 rolled files = 50 MB ceiling
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(formatter)
+        root.addHandler(file_handler)
+
     root.setLevel(level)
 
     _configured = True

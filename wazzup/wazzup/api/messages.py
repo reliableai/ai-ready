@@ -229,3 +229,41 @@ def query(
 
     rows = db.execute(sql, params).fetchall()
     return [_row_to_messageread(r) for r in rows]
+
+
+def recent_history(
+    db: Connection,
+    *,
+    conversation_id: int,
+    n: int = 20,
+) -> list[MessageRead]:
+    """Last ``n`` live messages in a conversation, oldest-first.
+
+    Distinct from ``query(limit=n)``: that orders ASC + LIMIT, which
+    returns the *first* ``n`` messages — fine for paging from the start
+    but wrong for "agent's recent context". This helper does
+    ``ORDER BY m.id DESC LIMIT n`` then reverses, so callers get the
+    trailing window in chronological order — exactly what the LLM
+    expects in an OpenAI ``messages`` array.
+
+    Used by ``api/agents._build_chat_history`` to build the prompt
+    history for each agent reply. JOINs through ``belongs_to`` exactly
+    like ``query``; only the ORDER BY direction differs.
+    """
+    rows = db.execute(
+        """
+        SELECT m.* FROM message m
+        JOIN rels r_conv
+            ON r_conv.src_id = m.id
+           AND r_conv.src_type = 'message'
+           AND r_conv.rel_type = 'belongs_to'
+           AND r_conv.deleted_at IS NULL
+        WHERE r_conv.tgt_id = ?
+          AND r_conv.tgt_type = 'conversation'
+          AND m.deleted_at IS NULL
+        ORDER BY m.id DESC
+        LIMIT ?
+        """,
+        (conversation_id, n),
+    ).fetchall()
+    return [_row_to_messageread(r) for r in reversed(rows)]

@@ -146,7 +146,8 @@ In v0.2, conversations are not user-facing. The only HTTP route is the messages-
   {"conversation_id": 1, "text": "shipping the auth fix today"}
   ```
 - **Access control**: after validating `conversation_id` exists, the route calls `conversations.is_accessible_by(...)` with the caller's id. Non-participant on a DM → **403**. (Without this check, any authenticated user could *write* into anyone's DM by guessing the conversation id — symmetric to the read break.)
-- **Success**: `201 Created` + `MessageRead` JSON. Side effects: one row in `message`, two rows in `rels` (`belongs_to → conversation`, `sent_by → user`). `MessageRead` is stored-columns-only — no `conversation_id` / `sender_id` (those live in rels). Routes that need to surface them in their response shape should JOIN.
+- **Agent reply dispatch (side effect)**: if the caller's `type='human'`, the handler commits the human's message **explicitly** and then calls `agents.respond_to_human_message(...)`. Each agent reply lands as its own message via the same `messages.create` write path; agent replies are visible on the next `GET /conversations/{slug}/messages`. Failure isolation: each LLM call is wrapped in try/except + `deviation()`; lax mode logs and continues, strict mode 500s the request *but* the human's message and any prior committed agent replies survive (durability test pinned in `test_agents.py`). Agent posts (`type='agent'`) skip dispatch — the loop guard prevents reply chains.
+- **Success**: `201 Created` + `MessageRead` JSON for the human's message. Side effects: one row in `message`, two rows in `rels` (`belongs_to → conversation`, `sent_by → user`). `MessageRead` is stored-columns-only — no `conversation_id` / `sender_id` (those live in rels). Routes that need to surface them in their response shape should JOIN.
 - **Errors**:
   - `422` — invalid body (missing `conversation_id`, missing `text`, empty `text`).
   - `401` — missing `X-User-Slug`.

@@ -184,6 +184,7 @@ def test_configure_logging_is_idempotent(monkeypatch):
     has exactly one handler attached afterward.
     """
     monkeypatch.setattr(logging_setup, "_configured", False)
+    monkeypatch.delenv("LOG_FILE_PATH", raising=False)        # stderr-only path
     # Save & restore root logger handlers across this test so we don't
     # leak our handler config to other tests in the run.
     root = logging.getLogger()
@@ -192,5 +193,74 @@ def test_configure_logging_is_idempotent(monkeypatch):
         configure_logging()
         configure_logging()
         assert len([h for h in root.handlers if isinstance(h.formatter, JSONLineFormatter)]) == 1
+    finally:
+        root.handlers = original_handlers
+
+
+# ----- file rotation handler -----
+
+
+def test_log_file_path_adds_rotating_handler(monkeypatch, tmp_path):
+    """When ``LOG_FILE_PATH`` is set, a RotatingFileHandler is attached
+    alongside stderr; emitted records land in the file.
+
+    Uses ``tmp_path`` so the test never touches a real ``./logs``.
+    Resets the module's ``_configured`` flag so configure_logging
+    rebuilds handlers under the env we monkeypatched in.
+    """
+    from logging.handlers import RotatingFileHandler
+
+    log_file = tmp_path / "wazzup.log"
+    monkeypatch.setenv("LOG_FILE_PATH", str(log_file))
+    monkeypatch.setattr(logging_setup, "_configured", False)
+
+    root = logging.getLogger()
+    original_handlers = list(root.handlers)
+    try:
+        configure_logging()
+
+        # One stderr StreamHandler + one RotatingFileHandler, both with
+        # the JSONLineFormatter. ``RotatingFileHandler`` is a subclass
+        # of ``FileHandler`` which is a subclass of ``StreamHandler``,
+        # so the explicit class check matters.
+        json_handlers = [h for h in root.handlers if isinstance(h.formatter, JSONLineFormatter)]
+        assert len(json_handlers) == 2
+        assert any(isinstance(h, RotatingFileHandler) for h in json_handlers)
+
+        # Emit a record and assert the file received it.
+        log = logging.getLogger("wazzup.test_rotation")
+        log.warning("rotation works")
+        # Flush all handlers — RotatingFileHandler buffers via
+        # underlying FileHandler stream until flush.
+        for h in root.handlers:
+            h.flush()
+
+        contents = log_file.read_text()
+        assert "rotation works" in contents
+        # Should be JSON-line shaped (the formatter we configured).
+        last_line = [ln for ln in contents.strip().splitlines() if ln][-1]
+        payload = json.loads(last_line)
+        assert payload["msg"] == "rotation works"
+    finally:
+        # Close handlers we opened so the temp file isn't held on Windows.
+        for h in list(root.handlers):
+            if isinstance(h, RotatingFileHandler):
+                h.close()
+        root.handlers = original_handlers
+
+
+def test_no_log_file_path_means_stderr_only(monkeypatch):
+    """No ``LOG_FILE_PATH`` env → only the stderr handler is attached."""
+    from logging.handlers import RotatingFileHandler
+
+    monkeypatch.delenv("LOG_FILE_PATH", raising=False)
+    monkeypatch.setattr(logging_setup, "_configured", False)
+
+    root = logging.getLogger()
+    original_handlers = list(root.handlers)
+    try:
+        configure_logging()
+        rotating = [h for h in root.handlers if isinstance(h, RotatingFileHandler)]
+        assert rotating == []
     finally:
         root.handlers = original_handlers

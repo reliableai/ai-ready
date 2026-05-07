@@ -885,6 +885,74 @@ background jobs, CLIs) come in later lessons; they all sit *on top of*
 section 6, not in place of it. That's the payoff of keeping section 6
 as the only thing that touches SQL.
 
+**Free OpenAPI docs — and why "free" is real.** The moment you
+instantiate `FastAPI()`, three URLs land automatically:
+
+- `/docs` — Swagger UI: interactive, "Try it out" button per route,
+  fill-in forms for params and bodies, live responses inline.
+- `/redoc` — ReDoc: read-only, easier to read, good for API consumers
+  who want to skim rather than poke.
+- `/openapi.json` — the raw OpenAPI 3.x spec both UIs consume.
+
+You write zero code for these. Two design decisions in FastAPI
+conspire to make the spec a byproduct of code you'd write anyway:
+
+1. *Pydantic models double as JSON Schema.* Every `UserCreate`,
+   `MessageRead`, etc. exports itself to JSON Schema — Pydantic does
+   this; FastAPI just reads it. That's all your request and response
+   shapes for free.
+2. *Route signatures encode the contract.* `def get_user_by_slug(slug:
+   str, db: Connection = Depends(get_db)) -> UserRead` tells FastAPI
+   everything: path param `slug` (typed, required), an injected dep
+   (excluded from the wire spec — it's an internal injection), response
+   shape `UserRead`. FastAPI walks the routes at startup and writes
+   the OpenAPI spec from those signatures.
+
+It's not magic — it's that FastAPI was *designed around* OpenAPI from
+day one. Other frameworks (Flask + flask-restx, Django + drf-spectacular)
+bolt OpenAPI on top; FastAPI grew from it. The "for free" comes from
+designing the contract to live in the types rather than in a separate
+schema file. The lesson here is broader than FastAPI: when you pick a
+framework, what does it make free? FastAPI made the introspectable
+schema free; that compounds across every route you add.
+
+**What you actually do at `/docs`.** Open `http://localhost:8000/docs`.
+Every router (`users`, `topics`, `messages`, `dms`, `conversations`,
+`auth`) shows up grouped by tag. Each route is collapsible with full
+request/response shape, error codes, example payloads. Click "Try it
+out" on any route, fill in the params, hit "Execute" — Swagger sends
+the request and shows the response inline. Faster than curl; doesn't
+need Postman.
+
+**One auth-shaped gotcha worth fixing.** The dev-mode auth header
+`X-User-Slug` shows up in the spec as a "header parameter" but not as
+a *security scheme*. That means Swagger UI doesn't render an
+"Authorize" button at the top — every "Try it out" call has to
+retype the header. The fix is one import: declare the header as an
+`APIKeyHeader` so FastAPI tags it as security:
+
+```python
+# in http/dependencies.py
+from fastapi.security import APIKeyHeader
+
+_dev_user_header = APIKeyHeader(name="X-User-Slug", auto_error=False)
+
+def require_auth(
+    x_user_slug: str | None = Depends(_dev_user_header),
+) -> str:
+    if AUTH_DISABLED:
+        if not x_user_slug:
+            raise HTTPException(401, "X-User-Slug header required in dev mode")
+        return x_user_slug
+    raise HTTPException(501, "real auth not yet implemented")
+```
+
+Same runtime behavior as the plain `Header(None)` form. Swagger UI
+now shows an "Authorize" button — set the slug once, every subsequent
+"Try it out" carries it. For a teaching app where students haven't
+necessarily learned curl, this turns `/docs` into a usable browser
+client for the API.
+
 **Authorize at the route boundary, not in `api/`.** Authentication
 (*who is the caller?*) and authorization (*may they do this?*) sit on
 the http layer; the api/ layer takes ids and trusts them. The split
@@ -1246,6 +1314,25 @@ Level via env (`LOG_LEVEL=DEBUG python -m wazzup`). Each module:
 directly. FastAPI middleware injects a `request_id` into every log
 line for one request's worth of tracing; the cheapest observability
 win there is.
+
+**Where logs go: two sinks, opt-in for the file one.** stderr
+*always* — that's the uvicorn terminal, where a developer is
+already looking. When `$LOG_FILE_PATH` is set in `.env` (the
+example sets it to `./logs/wazzup.log`), logs are *also* written
+to a `RotatingFileHandler` at that path: 10 MB per file, 5
+backups, ≤ 50 MB on disk total. Same `JSONLineFormatter` on
+both sinks so `jq -c` over the file produces the same shape as
+the live terminal. Two design decisions worth naming. First,
+**opt-in via env, not default-on** — tests would otherwise
+litter the working directory with log files; production
+deployments often want the file path elsewhere (e.g., a mounted
+volume) and a hard-coded default forecloses that. Second,
+**size-based rotation, not time-based** — for a teaching app
+with no fixed traffic shape, "rotate when full" is more
+predictable than "rotate at midnight UTC". A rotating file
+handler is ~10 lines and stdlib only; resist the urge to bring
+in `loguru` or a structured-log SaaS for v0.1. When you outgrow
+stdlib, the migration target is well-understood.
 
 **No silent failures — the most important rule.** Every path that
 deviates from your expectation gets logged at WARNING or above, with
@@ -1829,6 +1916,81 @@ When real auth lands, the same `fetchAPI` wrapper switches from
 `X-User-Slug` to `Authorization: Bearer <token>` and the routes
 that consume `current_user` don't change.
 
+**Designing the UI before writing it.** The fetch pattern above
+gets you "functional." The next layer — *"feels like a real chat
+app, not a debugging tool"* — is design work, not framework work.
+For wazzup the user-facing model is two surfaces: **People** (who
+you can DM) and **Topics** (public rooms). Conversations are
+internal plumbing — never mentioned in the UI. That choice
+collapses the v0.1 Slack-style hierarchy into a flatter shape:
+click a person → DM opens; click a topic → its default
+conversation opens. One layout works for both.
+
+A target shape worth aiming at, and stopping at:
+
+- **Sidebar with two sections, selected state visible.** People
+  list (excluding the current user) above; Topics list below. The
+  clicked entry gets a highlight class — without it, navigation
+  feels like nothing happened. Already cheap with vanilla JS:
+  `highlightSelected(ul, target)` flips a `.selected` class.
+- **A conversation header that names the context.** "Topic:
+  Engineering" or "DM with Marie Curie". You read the header and
+  you know what you're looking at; no clicking back to verify.
+- **Sender names in the message stream.** The biggest blocker to
+  the UI feeling real. `MessageRead` is stored-columns-only by
+  design (rels-only, section 3) — it has `text` and timestamps
+  but no `sender_id`. So a naïve message render is "floating
+  text, no attribution." The fix is the symmetric pattern to
+  `MessageCreateRequest`: define a route-local response shape
+  `MessageReadInConversation` that JOINs through the `sent_by`
+  rel and surfaces `sender_slug` + `sender_name`. The api
+  function `messages.query` stays stored-columns-only; the route
+  layer enriches. Same teaching point as `MessageCreateRequest`,
+  symmetric direction — *when the wire shape diverges from the
+  api shape, the route is where the divergence lives.*
+- **Self vs. others, visually distinguished.** Once you have
+  sender names, right-align (or color-distinguish) messages
+  where `sender_slug == getCurrentUserSlug()`. Subtle but
+  immediately readable.
+- **Color per sender.** Hash the slug to a small palette (5–6
+  muted colors). A touch of visual distinction without committing
+  to avatars; renders fine on slow connections; no images to
+  fail to load.
+- **Composer ergonomics.** Enter sends, Shift+Enter newline, the
+  send button disables when the textarea is empty, the textarea
+  clears on send, the message stream auto-scrolls to the bottom
+  after both load and post. Each of these is two or three lines;
+  together they're the difference between "demo" and "usable".
+- **Empty / loading / error states everywhere.** People list
+  empty: *"No other users yet — `python -m examples.add_user
+  "Bob"`"*. Chat pane with nothing selected: *"Pick a person or
+  topic to start chatting."* Loading: a brief inline message,
+  not a spinner library. Errors: the existing `showError` toast
+  is enough. Without these, students who run into a real edge
+  case (only one user seeded, server momentarily down) think
+  the UI is broken when it's actually correct.
+
+**Where to stop adding features.** The discipline matters as
+much as the additions:
+
+- *No avatars.* Initials-in-circles is more code than it pays
+  for at this scale. Color-by-slug is enough.
+- *No real-time updates.* No WebSockets, no Server-Sent Events.
+  The UI re-fetches on click and after post. Push updates are
+  their own topic in lesson 4.
+- *No markdown rendering.* Plain text is fine. Adding markdown
+  means a parser library, which means the no-build vibe is gone.
+- *No date separators ("Today", "Yesterday").* Cute, but a
+  rabbit hole — locale-aware formatting, edge cases at midnight.
+  Skip.
+- *No mobile-responsive grid.* The UI's a teaching app served at
+  `localhost`. If a student wants it on their phone, they can
+  add media queries.
+
+The principle: each addition should buy *visible* polish. If you
+can't show what changed in a screenshot, you're optimizing the
+wrong thing.
+
 **What this UI doesn't try to be:**
 
 - **Real-time updates.** No WebSockets, no Server-Sent Events.
@@ -2022,14 +2184,135 @@ dedicated column. Each agent user becomes a different "voice"
 just by changing what gets passed as the system message.
 
 **Two consumers, today and tomorrow.** Lesson 1 uses
-`llm.call()` inside agents that compose their own messages (an
-agent reads recent conversation, generates a reply via
-`llm.call(...)`, posts the message back through the API).
+`llm.call()` inside agents that compose their own messages.
 Lesson 2 will use the *same* function for the agent client's
 own LLM calls when running the tool-calling loop. One wrapper,
-two consumers — the right
-shape because *"talking to a language model"* is a primitive
-that shows up at multiple layers.
+two consumers — the right shape because *"talking to a
+language model"* is a primitive that shows up at multiple
+layers.
+
+### 14a. How agents reply (the dispatch loop)
+
+The mechanics behind "an agent reads recent conversation and
+posts a reply." The whole loop lives in
+`wazzup/api/agents.respond_to_human_message()`, called from
+`POST /messages` after a human posts. Six small decisions, each
+of which we're going to spell out because each one has a wrong
+default that's easy to slip into.
+
+**1. What triggers a reply?** Only `user.type='human'` posts.
+If an agent posts (in dev mode, by impersonating one), no
+further replies fire. This is the loop guard: without it, every
+agent reply would re-trigger the dispatcher and you'd burn
+through your LLM credits in seconds. Encode it as the *first*
+check in the dispatcher, not buried inside the loop.
+
+**2. Who replies?** Two cases:
+
+- **DM**: a conversation with no `in_topic` rel. The other
+  participant — if `type='agent'` — replies. If both
+  participants are human, no agent reply.
+- **Topic-default**: a conversation linked to a topic via
+  `in_topic`. *Every* `user.type='agent'` user replies. With
+  three seeded agents (Trump, Curie, Yoda) that's three replies
+  per human post. Topics are public in v0.1, so there's no
+  scoping by membership; future private/group topics or
+  @-mention parsing both belong inside this same selector.
+
+The selector is one helper (`_responders_for`) that calls the
+existing structural distinction (`conversations.get_topic_id`)
+rather than re-implementing the in_topic/DM detection. Single
+source of truth: when private topics ship, the rule changes in
+one place.
+
+**3. Sequential or parallel?** Sequential, in stable user-id
+order. Two reasons. First, parallel needs `asyncio` and we're
+keeping the lesson sync end-to-end. Second, sequential gives us
+**chain semantics**: each agent's history fetch happens *after*
+the prior agent's commit, so Curie sees Trump's just-typed
+reply, Yoda sees both. That's the chat-room dynamic — agents
+build on each other rather than three independent reactions to
+the same human prompt. If you want the snapshot-once shape
+(three independent reactions), build the history once before
+the loop and reuse it; this is a deliberate non-default.
+
+**4. What's in the prompt?** OpenAI message list. First entry:
+`{"role": "system", "content": agent.persona}` — the persona
+markdown is the system prompt. Then `recent_history(n=20)`
+walks the conversation chronologically; each message becomes:
+
+- `role="assistant"` if the sender == the responding agent
+  (the model sees its own past contributions as its own).
+- `role="user"` with `"{sender.name}: {text}"` content
+  otherwise. The name prefix is what carries "who said what" in
+  a multi-party room, since OpenAI's `user` role is one
+  abstract speaker.
+
+Note: `messages.query(limit=20)` orders ASC + LIMIT, which
+returns the *first* 20 messages — not the recent 20. Add a
+dedicated `recent_history(n=20)` helper that does
+`ORDER BY id DESC LIMIT n` then reverses; the trap is easy to
+walk into and very quiet when you do.
+
+**5. How does failure isolate?** Each agent reply is wrapped
+in `try/except` around `llm.call()`. On exception:
+`deviation("agent reply failed", agent_slug=..., error=...)`
+fires and the loop `continue`s. Lax mode logs and moves on;
+strict mode (`STRICT_MODE=1`) raises through, so the request
+500s — but only at the agent that failed; prior agents who
+already replied stay durable.
+
+**6. The transaction shape — and why it's the load-bearing
+decision.** The naïve dispatch — call `llm.call`, then
+`messages.create`, all inside the `POST /messages` handler —
+*looks* fine. But `wazzup.http.dependencies.get_db` only
+commits on clean return and rolls back on exception. So when
+strict mode raises mid-loop, the request wrapper unwinds *the
+entire transaction*, including the human's message. The user
+sees their post disappear because an unrelated agent's API
+call timed out.
+
+The fix is small but explicit: after the human's message
+inserts, the handler calls `db.commit()` to mark it durable.
+Then the agent loop runs. Each successful agent reply also
+commits before the next runs. A subsequent failure unwinds only
+the in-flight insert — never anything that already committed.
+
+```python
+# wazzup/http/messages.py — the POST handler, sketch
+human_msg = messages_api.create(db, data)
+db.commit()                                  # durability marker
+agents_api.respond_to_human_message(
+    db, conversation_id=body.conversation_id, sender_id=me.id,
+)
+return human_msg
+```
+
+This is *the one place* the lesson breaks the "caller owns
+transaction" rule from §6. Document it loudly: a stray inline
+comment that says *"deliberately committing here so a strict-
+mode deviation in the agent loop doesn't unwind the human's
+message"* costs nothing and saves the next contributor from
+"fixing" it. The same applies to the per-agent commits inside
+the dispatcher.
+
+**Test fixture parity.** One trap that won't show up in
+production but will hide failures in tests: if the FastAPI
+TestClient fixture overrides `get_db` with a bare `yield db`
+(no try/commit/except/rollback wrapper), strict-mode rollback
+behavior becomes invisible — the test sees rows that production
+would have rolled back. Mirror the production wrapper in the
+override, or your "human's message survives a strict-mode
+deviation" test passes for the wrong reason. This bit us; it'll
+bite again.
+
+**Cost shape, briefly.** Every topic post = N LLM calls, where
+N is the count of agent users. With three agents that's fine.
+At thirty agents on a busy topic, it's not. Real apps scope
+this — `member_of` rels on private topics, @-mention parsing,
+or a per-topic agent roster — but those all live inside the
+same `_responders_for` selector. The dispatch shape is
+unchanged; the eligibility rule is what tightens.
 
 ---
 

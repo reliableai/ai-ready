@@ -36,6 +36,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from wazzup.api import NotFound
+from wazzup.api import agents as agents_api
 from wazzup.api import conversations as conversations_api
 from wazzup.api import messages as messages_api
 from wazzup.http.dependencies import current_user, get_db, require_auth
@@ -94,7 +95,20 @@ def create_message(
         text=body.text,
         details=body.details,
     )
-    return messages_api.create(db, data)
+    human_msg = messages_api.create(db, data)
+    # Deliberate exception to "caller owns transaction" (see CLAUDE.md +
+    # lesson §14a). ``get_db`` only commits on clean return; without this
+    # explicit commit, a strict-mode ``deviation()`` inside the agent
+    # dispatch would unwind the human's message via the request
+    # wrapper's rollback path. Per-agent commits inside the dispatcher
+    # preserve any successful agent replies for the same reason.
+    db.commit()
+    agents_api.respond_to_human_message(
+        db,
+        conversation_id=body.conversation_id,
+        sender_id=me.id,
+    )
+    return human_msg
 
 
 @router.get("", response_model=list[MessageRead])
