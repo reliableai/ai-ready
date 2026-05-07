@@ -285,6 +285,64 @@ def get_or_create_dm(
     return conv
 
 
+def is_accessible_by(
+    db: Connection,
+    *,
+    conversation_id: int,
+    user_id: int,
+) -> bool:
+    """Authorize a user to read or write a conversation.
+
+    Encodes invariant #8 from ``docs/MODEL.md``:
+
+    - **Topic-default conversations** (one ``in_topic`` rel pointing at a
+      topic): gated by ``topics.can_access(db, user_id=, topic_id=)``.
+      v0.1 returns ``True`` for all authenticated users — topics are
+      public. Future private/group topics flip ``can_access`` without
+      touching this helper or its call sites.
+    - **DMs** (no ``in_topic`` rel): caller must have a live
+      ``participates_in`` rel pointing at the conversation.
+    - **Anything else** (no in_topic AND no participation): denied. A
+      conservative default that protects against malformed conversation
+      shapes — they shouldn't exist (boundary enforcement: only
+      ``topics.create`` and ``get_or_create_dm`` produce conversations),
+      but if they ever do, "deny" is the safe fallback.
+
+    The api layer answers a *structural* question ("is this user a
+    participant / member"); the http layer ties it to the authenticated
+    caller and translates ``False`` to a 403. Don't read auth headers
+    here — keep this callable from tests, CLIs, and future MCP tools
+    without a request context.
+    """
+    # Lazy-imported to avoid pulling topics into module-load time.
+    from wazzup.api import topics
+
+    in_topic_row = db.execute(
+        "SELECT tgt_id AS topic_id FROM rels "
+        "WHERE src_type = 'conversation' AND src_id = ? "
+        "  AND rel_type = 'in_topic' AND tgt_type = 'topic' "
+        "  AND deleted_at IS NULL "
+        "LIMIT 1",
+        (conversation_id,),
+    ).fetchone()
+    if in_topic_row is not None:
+        return topics.can_access(
+            db, user_id=user_id, topic_id=in_topic_row["topic_id"],
+        )
+
+    # Otherwise: DM-shaped — caller must be a participant.
+    participates = db.execute(
+        "SELECT 1 FROM rels "
+        "WHERE src_type = 'user' AND src_id = ? "
+        "  AND tgt_type = 'conversation' AND tgt_id = ? "
+        "  AND rel_type = 'participates_in' "
+        "  AND deleted_at IS NULL "
+        "LIMIT 1",
+        (user_id, conversation_id),
+    ).fetchone()
+    return participates is not None
+
+
 def query(
     db: Connection,
     *,

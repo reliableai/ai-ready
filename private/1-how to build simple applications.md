@@ -113,6 +113,21 @@ both DMs and group chat without inventing more entities. The
 *member_of* rel survives unchanged because group/private
 topics will need it; the lesson just doesn't exercise it yet.
 
+**One half is private; one half is public.** Topics are
+explicitly public in v0.1 — anyone authenticated can read or
+post on any topic. DMs are the opposite: a 1:1 conversation
+between exactly two users, and *only* those two should ever
+see its messages. The model needs a single rule that handles
+both shapes: a user may access a conversation iff it's a
+topic-default they're allowed to see (gated by a future-
+private hook), OR it's a DM they're a participant of. We
+encode that as `conversations.is_accessible_by(db, *,
+conversation_id, user_id)` and call it from every read or
+write route. The api layer answers the structural question
+("is this user a participant?"); the http layer ties it to
+the authenticated caller. See section 8 for the routing
+mechanics.
+
 ---
 
 ## 2. One shape for every entity table
@@ -870,9 +885,49 @@ background jobs, CLIs) come in later lessons; they all sit *on top of*
 section 6, not in place of it. That's the payoff of keeping section 6
 as the only thing that touches SQL.
 
----
+**Authorize at the route boundary, not in `api/`.** Authentication
+(*who is the caller?*) and authorization (*may they do this?*) sit on
+the http layer; the api/ layer takes ids and trusts them. The split
+keeps the api callable from places without an http request — tests,
+CLIs, background jobs, future MCP tool surfaces — without dragging
+auth-aware logic into the data path.
 
-## 9. Test plan: write `tests.md` first
+But the *rule* that authorizes ("only DM participants may read this
+DM") is a structural fact about the model, not about HTTP. Encode it
+once, in `api.conversations.is_accessible_by(db, *, conversation_id,
+user_id)`, and call it from every route that reads or writes the
+conversation. Pseudocode for `GET /conversations/{slug}/messages`:
+
+```python
+@router.get("/{slug}/messages")
+def list_messages(slug, db, me=Depends(current_user)):
+    conv = conversations.get_by_slug(db, slug) or raise NotFound(...)
+    if not conversations.is_accessible_by(
+        db, conversation_id=conv.id, user_id=me.id
+    ):
+        raise HTTPException(403, "not a participant")
+    return messages.query(db, conversation_id=conv.id)
+```
+
+Two things this gets right. **The rule lives in one place** — four
+routes (the messages-list, the by-id read, the flat messages query,
+and the message POST) all call the same helper. Drift is impossible:
+add a fifth route tomorrow and you can't *forget* the check, because
+the helper exists for exactly that reason. **The api layer stays auth-
+agnostic** — `is_accessible_by` takes a `user_id`, not a request, so
+you can call it from a test without a TestClient or from a future MCP
+tool without a session. The http layer is what reads the
+`X-User-Slug` header (via `current_user`), passes the resolved id in,
+and translates a `False` to a 403.
+
+A subtle note on **403 vs 404 on deny**: returning 404 hides the
+existence of the conversation from non-participants. That's stricter
+but inconsistent — a non-participant can already enumerate users via
+`GET /users`, and DM slugs are a deterministic function of those user
+slugs (`dm-{min}-{max}`), so existence isn't really secret. We return
+403, which is honest about what happened. If you ever decide existence
+*is* secret (e.g. a "blocked users" feature), flip the helper's deny
+path to 404.
 
 Before you write a single `test_*.py`, write `tests/tests.md`. One
 section per endpoint, then one happy-path end-to-end at the bottom.

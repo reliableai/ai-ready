@@ -109,6 +109,10 @@ Indexes on `(src_type, src_id)`, `(tgt_type, tgt_id)`, `(rel_type)` for traversa
 5. **`user.type` is exactly `'human'` or `'agent'`.** Enforced at the Pydantic layer (`Literal["human", "agent"]`) and ideally with a `CHECK` constraint at the schema level.
 6. **Every conversation is either a topic-default or a DM.** Topic-default = exactly one `in_topic` rel pointing at a topic. DM = exactly two distinct `participates_in` rels with no third participant and no `in_topic` rel. There are no free-floating conversations. Enforced by *boundary*: `conversations._create()` is module-private; only `topics.create()` and `conversations.get_or_create_dm()` can produce a conversation. No runtime read-time validator — the boundary is the contract.
 7. **Every topic has a default conversation.** `TopicRead.default_conversation_slug` is non-Optional. If the rel is missing at read time, `topics.get*()` calls `deviation("topic missing default conversation", topic_id=...)`; in strict mode this raises, in lax mode it surfaces a `<missing>` sentinel so the UI looks broken loudly.
+8. **Conversation access is structural.** A user may read or write a conversation iff:
+   - the conversation is a **topic-default** (has an `in_topic` rel) AND `topics.can_access(db, user_id=..., topic_id=...)` returns `True`. v0.1 topics are public, so the gate is open today; the hook is the single edit point for future private/group topics.
+   - the conversation is a **DM** AND the user has a live `participates_in` rel pointing at it.
+   Any other shape (no `in_topic`, no participation) is denied. The rule is encoded in `api.conversations.is_accessible_by(db, *, conversation_id, user_id)` and called from every HTTP route that addresses a conversation (read or write). The api layer answers the *structural* question; the http layer ties it to the authenticated caller. Returns **403** on deny — the conversation's existence is not concealed (the slug is enumerable via other surfaces), but its contents are.
 
 ## Cascade rules
 

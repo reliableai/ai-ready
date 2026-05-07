@@ -11,13 +11,13 @@ are the only producers.
 
 from sqlite3 import Connection
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from wazzup.api import NotFound
 from wazzup.api import conversations as conversations_api
 from wazzup.api import messages as messages_api
-from wazzup.http.dependencies import get_db, require_auth
-from wazzup.models import MessageRead
+from wazzup.http.dependencies import current_user, get_db, require_auth
+from wazzup.models import MessageRead, UserRead
 
 router = APIRouter(
     prefix="/conversations",
@@ -32,6 +32,7 @@ def list_messages_in_conversation(
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Connection = Depends(get_db),
+    me: UserRead = Depends(current_user),
 ) -> list[MessageRead]:
     """List live messages in a conversation, oldest first.
 
@@ -40,6 +41,11 @@ def list_messages_in_conversation(
     to find belongs_to messages. Default page size is 20 (smaller
     than the entity-list 50; messages are higher-volume).
 
+    Access: the caller must pass ``conversations.is_accessible_by`` —
+    a topic-default conversation is open to anyone today (topics are
+    public in v0.1), but a DM only admits its two participants. Non-
+    participant on a DM → 403, NOT 404; existence isn't secret.
+
     This is the route the UI's chat view hits — for both topic-default
     conversations (loaded after ``GET /topics/{slug}``) and DMs
     (loaded after ``POST /dms/{peer_slug}``).
@@ -47,6 +53,10 @@ def list_messages_in_conversation(
     conv = conversations_api.get_by_slug(db, slug)
     if conv is None:
         raise NotFound(f"conversation slug={slug!r} not found")
+    if not conversations_api.is_accessible_by(
+        db, conversation_id=conv.id, user_id=me.id,
+    ):
+        raise HTTPException(403, "not a participant of this conversation")
     return messages_api.query(
         db, conversation_id=conv.id, limit=limit, offset=offset,
     )

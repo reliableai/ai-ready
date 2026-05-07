@@ -89,9 +89,11 @@ In v0.2, conversations are not user-facing. The only HTTP route is the messages-
 - **Auth**: required.
 - **Path param**: `slug` — the conversation's slug. Resolves to a `conversation_id` via `conversations.get_by_slug` before querying messages.
 - **Query params**: `limit` (1..200, default 20 — smaller than entity-list 50; messages are higher-volume), `offset` (≥0, default 0). Same `Query(ge=…, le=…)` bounds as the other list routes.
+- **Access control**: after slug resolution, the route calls `conversations.is_accessible_by(db, conversation_id=conv.id, user_id=current_user.id)`. Topic-default conversations gate through `topics.can_access` (today: always True, since v0.1 topics are public). DMs require the caller to be one of the two `participates_in` users. Non-participant on a DM → **403** (not 404 — the conversation's existence isn't secret; its contents are).
 - **Success**: `200 OK` + JSON array of `MessageRead`, ordered by id (oldest first).
 - **Errors**:
   - `404` — no live conversation with that slug. Body: `{"detail": "conversation slug='nope' not found"}`.
+  - `403` — caller is not a participant in the DM (or, when private topics ship, not a member of the topic). Body: `{"detail": "not a participant of this conversation"}`.
   - `401` — missing `X-User-Slug`.
 - **Soft-delete behavior**: soft-deleted messages are excluded; soft-deleted conversation → 404 (looks the same as a typo). The query JOINs through rels filtering `deleted_at IS NULL` on both sides, so a soft-deleted `belongs_to` rel also hides its message from this view. **This is the route the UI's chat view hits.**
 
@@ -143,19 +145,23 @@ In v0.2, conversations are not user-facing. The only HTTP route is the messages-
   ```json
   {"conversation_id": 1, "text": "shipping the auth fix today"}
   ```
+- **Access control**: after validating `conversation_id` exists, the route calls `conversations.is_accessible_by(...)` with the caller's id. Non-participant on a DM → **403**. (Without this check, any authenticated user could *write* into anyone's DM by guessing the conversation id — symmetric to the read break.)
 - **Success**: `201 Created` + `MessageRead` JSON. Side effects: one row in `message`, two rows in `rels` (`belongs_to → conversation`, `sent_by → user`). `MessageRead` is stored-columns-only — no `conversation_id` / `sender_id` (those live in rels). Routes that need to surface them in their response shape should JOIN.
 - **Errors**:
   - `422` — invalid body (missing `conversation_id`, missing `text`, empty `text`).
   - `401` — missing `X-User-Slug`.
+  - `403` — caller is not a participant in the DM identified by `conversation_id`.
   - `404` — `conversation_id` doesn't match a live conversation. Body: `{"detail": "conversation_id=999 not found"}`. The api validates FK existence before insert (no DB-level FK because rels is polymorphic).
 - **Soft-delete behavior**: N/A (creation only).
 
 ### `GET /messages/{id}`
 - **Auth**: required.
 - **Path param**: `id` typed as `int` — non-numeric returns `422` (FastAPI path parsing).
+- **Access control**: after resolving the message, the route looks up its `belongs_to` conversation via the rel, then calls `conversations.is_accessible_by(...)` with the caller's id. Non-participant on a DM → **403**.
 - **Success**: `200 OK` + `MessageRead` JSON.
 - **Errors**:
   - `404` — no live message with that id.
+  - `403` — caller is not a participant in the message's conversation (DM).
   - `401` — missing `X-User-Slug`.
 - **Soft-delete behavior**: soft-deleted messages return 404. Cascade via conversation deletion (or direct `messages.delete`) soft-deletes the message and its two rels.
 
@@ -165,12 +171,15 @@ In v0.2, conversations are not user-facing. The only HTTP route is the messages-
   - `conversation_id` — **required**; integer. No "all messages" fallthrough — see `api/messages.query` docstring for the rationale.
   - `sender_id` — optional; integer. Filters within the conversation.
   - `limit` (1..200, default 20), `offset` (≥0, default 0). Same `Query(ge=…, le=…)` bounds as the other list routes.
+- **Access control**: same rule as `GET /conversations/{slug}/messages` — caller must pass `conversations.is_accessible_by(...)`. Non-participant on a DM → **403**.
 - **Success**: `200 OK` + JSON array of `MessageRead`. Empty array on no match.
 - **Errors**:
   - `422` — `conversation_id` missing or non-integer; `limit`/`offset` out of bounds.
+  - `403` — caller is not a participant.
+  - `404` — `conversation_id` doesn't match a live conversation.
   - `401` — missing `X-User-Slug`.
-- **Soft-delete behavior**: soft-deleted messages excluded; soft-deleted `belongs_to` rels also hide their message (cascade). The conversation itself doesn't have to exist — a typo'd `conversation_id` simply returns `[]` rather than 404 (no slug→id resolution to fail on; if you want strict-404 semantics, use `GET /conversations/{slug}/messages` instead).
-- **Same data as** `GET /conversations/{slug}/messages` — both call `messages_api.query`. The nested route adds slug resolution + 404. Use the nested one when you have a slug, this one when you have an id.
+- **Soft-delete behavior**: soft-deleted messages excluded; soft-deleted `belongs_to` rels also hide their message (cascade). Unlike previous behavior, a typo'd `conversation_id` now returns `404` rather than `[]` — the access check forces existence resolution. (The nested-route variant has always 404'd on miss; this aligns the two.)
+- **Same data as** `GET /conversations/{slug}/messages` — both call `messages_api.query` after the same access check. The nested route resolves a slug; this one takes the id directly. Use the nested one when you have a slug, this one when you have an id.
 
 ## rels (no HTTP routes — api-only)
 

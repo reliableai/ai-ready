@@ -16,19 +16,27 @@ via rels (belongs_to conversation, sent_by user). Tests verify:
 
 import pytest
 
-from wazzup.api import NotFound, conversations, messages, users
+from wazzup.api import NotFound, conversations, messages, topics, users
 from wazzup.models import (
     ConversationCreate,
     MessageCreate,
     MessageUpdate,
+    TopicCreate,
     UserCreate,
 )
 
 
 def _seed_alice_and_standup(db):
-    """Seed the canonical (alice, standup) pair used by most tests."""
+    """Seed the canonical (alice, standup) pair used by most tests.
+
+    The "standup" conversation is the daily-standup topic's auto-default
+    conversation, not a free-floating row. Topics are public in v0.1, so
+    this conversation is accessible to any authenticated user — which is
+    what the HTTP tests need to satisfy ``conversations.is_accessible_by``.
+    """
     alice = users.create(db, UserCreate(name="Alice", type="human"))
-    standup = conversations._create(db, ConversationCreate(name="Daily Standup"))
+    standup_topic = topics.create(db, TopicCreate(name="Daily Standup"))
+    standup = conversations.get(db, standup_topic.default_conversation_id)
     return alice, standup
 
 
