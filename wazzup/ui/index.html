@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wazzup</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>wazzup</h1>
+    <div id="user-info"><!-- populated by app.js once "logged in" (X-User-Slug header) --></div>
+  </header>
+
+  <main>
+    <aside id="sidebar">
+      <h2>People</h2>
+      <ul id="users-list"><!-- populated by loadUsers() — click to open a DM --></ul>
+
+      <h2>Topics</h2>
+      <ul id="topics-list"><!-- populated by loadTopics() — click to open the topic's default conversation --></ul>
+    </aside>
+
+    <section id="conversation">
+      <h2 id="conversation-name">Pick a person or topic</h2>
+      <ol id="messages-list"></ol>
+
+      <form id="compose-form">
+        <textarea id="compose-text" placeholder="Type a message..." required></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="error-banner" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
