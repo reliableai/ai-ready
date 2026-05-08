@@ -22,7 +22,11 @@
     </aside>
 
     <section id="conversation">
-      <h2 id="conversation-name">Pick a person or topic</h2>
+      <div id="conversation-header">
+        <h2 id="conversation-name">Pick a person or topic</h2>
+        <!-- Visible only when the open conversation is a DM. Soft-deletes every message in the DM. -->
+        <button type="button" id="clear-chat" hidden>Clear chat</button>
+      </div>
       <ol id="messages-list"></ol>
 
       <form id="compose-form">

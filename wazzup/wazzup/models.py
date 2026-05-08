@@ -72,12 +72,15 @@ rels-only design (section 3 of the lesson; ``docs/MODEL.md``) means
 those links live in the ``rels`` table, not in ``message`` columns.
 
 Routes that need to surface the rel-linked ids in their responses
-define their *own* response shape (e.g., ``MessageReadInConversation
-extends MessageRead`` adding ``conversation_id``, ``sender_id``,
-populated by the route via JOIN). Keeping ``MessageRead`` aligned
-with the table is the choice that makes the storage decision
-visible at every layer; the alternative — silently denormalizing
-rels onto the read model — would let the abstraction leak.
+define their *own* response shape — see ``MessageReadInConversation``
+below, which extends ``MessageRead`` with ``sender_id`` /
+``sender_slug`` / ``sender_name`` populated via JOIN at the api
+boundary. Keeping ``MessageRead`` aligned with the table is the
+choice that makes the storage decision visible at every layer; the
+alternative — silently denormalizing rels onto the read model —
+would let the abstraction leak. ``MessageReadInConversation`` is
+the controlled denormalization for route consumers (the UI) that
+need the sender at-a-glance.
 """
 
 from datetime import datetime
@@ -227,6 +230,24 @@ class MessageUpdate(BaseModel):
     """Message edits are rare; keeping the CRUD pattern uniform."""
     text: str | None = Field(default=None, min_length=1)
     details: MessageDetails = Field(default_factory=MessageDetails)
+
+
+class MessageReadInConversation(MessageRead):
+    """Read shape for list routes that need the sender at-a-glance.
+
+    Same stored columns as ``MessageRead``, plus the sender's id, slug,
+    and display name resolved through the ``sent_by`` rel + the user
+    table. Populated by ``api.messages.query_with_senders`` (the api
+    boundary owns the JOIN; routes pass through).
+
+    The denormalization is *controlled* — only this read shape carries
+    the rel-resolved fields, and only the list routes use it. ``MessageRead``
+    stays stored-columns-only so the rels-only invariant is visible at
+    every other layer.
+    """
+    sender_id: int
+    sender_slug: str
+    sender_name: str
 
 
 # ----- rels (no name/slug, no updated_at; just links) -----

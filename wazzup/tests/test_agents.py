@@ -125,7 +125,11 @@ def test_human_human_dm_no_agent_reply(client, db, mock_llm):
 
 
 def test_human_post_in_topic_triggers_one_reply_per_agent(client, db, mock_llm):
-    """alice posts in daily-standup → 4 messages (alice's + 3 agents)."""
+    """alice posts in daily-standup → 4 messages (alice's + 3 agents).
+
+    Order of agent replies is now random (per ``_responders_for``); we
+    assert *which* texts appear, not the sequence.
+    """
     _seed_humans_and_agents(db)
     standup = topics.create(db, TopicCreate(name="Daily Standup"))
 
@@ -144,16 +148,18 @@ def test_human_post_in_topic_triggers_one_reply_per_agent(client, db, mock_llm):
         headers=AUTH_HEADER_ALICE,
     ).json()
     texts = [m["text"] for m in msgs]
-    assert texts == [
-        "what's everyone working on?",
+    # Alice's prompt always comes first (she posted first; ORDER BY id ASC).
+    assert texts[0] == "what's everyone working on?"
+    # Three agents replied — set comparison, order-agnostic.
+    assert set(texts[1:]) == {
         "TREMENDOUS reply, the best.",
         "Quietly, I observe.",
         "Reply, I do.",
-    ]
+    }
 
 
-def test_agent_replies_in_user_id_order(client, db, mock_llm):
-    """3 agent replies appear in stable order (Trump → Curie → Yoda by user.id)."""
+def test_all_three_agents_reply_each_exactly_once(client, db, mock_llm):
+    """3 LLM calls, one per agent. Order is randomized; presence is required."""
     _seed_humans_and_agents(db)
     standup = topics.create(db, TopicCreate(name="Daily Standup"))
 
@@ -163,20 +169,93 @@ def test_agent_replies_in_user_id_order(client, db, mock_llm):
         json={"conversation_id": standup.default_conversation_id, "text": "ping"},
     )
 
-    # mock_llm captures the prompts in order; the persona of each is
-    # observable in messages[0].content.
-    personas = [c[0]["content"] for c in mock_llm]
-    assert "Trump" in personas[0]
-    assert "Curie" in personas[1]
-    assert "Yoda" in personas[2]
+    assert len(mock_llm) == 3
+    personas_called = []
+    for prompt in mock_llm:
+        system_content = prompt[0]["content"].lower()
+        if "trump" in system_content:
+            personas_called.append("trump")
+        elif "curie" in system_content:
+            personas_called.append("curie")
+        elif "yoda" in system_content:
+            personas_called.append("yoda")
+    assert sorted(personas_called) == ["curie", "trump", "yoda"]
+
+
+def test_responders_for_shuffles_topic_agents(db, monkeypatch):
+    """Direct unit test of ``_responders_for``: order changes when shuffle runs.
+
+    Uses a deterministic seeding of ``random`` so the test is stable
+    while still exercising the shuffle code path. With 3 agents, a real
+    shuffle has 1/6 chance of returning id-order — we assert the seed
+    we picked produces a non-id-order to actually pin shuffling on.
+    """
+    import random as _random
+
+    from wazzup.api import agents as agents_api
+    from wazzup.api import topics
+
+    _seed_humans_and_agents(db)
+    standup = topics.create(db, TopicCreate(name="Daily Standup"))
+    alice_id = users.get_by_slug(db, "alice").id
+
+    _random.seed(42)
+    responders = agents_api._responders_for(
+        db, standup.default_conversation_id, alice_id,
+    )
+    ids = [r.id for r in responders]
+
+    # All three agents present, no duplicates.
+    assert sorted(ids) == sorted(
+        [users.get_by_slug(db, s).id for s in ("trump", "curie", "yoda")]
+    )
+    # The seed=42 shuffle produces a non-id-sorted order — pin shuffling.
+    assert ids != sorted(ids)
+
+
+def test_responders_for_avoids_repeating_last_speaker(db, monkeypatch):
+    """If the most recent agent message in the conversation is from agent X,
+    and the post-shuffle list puts X at index 0, swap with index 1."""
+    import random as _random
+
+    from wazzup.api import agents as agents_api
+    from wazzup.api import topics
+    from wazzup.models import MessageCreate
+
+    _seed_humans_and_agents(db)
+    standup = topics.create(db, TopicCreate(name="Daily Standup"))
+    conv_id = standup.default_conversation_id
+    alice_id = users.get_by_slug(db, "alice").id
+    trump_id = users.get_by_slug(db, "trump").id
+
+    # Force trump to be the most recent agent speaker.
+    from wazzup.api import messages as messages_api
+    messages_api.create(db, MessageCreate(
+        conversation_id=conv_id, sender_id=trump_id, text="prior trump msg",
+    ))
+    db.commit()
+
+    # Force shuffle to put trump at index 0 (id-order would be: trump, curie, yoda
+    # — trump has the lowest id of the three agents seeded after alice/bob).
+    monkeypatch.setattr("wazzup.api.agents.random.shuffle", lambda lst: None)
+    responders = agents_api._responders_for(db, conv_id, alice_id)
+
+    # Trump should NOT lead — they spoke last. The dispatcher swaps [0] and [1].
+    assert responders[0].id != trump_id
+    assert responders[1].id == trump_id
 
 
 # ----- Chain semantics -----
 
 
-def test_chain_semantics_curie_sees_trumps_reply(client, db, mock_llm):
-    """Curie's history fetch happens *after* Trump's reply commits, so
-    Curie's prompt includes Trump's reply text."""
+def test_chain_semantics_each_agent_sees_priors(client, db, mock_llm):
+    """Each agent's history fetch runs *after* the prior agent's commit,
+    so the i-th agent's prompt contains exactly i prior agent replies.
+
+    Order-agnostic by design — the dispatcher shuffles, so we don't
+    know *which* agent fires first. Whatever the order, the i-th
+    agent's prompt should carry the (i) prior agent reply texts.
+    """
     _seed_humans_and_agents(db)
     standup = topics.create(db, TopicCreate(name="Daily Standup"))
 
@@ -186,26 +265,24 @@ def test_chain_semantics_curie_sees_trumps_reply(client, db, mock_llm):
         json={"conversation_id": standup.default_conversation_id, "text": "go"},
     )
 
-    # mock_llm[0] = Trump's prompt (sees only alice's msg)
-    # mock_llm[1] = Curie's prompt (should see alice + Trump's reply)
-    # mock_llm[2] = Yoda's prompt (should see alice + Trump + Curie)
-    trump_history = mock_llm[0]
-    curie_history = mock_llm[1]
-    yoda_history = mock_llm[2]
+    fake_replies = [
+        "TREMENDOUS reply, the best.",
+        "Quietly, I observe.",
+        "Reply, I do.",
+    ]
 
-    # Trump sees only alice's message, no prior agent replies.
-    trump_user_msgs = [m["content"] for m in trump_history if m["role"] == "user"]
-    assert any("go" in c for c in trump_user_msgs)
-    assert not any("TREMENDOUS" in c for c in trump_user_msgs)
-
-    # Curie sees Trump's reply (chain).
-    curie_contents = [m["content"] for m in curie_history]
-    assert any("TREMENDOUS reply, the best." in c for c in curie_contents)
-
-    # Yoda sees Trump *and* Curie.
-    yoda_contents = [m["content"] for m in yoda_history]
-    assert any("TREMENDOUS reply, the best." in c for c in yoda_contents)
-    assert any("Quietly, I observe." in c for c in yoda_contents)
+    for i, prompt in enumerate(mock_llm):
+        contents = [m["content"] for m in prompt]
+        # All agents see alice's prompt regardless of order.
+        assert any("go" in c for c in contents)
+        # Count how many of the (still-canned) reply texts appear in
+        # this agent's history. The i-th dispatch should see exactly i.
+        seen = sum(1 for r in fake_replies if any(r in c for c in contents))
+        assert seen == i, (
+            f"Agent at dispatch index {i} should see exactly {i} prior "
+            f"agent replies in history; saw {seen}. "
+            f"Prompts captured: {[p[0]['content'][:20] for p in mock_llm]}"
+        )
 
 
 # ----- Loop guard -----

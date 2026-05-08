@@ -84,10 +84,10 @@ or group-restricted topics later (see *member_of* below).
 - `conversation` — internal plumbing for messages. **Not user-
 facing.** Two valid shapes:
   - the **default conversation** for a topic (auto-created
-    when the topic is created), which holds posts to that
-    topic; and
+  when the topic is created), which holds posts to that
+  topic; and
   - a **DM** between exactly two users (no topic, two
-    `participates_in` rels).
+  `participates_in` rels).
   The UI never shows the word "conversation" — users only see
   *people* (DMs) and *topics* (rooms). Conversations exist so
   messages have one stable place to live regardless of which
@@ -121,8 +121,7 @@ see its messages. The model needs a single rule that handles
 both shapes: a user may access a conversation iff it's a
 topic-default they're allowed to see (gated by a future-
 private hook), OR it's a DM they're a participant of. We
-encode that as `conversations.is_accessible_by(db, *,
-conversation_id, user_id)` and call it from every read or
+encode that as `conversations.is_accessible_by(db, *, conversation_id, user_id)` and call it from every read or
 write route. The api layer answers the structural question
 ("is this user a participant?"); the http layer ties it to
 the authenticated caller. See section 8 for the routing
@@ -179,7 +178,7 @@ datetime type, so `created_at` / `updated_at` / `deleted_at` are
 stored as ISO-8601 strings (`"2026-05-06T14:23:45Z"`) in UTC.
 *Always UTC, never local.* They're set in the API layer at create
 / update / soft-delete time — `datetime.now(UTC).isoformat()` —
-and never trusted from the client. 
+and never trusted from the client.
 
 **The shape isn't strict.** Some entities don't have a natural
 human name and don't need a slug — `message` is the obvious case
@@ -206,16 +205,16 @@ in `details`.
 A single relationships table holds *all* links between entities:
 
 
-| Column                     | Purpose                                       |
-| -------------------------- | --------------------------------------------- |
-| `id`                       | Primary key                                   |
-| `src_id`                   | Source entity ID                              |
-| `src_type`                 | Source table name (`user`, `conversation`, …) |
-| `tgt_id`                   | Target entity ID                              |
-| `tgt_type`                 | Target table name                             |
+| Column                     | Purpose                                                                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                       | Primary key                                                                                                                        |
+| `src_id`                   | Source entity ID                                                                                                                   |
+| `src_type`                 | Source table name (`user`, `conversation`, …)                                                                                      |
+| `tgt_id`                   | Target entity ID                                                                                                                   |
+| `tgt_type`                 | Target table name                                                                                                                  |
 | `rel_type`                 | `in_topic`, `participates_in`, `belongs_to`, `sent_by`, … (`member_of` is reserved for future private topics; not written by v0.1) |
-| `details`                  | JSON (e.g., role, joined_at metadata)         |
-| `created_at`, `deleted_at` | same soft-delete semantics                    |
+| `details`                  | JSON (e.g., role, joined_at metadata)                                                                                              |
+| `created_at`, `deleted_at` | same soft-delete semantics                                                                                                         |
 
 
 **Why one rels table? (initially)**
@@ -242,36 +241,93 @@ Later on as we mature, we will promote some relationships as own table.
 
 ---
 
-## 4. Pick a deletion strategy *before* you write code
+## 4. Managing Deletions
 
-Three choices to make explicit:
+Deletion deserves its own section. CRUD tutorials usually show
+`DELETE FROM user WHERE id = ?` as a one-liner and move on; the
+problem is that no app actually wants the bare row gone. You want
+the row gone *and* every relationship that pointed at it cleaned up
+*and* a decision about cascading dependents (does deleting a user
+nuke their messages? their DMs? their topics?) made up-front and
+written down in one place — not scattered across whichever route
+happens to call delete first.
+
+This section covers two things: (a) the three choices to make
+explicit before writing any deletion code, and (b) the code
+pattern — three roles per entity, one shared orchestrator — that
+keeps those choices implementable without bloat.
+
+### 4.1 Three choices, made up-front
 
 1. **Soft is default.** All `DELETE` calls set `deleted_at`. Reads
-  filter it out. This is non-negotiable for the teaching version.
-2. **Hard delete is admin-only.** A separate endpoint, gated, off the
-  normal API path. 
-3. **Cascade rule.** When you soft-delete an entity, you soft-delete
-  the rels touching it. Implement this in **one place** (a `delete()`
-   helper) — never scatter cascade logic across routes.
+  filter it out. This is non-negotiable for the teaching version
+   — it makes recovery from operational mistakes survivable
+   ("oh no, we deleted the wrong user" is one UPDATE away from
+   recovery).
+2. **Hard delete is admin-only.** A separate endpoint, gated, off
+  the normal API path. Most apps need *some* hard-delete
+   eventually (GDPR, compliance, storage cleanup); making it
+   explicit and gated keeps it from leaking into normal flows.
+3. **Cascade rules, written down per entity.** When you soft-delete
+  X, what gets soft-deleted with it? Document the rule per entity
+   *before* writing any delete code. Implement the rules in **one
+   place** — never scatter cascade logic across routes.
 
-For each entity, write down the cascade you want. Examples:
+For each entity, write down the cascade you want. Examples from
+wazzup:
 
-- Delete a `conversation` → cascade to its `message`s and to all rels
-pointing at it or them.
+- Delete a `conversation` → cascade to its `message`s and to all
+rels pointing at it or them.
 - Delete a `topic` → cascade to its default conversation (the one
 linked via `in_topic`), which then recursively cascades to its
 messages and their rels per the conversation rule. Without this
-extra step, the conversation would survive the topic and become a
-ghost — a user-facing topic the user can't reach but whose
+extra step, the conversation would survive the topic and become
+a ghost — a user-facing topic the user can't reach but whose
 messages and rels still occupy storage.
-- Delete a `user` → product decision: do you nuke their messages, keep
-them and anonymize the author, or refuse with 409? Pick one. Write
-it down. The hardest deletion bug is the one nobody documented.
+- Delete a `user` → product decision: do you nuke their messages,
+keep them and anonymize the author, or refuse with 409? Pick
+one. Write it down. The hardest deletion bug is the one nobody
+documented.
 
-**The shape that holds up.** A single `cascade_delete(table, id, hard)`
-function in `api/deletion.py` is the only place that knows about
-cascade rules. Every entity's public `delete()` is a 4-line
-funnel:
+These rules are the spec. Mirror them in `docs/MODEL.md` so the
+schema spec carries them too — when someone reads the model, they
+should see the cascade behavior alongside the column definitions.
+The code in §4.2 enforces what the spec describes; the spec is
+what changes first.
+
+### 4.2 The code pattern: three roles per entity, one orchestrator
+
+The naive shape — put cascade logic inside each entity's `delete()`
+— scatters the rules. Six months later, when someone changes "user
+delete should also nuke their messages", they have to find every
+place where "delete a user" runs and update each one. Easy to miss.
+
+The shape that holds up: **one orchestrator, three roles per
+entity.** For each entity (user, topic, conversation, message),
+three functions touch deletion:
+
+
+| Function                                               | Where it lives                          | What it does                                                                                                                                                          | Who calls it                                 |
+| ------------------------------------------------------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `_delete_primary(db, id, hard) -> bool`                | the entity module (`api/users.py` etc.) | Single-row write only — the `UPDATE … SET deleted_at` (soft) or `DELETE FROM …` (hard). Returns `True` iff it actually touched a row.                                 | only `cascade_delete`                        |
+| `cascade_delete(db, table, id, hard) -> CascadeReport` | `api/deletion.py`                       | The **orchestrator**. Knows the cascade rules for every entity. Sweeps rels, recurses into nested entities, calls the right `_delete_primary` last. Returns a report. | each entity's `delete()`; tests; admin tools |
+| `delete(db, id, hard)`                                 | the entity module                       | The 4-line public wrapper. Calls `cascade_delete`, raises `NotFound` if `report.primary == 0`.                                                                        | HTTP routes                                  |
+
+
+`cascade_delete` looks up `_delete_primary` per entity through a
+dispatch dictionary so it stays generic over the table:
+
+```python
+# api/deletion.py
+_PRIMARY_DELETE = {
+    "user":         users._delete_primary,
+    "conversation": conversations._delete_primary,
+    "topic":        topics._delete_primary,
+    "message":      messages._delete_primary,
+}
+```
+
+Each entity's public `delete()` is the same 4-line funnel:
 
 ```python
 def delete(db: Connection, id: int, hard: bool = False) -> None:
@@ -281,23 +337,129 @@ def delete(db: Connection, id: int, hard: bool = False) -> None:
         raise NotFound(f"user id={id} not found")
 ```
 
-Three things this gets right. **`cascade_delete` returns a small
-report** (`primary`, `rels`, `messages` — extend as needed) so
-callers can verify what actually happened, and tests can assert on
-it. **Hard/soft is uniform** — the `hard` flag propagates to
-every dependent; mixed modes are confusing and easy to get wrong.
-**Cascade is idempotent** — a second call on an already-deleted
-entity returns `primary=0` rather than raising; the public
-`delete()` wrapper translates that to `NotFound`. Two contracts,
-one machine: the wrapper preserves the friendly raise-on-missing
-behavior, the helper stays composable for tests and admin tools
-that want the report.
+Adding a new entity = three small additions, none scattered:
+write its `_delete_primary`, register it in `_PRIMARY_DELETE`, add
+its cascade rule to `cascade_delete`. Adding a new cascade rule
+between existing entities = one edit in `cascade_delete`. The
+private/public split keeps each entity's module short while
+giving the orchestrator the hook it needs.
 
-Each entity's `_delete_primary(db, id, hard) -> bool` does the
-single-row write and returns whether it affected a row. Cascade
-calls it last (after sweeping rels and recursing into nested
-entities). The split means cascade can keep its own contract
-clean while the wrapper enforces the route-friendly one.
+### 4.3 Two contracts, one machine: report vs. raise
+
+`cascade_delete` returns a `CascadeReport` (small dataclass —
+`primary`, `rels`, `messages`, plus whatever your cascade rules
+add); the public `delete()` raises `NotFound` on missing rows.
+Two different contracts because two different consumers want
+different things:
+
+- **Routes want raises.** `users.delete(db, 999)` for a missing
+user should `raise NotFound`, which the FastAPI exception
+handler turns into a 404. If routes had to inspect a return
+value every time, error handling would multiply across the
+codebase.
+- **Tests and admin tools want a report.** "Did the cascade
+actually sweep the 5 rels I expected? Did exactly 2 messages
+get deleted alongside the conversation?" Those are assertions.
+Raising on missing rows would force every test to wrap in
+`try/except`; you'd lose the ability to assert on the *shape*
+of the cascade.
+
+The split is what lets both consumers stay clean. The wrapper is
+4 lines because the only thing it adds is the raise translation;
+everything else lives in the orchestrator.
+
+This also gives you idempotency for free: a second call on an
+already-deleted entity returns `primary=0` rather than raising.
+The public wrapper translates `primary=0` to `NotFound` — which
+makes "row doesn't exist" and "row was already deleted" look the
+same to the route, which is what you want.
+
+### 4.4 What a cascade actually does (concrete trace)
+
+Walk through deleting a topic in wazzup:
+
+```
+HTTP DELETE /topics/engineering
+  ↓
+http/topics.py: topics_api.delete(db, eng.id)
+  ↓
+api/topics.py — the 4-line wrapper
+  ↓
+api/deletion.py: cascade_delete(db, table="topic", id=eng.id)
+  │
+  ├─ recurse: for each conversation linked via in_topic rel
+  │     ↓
+  │     cascade_delete(db, table="conversation", id=conv.id)
+  │       │
+  │       ├─ recurse: for each message in this conversation
+  │       │     ↓
+  │       │     cascade_delete(db, table="message", id=msg.id)
+  │       │       ├─ sweep message's rels (belongs_to + sent_by)
+  │       │       └─ _PRIMARY_DELETE["message"](db, id)
+  │       │       ← CascadeReport(primary=1, rels=2)
+  │       │
+  │       ├─ sweep conversation's rels (in_topic, participates_in)
+  │       └─ _PRIMARY_DELETE["conversation"](db, id)
+  │       ← CascadeReport(primary=1, rels=…, messages=N)
+  │
+  ├─ sweep topic's rels (member_of, …)
+  └─ _PRIMARY_DELETE["topic"](db, id)
+  ← CascadeReport(primary=1, conversations=1, messages=N, rels=…)
+  ↓
+back in topics.delete: report.primary > 0 → no exception
+  ↓
+HTTP 204 No Content
+```
+
+The same code path handles the missing-row case: every step is a
+no-op (no rels to sweep, no children to recurse into), the final
+`_PRIMARY_DELETE["topic"]` returns `False`, `report.primary = 0`,
+and the wrapper raises `NotFound`. FastAPI's exception handler
+turns that into 404. You wrote the 4-line wrapper *once*; every
+delete route gets that error translation for free.
+
+### 4.5 The late-import dance
+
+You'll notice the `cascade_delete` import is *inside* the function
+body, not at the top of the module. That's not a stylistic choice
+— it's breaking a circular import.
+
+`api/deletion.py` imports each entity's `_delete_primary` (to
+populate `_PRIMARY_DELETE`). Each entity's `delete()` needs to
+call `cascade_delete`. If both imports were at module top, Python
+would chase deletion → users → deletion → users in an infinite
+loop and crash with a partial-import error.
+
+The fix is to defer one side until call time. By the time
+`users.delete()` actually *runs*, both modules are fully loaded;
+the cycle only existed during the import phase. The cost is one
+extra dict lookup per call (Python caches imports), which is
+nothing. The win is no special module-loading dance and no
+restructuring of the code's natural layering.
+
+This is a recurring trick for any "orchestrator + per-entity
+hook" shape — you'll see it again in the agent-reply dispatcher
+in §14a.
+
+### 4.6 What this gets right (small wins, listed)
+
+- **The cascade rules live in one file** — `api/deletion.py`.
+When the rules change, one place changes. When you read the
+rules, one file tells you.
+- **Each entity's `delete()` is trivially short.** Four lines.
+No SQL, no sweep logic, no error handling beyond the
+`NotFound` translation. If your `delete()` grows, that's a
+signal the orchestrator should take another job, not the
+wrapper.
+- **Hard/soft propagates uniformly.** The `hard` flag passes
+through every recursive call. Mixed modes (soft primary +
+hard dependents) are intentionally not supported — they
+confuse rollback semantics and are easy to get wrong. If you
+ever need them, treat that as a separate code path with its
+own name, not an option flag.
+- **Tests get a report; routes get an exception.** Two clean
+contracts on the same machinery. Neither caller has to
+translate the other's shape.
 
 ---
 
@@ -620,10 +782,8 @@ def create_user(
 ) -> UserRead: ...
 ```
 
-A subtler case: when the *wire contract* and the *api contract*
-disagree, the route defines its own request shape. The canonical
-example is `POST /messages`. The api function `messages.create`
-takes a `MessageCreate` with `sender_id` (so api-level tests can
+A subtler case: when the *wire contract* and the *api contract* disagree, the route defines its own request shape. The canonical  
+example is `POST /messages`. The api function `messages.create` takes a `MessageCreate` with `sender_id` (so api-level tests can
 write any sender they want), but on the wire the client must
 *not* supply `sender_id` — the route fills it from
 `current_user`. If the route consumed `MessageCreate` directly,
@@ -678,21 +838,15 @@ def login(
 ) -> Token: ...
 ```
 
-Two files, one difference: the *presence* of
-`dependencies=[Depends(require_auth)]` on the `APIRouter` line.
+Two files, one difference: the *presence* of `dependencies=[Depends(require_auth)]` on the `APIRouter` line.
 Every endpoint registered on the protected router runs
-`require_auth` before its body — you literally cannot add an
-unauthenticated route to `messages.py`, because the gate isn't on
-the endpoint at all. The public router deliberately has no
-`dependencies=` argument; that absence *is* the opt-out, and it
-lives in exactly one small file (`http/auth.py`) that's easy to
-eyeball.
+`require_auth` before its body — you literally cannot add an unauthenticated route to `messages.py`, because the gate isn't on  
+the endpoint at all. The public router deliberately has no `dependencies=` argument; that absence *is* the opt-out, and it
+lives in exactly one small file (`http/auth.py`) that's easy to eyeball.
 
 Auditing auth coverage means scanning the half-dozen
-`APIRouter(...)` calls in `http/`, not every `@router.post(...)`
-line in the codebase. New endpoint file? Copy the protected
-router declaration and you're authenticated by default. The route
-author can't forget.
+`APIRouter(...)` calls in `http/`, not every `@router.post(...)` line in the codebase. New endpoint file? Copy the protected  
+router declaration and you're authenticated by default. The route author can't forget.
 
 **Two other `Depends` patterns worth knowing.**
 
@@ -801,18 +955,18 @@ once it's `async def`, every blocking call inside has to be either
 migrations:
 
 - **External network I/O (LLMs, third-party APIs).** This is where
-  async pays off most, and you can adopt it without touching the DB
-  layer. Make `llm.call_async` using `httpx.AsyncClient`. Convert
-  routes that fan out N parallel calls to `async def`; the DB calls
-  inside can stay sync via `run_in_threadpool` (DB hits are
-  microseconds, the wrap cost is invisible).
+async pays off most, and you can adopt it without touching the DB
+layer. Make `llm.call_async` using `httpx.AsyncClient`. Convert
+routes that fan out N parallel calls to `async def`; the DB calls
+inside can stay sync via `run_in_threadpool` (DB hits are
+microseconds, the wrap cost is invisible).
 - **The database — only when you migrate off SQLite.** Async
-  wrappers over `sqlite3` (like `aiosqlite`) buy nothing; they run
-  the same blocking calls in their own internal threadpool, which
-  is what FastAPI does for you already. The migration that *matters*
-  is to a real async driver (`asyncpg` for Postgres). At that point
-  `get_db` becomes `async def`, the `api/` layer becomes async, and
-  routes follow.
+wrappers over `sqlite3` (like `aiosqlite`) buy nothing; they run
+the same blocking calls in their own internal threadpool, which
+is what FastAPI does for you already. The migration that *matters*
+is to a real async driver (`asyncpg` for Postgres). At that point
+`get_db` becomes `async def`, the `api/` layer becomes async, and
+routes follow.
 
 Mixed-mode apps are fine indefinitely. FastAPI runs `def` and
 `async def` handlers side by side; the router doesn't care. Convert
@@ -889,23 +1043,20 @@ as the only thing that touches SQL.
 instantiate `FastAPI()`, three URLs land automatically:
 
 - `/docs` — Swagger UI: interactive, "Try it out" button per route,
-  fill-in forms for params and bodies, live responses inline.
+fill-in forms for params and bodies, live responses inline.
 - `/redoc` — ReDoc: read-only, easier to read, good for API consumers
-  who want to skim rather than poke.
+who want to skim rather than poke.
 - `/openapi.json` — the raw OpenAPI 3.x spec both UIs consume.
 
 You write zero code for these. Two design decisions in FastAPI
 conspire to make the spec a byproduct of code you'd write anyway:
 
 1. *Pydantic models double as JSON Schema.* Every `UserCreate`,
-   `MessageRead`, etc. exports itself to JSON Schema — Pydantic does
+  `MessageRead`, etc. exports itself to JSON Schema — Pydantic does
    this; FastAPI just reads it. That's all your request and response
    shapes for free.
 2. *Route signatures encode the contract.* `def get_user_by_slug(slug:
-   str, db: Connection = Depends(get_db)) -> UserRead` tells FastAPI
-   everything: path param `slug` (typed, required), an injected dep
-   (excluded from the wire spec — it's an internal injection), response
-   shape `UserRead`. FastAPI walks the routes at startup and writes
+  str, db: Connection = Depends(get_db)) -> UserRead`tells FastAPI  everything: path param`slug`(typed, required), an injected dep  (excluded from the wire spec — it's an internal injection), response  shape`UserRead`. FastAPI walks the routes at startup and writes
    the OpenAPI spec from those signatures.
 
 It's not magic — it's that FastAPI was *designed around* OpenAPI from
@@ -962,8 +1113,7 @@ auth-aware logic into the data path.
 
 But the *rule* that authorizes ("only DM participants may read this
 DM") is a structural fact about the model, not about HTTP. Encode it
-once, in `api.conversations.is_accessible_by(db, *, conversation_id,
-user_id)`, and call it from every route that reads or writes the
+once, in `api.conversations.is_accessible_by(db, *, conversation_id, user_id)`, and call it from every route that reads or writes the
 conversation. Pseudocode for `GET /conversations/{slug}/messages`:
 
 ```python
@@ -1034,14 +1184,14 @@ single-threaded, you didn't spawn anything, why is SQLite complaining
 about a worker thread? Two design decisions are colliding:
 
 1. **FastAPI offloads sync handlers to a worker thread.** A `def`
-   handler can't run on the event loop — it would block every other
+  handler can't run on the event loop — it would block every other
    in-flight request until it returned. So FastAPI hands it to
    `anyio`'s threadpool: the event loop awaits the offload, a worker
    thread runs the handler, the result comes back. This is true under
    `uvicorn` *and* under `TestClient` (which is `httpx` driving the
    ASGI app in-process — same threading model, no socket).
-2. **`sqlite3.Connection` is thread-bound by default.** A connection
-   "belongs to" the thread that created it; touch it from another
+2. `**sqlite3.Connection` is thread-bound by default.** A connection
+  "belongs to" the thread that created it; touch it from another
    thread and the binding raises `ProgrammingError`. The engine
    itself is fine with multi-threading (`SQLITE_THREADSAFE=1`); the
    *Python binding* is conservative for historical reasons that
@@ -1169,7 +1319,7 @@ check the install. Each owns its DB lifecycle (open via
 `wazzup.db.connect()`, run `init_schema()` first), and each prints
 what it did so the smoke output is human-readable:
 
-- **`seed.py`** — populates a fresh DB with the canonical demo
+- `**seed.py`** — populates a fresh DB with the canonical demo
 state described in `docs/DEMO.md`: humans + agents with personas,
 public topics (each one auto-creating its default conversation
 in the same transaction), one seeded DM (`alice` ↔ `curie`) so
@@ -1179,11 +1329,11 @@ exercising each agent's voice. Idempotent — every step is
 during debug); the seed also self-heals if a topic exists
 without its default conversation, calling `deviation()` so the
 drift is loud.
-- **`add_user.py`** — single-purpose CLI: take a name (and optional
+- `**add_user.py*`* — single-purpose CLI: take a name (and optional
 `--type`, `--persona`, `--slug`), call `users.create`, print the
 resulting `UserRead` as JSON. The smallest possible "is the install
 working?" smoke.
-- **`remove_user.py`** — cascade-demo CLI: take a slug, call
+- `**remove_user.py`** — cascade-demo CLI: take a slug, call
 `cascade_delete(table="user", id=...)` (not the public
 `users.delete` — we want the report), print the `CascadeReport`
 showing how many rels were swept up. `--hard` for physical removal.
@@ -1394,56 +1544,24 @@ The typo lives.
 *Four shapes where a broad catch is justified:*
 
 1. **The outermost boundary of a process that must not die.** A
-   long-running worker (queue consumer, daemon, Celery task) that
+  long-running worker (queue consumer, daemon, Celery task) that
    processes one message at a time. If one message blows up, you
    log loudly and move to the next instead of killing the worker:
-
-   ```python
-   while True:
-       msg = queue.get()
-       try:
-           handle(msg)
-       except Exception:
-           log.exception("handler failed", extra={"msg_id": msg.id})
-           queue.dead_letter(msg)
-   ```
-
    The catch is at the *outermost* layer — nothing below it
    should run if `handle` failed. FastAPI does the equivalent of
    this for you per-request, which is why you don't need to write
    it inside route handlers.
-
 2. **Log-and-re-raise (annotate, don't handle).** You're not
-   actually handling the exception — you're attaching context,
+  actually handling the exception — you're attaching context,
    then re-raising so it propagates as normal:
-
-   ```python
-   try:
-       cascade_delete(db, "user", user_id)
-   except Exception:
-       log.exception("cascade failed",
-                     extra={"user_id": user_id, "table": "user"})
-       raise
-   ```
-
    The `raise` is the load-bearing line. The catch isn't
    *handling*; it's *annotating*. Callers still see the failure.
-
 3. **Plugin or user-supplied code boundaries.** Your code calls
-   into something you don't control — a plugin, a callback, an
+  into something you don't control — a plugin, a callback, an
    LLM-generated tool dispatch. You can't enumerate what it
    raises; the boundary is real:
-
-   ```python
-   try:
-       result = plugin.run(data)
-   except Exception as e:
-       log.exception("plugin failed", extra={"plugin": plugin.name})
-       return PluginError(name=plugin.name, error=str(e))
-   ```
-
 4. **Reporters and last-ditch cleanup.** Code that emits errors
-   to another system (Sentry shim, metrics flusher, audit log)
+  to another system (Sentry shim, metrics flusher, audit log)
    wraps its own work broadly because *the reporter must not be
    the thing that crashes*. Same for cleanup paths in `finally`
    blocks where a cleanup failure shouldn't mask the original
@@ -1453,15 +1571,15 @@ The typo lives.
 same shape:
 
 - **The catch is at a meaningful boundary** — a process edge, a
-  plugin boundary, a reporter — not in the middle of business
-  logic.
+plugin boundary, a reporter — not in the middle of business
+logic.
 - **The "recovery" is explicit and loud** — `log.exception(...)`
-  (which includes the stack trace) at ERROR level, plus a
-  deliberate next step (dead-letter, re-raise, return a sentinel
-  the caller actually checks).
+(which includes the stack trace) at ERROR level, plus a
+deliberate next step (dead-letter, re-raise, return a sentinel
+the caller actually checks).
 - **The catch doesn't make a bug look like a normal outcome.** A
-  `KeyError` from a typo never gets converted into a
-  `return None` that looks like "not found."
+`KeyError` from a typo never gets converted into a
+`return None` that looks like "not found."
 
 The anti-pattern fails all three. It's in the middle of business
 logic, the recovery is `return None` or `log.warning(...)` (too
@@ -1662,8 +1780,7 @@ two.
 Step 1: checkout. Step 2: install `uv`. Step 3: pin Python.
 Step 4: `uv sync --extra dev` to install everything from
 `pyproject.toml`. Step 5: `uv run ruff check .` (fail-fast — no
-point running tests against unlinted code). Step 6: `uv run
-pytest -v` with `STRICT_MODE` from the matrix. ~60–90 seconds
+point running tests against unlinted code). Step 6: `uv run pytest -v` with `STRICT_MODE` from the matrix. ~60–90 seconds
 end-to-end on standard runners.
 
 ```yaml
@@ -1706,9 +1823,9 @@ jobs:
           STRICT_MODE: ${{ matrix.strict }}
 ```
 
-Two design notes worth naming. **`fail-fast: false`** keeps the
+Two design notes worth naming. `**fail-fast: false**` keeps the
 strict leg running even when the lax leg fails — you want to see
-both signals, not just the first failure. **`working-directory`**
+both signals, not just the first failure. `**working-directory**`
 at the job-defaults level tells every `run:` step to `cd wazzup`
 first, which matters because `pyproject.toml` lives in the
 subdirectory, not the repo root.
@@ -1741,19 +1858,19 @@ per-commit checkmark.
 **Footguns worth knowing.**
 
 - *Action versions drift.* `actions/checkout@v4` is current;
-  older majors still work but won't get security fixes. Pin
-  majors, bump when they're deprecated.
+older majors still work but won't get security fixes. Pin
+majors, bump when they're deprecated.
 - *Caching is a separate concern.* Without it, every run
-  downloads dependencies fresh (~10 seconds for our deps).
-  `actions/cache` or `uv`'s cache directory speeds this up. Skip
-  until it matters; for a 60-second job, premature.
+downloads dependencies fresh (~10 seconds for our deps).
+`actions/cache` or `uv`'s cache directory speeds this up. Skip
+until it matters; for a 60-second job, premature.
 - *Secrets.* Anything sensitive (API keys, tokens) goes in
-  *Settings → Secrets*, never the YAML. wazzup's CI doesn't need
-  any — the LLM tests don't make live calls.
+*Settings → Secrets*, never the YAML. wazzup's CI doesn't need
+any — the LLM tests don't make live calls.
 - *Workflow file path is exact.* It has to be
-  `.github/workflows/<name>.yml`. A typo in the directory
-  (`workflow/` without `s`) silently does nothing — GitHub
-  doesn't warn you.
+`.github/workflows/<name>.yml`. A typo in the directory
+(`workflow/` without `s`) silently does nothing — GitHub
+doesn't warn you.
 
 The principle behind the whole stack: **a mistake that fails
 loudly in dev or CI is free; a mistake that fails silently in
@@ -1929,63 +2046,62 @@ conversation opens. One layout works for both.
 A target shape worth aiming at, and stopping at:
 
 - **Sidebar with two sections, selected state visible.** People
-  list (excluding the current user) above; Topics list below. The
-  clicked entry gets a highlight class — without it, navigation
-  feels like nothing happened. Already cheap with vanilla JS:
-  `highlightSelected(ul, target)` flips a `.selected` class.
+list (excluding the current user) above; Topics list below. The
+clicked entry gets a highlight class — without it, navigation
+feels like nothing happened. Already cheap with vanilla JS:
+`highlightSelected(ul, target)` flips a `.selected` class.
 - **A conversation header that names the context.** "Topic:
-  Engineering" or "DM with Marie Curie". You read the header and
-  you know what you're looking at; no clicking back to verify.
+Engineering" or "DM with Marie Curie". You read the header and
+you know what you're looking at; no clicking back to verify.
 - **Sender names in the message stream.** The biggest blocker to
-  the UI feeling real. `MessageRead` is stored-columns-only by
-  design (rels-only, section 3) — it has `text` and timestamps
-  but no `sender_id`. So a naïve message render is "floating
-  text, no attribution." The fix is the symmetric pattern to
-  `MessageCreateRequest`: define a route-local response shape
-  `MessageReadInConversation` that JOINs through the `sent_by`
-  rel and surfaces `sender_slug` + `sender_name`. The api
-  function `messages.query` stays stored-columns-only; the route
-  layer enriches. Same teaching point as `MessageCreateRequest`,
-  symmetric direction — *when the wire shape diverges from the
-  api shape, the route is where the divergence lives.*
+the UI feeling real. `MessageRead` is stored-columns-only by
+design (rels-only, section 3) — it has `text` and timestamps
+but no `sender_id`. So a naïve message render is "floating
+text, no attribution." The fix is the symmetric pattern to
+`MessageCreateRequest`: define a route-local response shape
+`MessageReadInConversation` that JOINs through the `sent_by`
+rel and surfaces `sender_slug` + `sender_name`. The api
+function `messages.query` stays stored-columns-only; the route
+layer enriches. Same teaching point as `MessageCreateRequest`,
+symmetric direction — *when the wire shape diverges from the
+api shape, the route is where the divergence lives.*
 - **Self vs. others, visually distinguished.** Once you have
-  sender names, right-align (or color-distinguish) messages
-  where `sender_slug == getCurrentUserSlug()`. Subtle but
-  immediately readable.
+sender names, right-align (or color-distinguish) messages
+where `sender_slug == getCurrentUserSlug()`. Subtle but
+immediately readable.
 - **Color per sender.** Hash the slug to a small palette (5–6
-  muted colors). A touch of visual distinction without committing
-  to avatars; renders fine on slow connections; no images to
-  fail to load.
+muted colors). A touch of visual distinction without committing
+to avatars; renders fine on slow connections; no images to
+fail to load.
 - **Composer ergonomics.** Enter sends, Shift+Enter newline, the
-  send button disables when the textarea is empty, the textarea
-  clears on send, the message stream auto-scrolls to the bottom
-  after both load and post. Each of these is two or three lines;
-  together they're the difference between "demo" and "usable".
+send button disables when the textarea is empty, the textarea
+clears on send, the message stream auto-scrolls to the bottom
+after both load and post. Each of these is two or three lines;
+together they're the difference between "demo" and "usable".
 - **Empty / loading / error states everywhere.** People list
-  empty: *"No other users yet — `python -m examples.add_user
-  "Bob"`"*. Chat pane with nothing selected: *"Pick a person or
-  topic to start chatting."* Loading: a brief inline message,
-  not a spinner library. Errors: the existing `showError` toast
-  is enough. Without these, students who run into a real edge
-  case (only one user seeded, server momentarily down) think
-  the UI is broken when it's actually correct.
+empty: *"No other users yet — `python -m examples.add_user "Bob"`"*. Chat pane with nothing selected: *"Pick a person or
+topic to start chatting."* Loading: a brief inline message,
+not a spinner library. Errors: the existing `showError` toast
+is enough. Without these, students who run into a real edge
+case (only one user seeded, server momentarily down) think
+the UI is broken when it's actually correct.
 
 **Where to stop adding features.** The discipline matters as
 much as the additions:
 
 - *No avatars.* Initials-in-circles is more code than it pays
-  for at this scale. Color-by-slug is enough.
+for at this scale. Color-by-slug is enough.
 - *No real-time updates.* No WebSockets, no Server-Sent Events.
-  The UI re-fetches on click and after post. Push updates are
-  their own topic in lesson 4.
+The UI re-fetches on click and after post. Push updates are
+their own topic in lesson 4.
 - *No markdown rendering.* Plain text is fine. Adding markdown
-  means a parser library, which means the no-build vibe is gone.
+means a parser library, which means the no-build vibe is gone.
 - *No date separators ("Today", "Yesterday").* Cute, but a
-  rabbit hole — locale-aware formatting, edge cases at midnight.
-  Skip.
+rabbit hole — locale-aware formatting, edge cases at midnight.
+Skip.
 - *No mobile-responsive grid.* The UI's a teaching app served at
-  `localhost`. If a student wants it on their phone, they can
-  add media queries.
+`localhost`. If a student wants it on their phone, they can
+add media queries.
 
 The principle: each addition should buy *visible* polish. If you
 can't show what changed in a screenshot, you're optimizing the
@@ -2210,14 +2326,14 @@ check in the dispatcher, not buried inside the loop.
 **2. Who replies?** Two cases:
 
 - **DM**: a conversation with no `in_topic` rel. The other
-  participant — if `type='agent'` — replies. If both
-  participants are human, no agent reply.
+participant — if `type='agent'` — replies. If both
+participants are human, no agent reply.
 - **Topic-default**: a conversation linked to a topic via
-  `in_topic`. *Every* `user.type='agent'` user replies. With
-  three seeded agents (Trump, Curie, Yoda) that's three replies
-  per human post. Topics are public in v0.1, so there's no
-  scoping by membership; future private/group topics or
-  @-mention parsing both belong inside this same selector.
+`in_topic`. *Every* `user.type='agent'` user replies. With
+three seeded agents (Trump, Curie, Yoda) that's three replies
+per human post. Topics are public in v0.1, so there's no
+scoping by membership; future private/group topics or
+@-mention parsing both belong inside this same selector.
 
 The selector is one helper (`_responders_for`) that calls the
 existing structural distinction (`conversations.get_topic_id`)
@@ -2225,32 +2341,52 @@ rather than re-implementing the in_topic/DM detection. Single
 source of truth: when private topics ship, the rule changes in
 one place.
 
-**3. Sequential or parallel?** Sequential, in stable user-id
-order. Two reasons. First, parallel needs `asyncio` and we're
-keeping the lesson sync end-to-end. Second, sequential gives us
-**chain semantics**: each agent's history fetch happens *after*
-the prior agent's commit, so Curie sees Trump's just-typed
-reply, Yoda sees both. That's the chat-room dynamic — agents
+**3. Sequential, random order, no repeat-leader.** Sequential
+because parallel needs `asyncio` and we're keeping the lesson
+sync end-to-end. Sequential also gives us **chain semantics**:
+each agent's history fetch runs *after* the prior agent's
+commit, so whoever fires second sees whoever fired first, and
+the third sees both. That's the chat-room dynamic — agents
 build on each other rather than three independent reactions to
-the same human prompt. If you want the snapshot-once shape
-(three independent reactions), build the history once before
-the loop and reuse it; this is a deliberate non-default.
+the same human prompt. If you want the snapshot-once shape,
+build the history once before the loop and reuse it; this is a
+deliberate non-default.
+
+The order *within* a round is **randomized**, not sorted by
+user.id. A pure stable sort feels mechanical fast — the same
+voice always speaks first, demoing personalities in the same
+sequence on every round. `random.shuffle` per dispatch gets you
+out of that. One small twist: if the shuffle puts the *most
+recent agent speaker* in this conversation at index 0, we swap
+[0] with [1] before iterating. Without this, two adjacent
+rounds occasionally show the same agent leading twice in a row,
+which is the one case where pure shuffle looks bad. The check
+is one extra SQL lookup and four lines.
 
 **4. What's in the prompt?** OpenAI message list. First entry:
 `{"role": "system", "content": agent.persona}` — the persona
-markdown is the system prompt. Then `recent_history(n=20)`
+markdown is the system prompt. Then `recent_history(n=N)`
 walks the conversation chronologically; each message becomes:
 
 - `role="assistant"` if the sender == the responding agent
-  (the model sees its own past contributions as its own).
+(the model sees its own past contributions as its own).
 - `role="user"` with `"{sender.name}: {text}"` content
-  otherwise. The name prefix is what carries "who said what" in
-  a multi-party room, since OpenAI's `user` role is one
-  abstract speaker.
+otherwise. The name prefix is what carries "who said what" in
+a multi-party room, since OpenAI's `user` role is one
+abstract speaker.
 
-Note: `messages.query(limit=20)` orders ASC + LIMIT, which
-returns the *first* 20 messages — not the recent 20. Add a
-dedicated `recent_history(n=20)` helper that does
+The window size `N` is a single tunable in `api/agents.py`
+(`_HISTORY_WINDOW`). Pick it large enough that a typical
+conversation fits — for our seeded chat that's 30 messages, so
+we picked 100 as a comfortable ceiling. Too small and personas
+lose context across turns ("Min Ho should remember Plato's
+question from earlier"); too large and you waste tokens on
+ancient history that doesn't change the reply. Cost scales
+linearly with `N`.
+
+Note: `messages.query(limit=N)` orders ASC + LIMIT, which
+returns the *first* N messages — not the recent N. Add a
+dedicated `recent_history(n=N)` helper that does
 `ORDER BY id DESC LIMIT n` then reverses; the trap is easy to
 walk into and very quiet when you do.
 
@@ -2324,7 +2460,7 @@ a distinct audience and a distinct job:
 - `**README.md`** (root) — for humans landing on the repo:
 what wazzup is, how to clone-install-run-test, where the
 lesson docs live. ~50 lines, scannable. *Quickstart.*
-- `**docs/MODEL.md*`* — the conceptual model frozen as a
+- `**docs/MODEL.md`** — the conceptual model frozen as a
 *spec* rather than a narrative. Section 1 of this lesson is
 the narrative; `docs/MODEL.md` is the column-by-column
 reference, the invariants list, the cascade rules, the
@@ -2333,14 +2469,14 @@ auto-creation rule and the DM-detection rule). When you
 change the schema or the model, you update this doc *first*,
 then the SQL or the Python — it's the place engineers look
 when reasoning about the model. *Schema spec.*
-- `**docs/DEMO.md*`* — the demo data + walkthrough spec. What
+- `**docs/DEMO.md`** — the demo data + walkthrough spec. What
 users, topics (each with their default conversation), and
 DMs the seed produces; what each agent's voice sounds like;
 a step-by-step script for showing the app to someone. Pairs
 with `examples/seed.py` (section 10): `seed.py` is the
 *executable*, `DEMO.md` is the *readable*. Update `DEMO.md`
 first when you change what's seeded. *Demo spec.*
-- `**CLAUDE.md*`* (root) — project memory for AI coding tools
+- `**CLAUDE.md`** (root) — project memory for AI coding tools
 (Claude Code, Cursor, others read it). Lists the
 architectural rules, the conventions, the run commands.
 ~30 lines. Lets every AI conversation start from the same
@@ -2414,87 +2550,174 @@ in sync is cheap.
 
 This recipe builds a small, working app. Several capabilities are
 deliberately out of scope here, but become load-bearing the moment
-lessons 2, 3, or the framework survey kick in. A punch list to keep
-in your peripheral vision:
+lessons 2, 3, or the framework survey kick in. The punch list splits
+cleanly into three groups, in roughly increasing AI-specificity:
+
+1. things any non-trivial web service needs, AI or not;
+2. things needed to make this app *legible to an AI agent* (the
+   **provider** role — our world exposed so an external agent like
+   Claude Code can use it);
+3. things needed when this app *itself calls AI* (the **consumer**
+   role — the loop and machinery around model calls).
+
+The items below just *name* the gaps. Each one is solved (or
+surveyed) in a later lesson; here we're only drawing the map.
+
+### 1. Generic hardening — required for any service, AI or not
+
+These items have nothing specific to do with AI. They'd be on the
+list if the only consumers were humans and other services.
 
 - **Real token issuance and password handling.** Section 8
-establishes `require_auth` as a *pattern*; the JWT minting,
-password hashing, and session/refresh flow it depends on aren't
-implemented. Lesson 2 assumes the agent client already has a
-token; lesson 3 assumes the MCP client does. Before either can
-authenticate, you need a `/login` endpoint and the auth-token
-plumbing.
+  establishes `require_auth` as a *pattern*; the JWT minting,
+  password hashing, and session/refresh flow it depends on aren't
+  implemented. Lesson 2 assumes the agent client already has a
+  token; lesson 3 assumes the MCP client does. Before either can
+  authenticate, you need a `/login` endpoint and the auth-token
+  plumbing.
 - **Migrations / schema evolution.** `db.py` creates the schema
-once, on startup. Any post-launch app needs Alembic (or
-equivalent) for adding columns, evolving the `details` JSON
-shape, running backfills. The default entity shape from
-section 2 makes evolution easy; you still need a tool to drive
-it. *Teaching-grade workaround in the meantime:* a small
-`verify_schema()` step inside `init_schema()` that introspects
-existing tables and raises a clear `SchemaMismatch` if columns
-drifted from the expected set. It doesn't *migrate* — it just
-catches the *"old DB on disk, new code"* failure loudly at
-startup instead of letting `CREATE TABLE IF NOT EXISTS` silently
-keep the wrong shape. Same *"no silent failures"* principle
-from section 11, applied at the schema layer.
+  once, on startup. Any post-launch app needs Alembic (or
+  equivalent) for adding columns, evolving the `details` JSON
+  shape, running backfills. The default entity shape from
+  section 2 makes evolution easy; you still need a tool to drive
+  it. *Teaching-grade workaround in the meantime:* a small
+  `verify_schema()` step inside `init_schema()` that introspects
+  existing tables and raises a clear `SchemaMismatch` if columns
+  drifted from the expected set. It doesn't *migrate* — it just
+  catches the *"old DB on disk, new code"* failure loudly at
+  startup instead of letting `CREATE TABLE IF NOT EXISTS` silently
+  keep the wrong shape. Same *"no silent failures"* principle
+  from section 11, applied at the schema layer.
 - **Health-check and readiness endpoints.** Required by every
-load balancer, container orchestrator, and monitoring tool. A
-two-line `GET /healthz` is enough — but you do need it before
-the deployment story is real.
+  load balancer, container orchestrator, and monitoring tool. A
+  two-line `GET /healthz` is enough — but you do need it before
+  the deployment story is real.
 - **Rate limiting at the HTTP edge.** Mentioned in passing but
-not implemented. Lesson 4's governance section treats it as a
-deployment requirement, not an option.
-- **Production observability.** Section 11 has stdout logging
-via `deviation()`. Lesson 4 names the trace platforms
-(Langfuse, LangSmith, etc.) you'd plug in. Until you do, you
-are operating blind in production.
+  not implemented. Lesson 4's governance section treats it as a
+  deployment requirement, not an option.
 - **Async + connection pooling for non-SQLite databases.**
-Section 8 describes the pattern (`get_db` checks out from a
-pool); the recipe stays sync because SQLite is in-process.
-Swap in Postgres and the pool, the async story, and the
-transaction semantics all matter.
+  Section 8 describes the pattern (`get_db` checks out from a
+  pool); the recipe stays sync because SQLite is in-process.
+  Swap in Postgres and the pool, the async story, and the
+  transaction semantics all matter.
 - **Background jobs / queues.** Anything heavier than a
-synchronous request needs a worker (Celery, RQ, Arq). Out of
-scope here; the moment the agent triggers a long-running
-operation in lessons 2–3, it's on the table.
+  synchronous request needs a worker (Celery, RQ, Arq). Out of
+  scope here; the moment the agent triggers a long-running
+  operation in lessons 2–3, it's on the table.
+- **Production observability and ops basics.** Section 11 has
+  stdout logging via `deviation()` — enough to develop, not to
+  run. You also need structured logs shipped somewhere
+  queryable, metrics, alerting on the deviation signal, secrets
+  management, CORS, and a CI/CD pipeline. Until those exist,
+  you are operating blind in production.
 
-On top of the operational gaps above, the recipe doesn't yet
-know about *agents*. Lessons 2–4 fill in two distinct roles
-this app needs to play in an AI ecosystem — **provider** (your
-API exposed to AI agents) and **consumer** (your code calling
-other agents' tools):
+### 2. Making this app legible to AI agents (the *provider* role)
 
-- **Exposing the API to AI agents.** Lesson 1 gives you HTTP
-endpoints humans and services can call. Agents need a
-*curated* tool surface — a subset of operations, described in
-plain English, with input schemas an LLM can fill. Lesson 2
-builds this by hand (markdown catalog + custom client);
-lesson 3 formalizes it via MCP.
-- **The tool-calling loop.** Even with a curated surface in
-place, you need the loop: ask the LLM, parse its tool calls,
-dispatch them, feed results back, repeat until plain text.
-Lesson 2 writes ~30 lines of it by hand; lesson 3 delegates
-the loop to MCP-aware clients (Claude Desktop, LLM SDKs).
-- **Agent observability and control tower.** What did the
-agent actually do, where did it loop, how much did it cost,
-and how do you turn it off in seconds? Section 11's
-`deviation()` plus stdout logs aren't enough at agent scale —
-you need trace platforms (Langfuse, LangSmith, Phoenix) and a
-gateway-level kill switch. Lesson 4 surveys the landscape.
-- **Reliable tool calling as a *consumer* of AI.** Calling
-another agent's tools from inside your own workflow needs
-retries with backoff, provider fallback, schema validation,
-cost tracking, and a structured way to surface errors back to
-the caller. Lesson 4's framework survey covers the
-abstractions; lesson 3's MCP client is the wire-protocol layer
-underneath.
+The recipe ships HTTP endpoints that humans and services can call.
+An AI agent — Claude Code, an MCP client, or a custom tool-using
+agent — needs more than that. It needs a *curated, described,
+discoverable* surface. We haven't built any of it yet; we're only
+naming the gaps here.
 
-None of these change the architecture lesson 1 teaches. The
-operational items are the difference between *"this works on my
-machine"* and *"this is hardened for users"*. The agent items
-are the difference between *"a service for humans"* and *"a
-service that participates in an AI ecosystem."* Both layers sit
-on top of the recipe; neither requires changing it.
+- **A curated tool surface for agents.** Agents don't get the
+  full HTTP API. They need a subset of operations, described in
+  plain English, with input schemas an LLM can fill. Lesson 2
+  builds this by hand (markdown catalog + custom client); lesson
+  3 formalizes it via MCP.
+- **Agent-readable descriptions of every operation.** Names,
+  argument docs, error semantics, idempotency hints — all the
+  things a function signature *implies* to a developer but
+  doesn't *state* to a model. The internal Python API from
+  section 6 is the source; the agent-facing surface needs an
+  explicit description layer on top of it.
+- **Read access to conversational / historical state.** Once
+  this app stores conversations, runs, or any user-facing
+  history, an external agent (e.g. Claude Code) will need to
+  read that state to reason about what happened. We haven't
+  built the retrieval surface — neither the API for it nor the
+  agent-side protocol — so right now there's no way for an
+  outside agent to pull a past thread into its context.
+- **Auth and scoping for agent callers.** Agents are not humans;
+  the credential type, session lifetime, and the set of
+  operations they're allowed to invoke should differ. The
+  `require_auth` *mechanism* is the same as for humans; the
+  *policies* around it are not built.
+- **Permissions and the autonomy leash on agent actions.** Even
+  within the operations an agent is allowed to call, *which* ones
+  it can execute autonomously and which require human approval
+  is a separate policy on top of scoping. Read calls are usually
+  fine to auto-run; destructive or irreversible operations
+  (cascade deletes, sending messages on a user's behalf, anything
+  that costs money or moves data outside the system) need a
+  confirmation surface — a *"pending approval"* state in our own
+  app, a contract with the agent client that it must surface a
+  prompt before invoking the call, or both. We haven't built any
+  of this; today the API treats every authenticated caller as
+  fully authorized inside their scope.
+
+### 3. Acting as an AI consumer — the calling loop and what surrounds it
+
+When *our* code calls an LLM and dispatches its tool calls, an
+entirely different set of machinery shows up. None of it exists in
+this recipe.
+
+- **The tool-calling loop itself.** Ask the LLM, parse its tool
+  calls, dispatch them, feed results back, repeat until plain
+  text. Lesson 2 writes ~30 lines of it by hand; lesson 3
+  delegates the loop to MCP-aware clients (Claude Desktop, LLM
+  SDKs).
+- **Async execution, retries, and provider fallback.** Model
+  calls are slow, occasionally flaky, and sometimes return
+  wrong-shape arguments. Real loops run async, retry with
+  backoff on transient errors, validate tool-call arguments
+  against schemas, and fall back to a second provider when the
+  first is down or rate-limited.
+- **Memory management, in three flavors.** All three are
+  separate problems and all three are unsolved here:
+    - *Within-run context* — truncation, summarization, sliding
+      windows, RAG injection, so a single run stays inside the
+      model's context budget.
+    - *Across-run / session memory* — persisting facts the agent
+      learned (user prefs, prior decisions) so the next run
+      starts smarter.
+    - *Working memory / scratchpads* — structured intermediate
+      state the agent reads and writes during a task (plans,
+      todos, partial results).
+- **Orchestration of multiple agents.** Anything beyond a single
+  loop — supervisor/worker, router, plan-then-execute, parallel
+  sub-agents, hand-offs — needs either a framework or a
+  hand-rolled controller. Lesson 4 surveys the abstractions.
+- **The autonomy leash on our own loop.** When the LLM proposes
+  a tool call, we don't have to dispatch it. Real loops classify
+  proposed calls into *auto-execute*, *confirm-with-user*, and
+  *refuse*, based on the operation's blast radius (read vs.
+  write, reversible vs. not, money or external side effects).
+  They also bound the loop itself — max iterations, max cost per
+  run, max wall-clock — and surface confirmation prompts back to
+  the user mid-loop without losing state. This is the mirror of
+  bucket 2's permission bullet: bucket 2 is the leash *we set as
+  provider*; this is the leash *we set as consumer of our own
+  AI*. Lesson 4's autonomy-slider material surveys where to
+  place it.
+- **Agent-grade observability and a control tower.** What did
+  the agent actually do, where did it loop, how much did it
+  cost, and how do you turn it off in seconds? The stdout
+  `deviation()` log from section 11 isn't enough at agent scale
+  — you need per-run traces (Langfuse, LangSmith, Phoenix),
+  structured spans across the loop, cost attribution per
+  run/user/tool, and a gateway-level kill switch. This is the
+  *AI-specific upgrade* of the production observability bullet
+  in bucket 1.
+
+None of these change the architecture lesson 1 teaches. Bucket 1 is
+the difference between *"this works on my machine"* and *"this is
+hardened for users"* — the same checklist any web service eventually
+faces. Bucket 2 is what turns *"a service for humans"* into *"a
+service an AI agent can use"*: a described, scoped surface with the
+right read paths into our state. Bucket 3 is what turns *"a service
+that happens to call an LLM"* into *"a system that orchestrates AI
+reliably"*. All three layers sit on top of the recipe; none of them
+require changing it.
 
 ---
 

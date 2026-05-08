@@ -207,7 +207,8 @@ AUTH_HEADER = {"X-User-Slug": "alice"}
 
 
 def test_get_messages_in_conversation(client, db):
-    """GET /conversations/{slug}/messages → live messages, ordered by id."""
+    """GET /conversations/{slug}/messages → live messages, ordered by id,
+    with sender_id / sender_slug / sender_name denormalized."""
     from wazzup.api import messages
     from wazzup.models import MessageCreate
     alice = users.create(db, UserCreate(name="Alice", type="human"))
@@ -228,6 +229,34 @@ def test_get_messages_in_conversation(client, db):
     body = resp.json()
     assert [m["id"] for m in body] == [m1.id, m2.id]
     assert [m["text"] for m in body] == ["hello", "world"]
+    # Sender denormalization: each row carries sender_*.
+    assert all(m["sender_id"] == alice.id for m in body)
+    assert all(m["sender_slug"] == alice.slug for m in body)
+    assert all(m["sender_name"] == alice.name for m in body)
+
+
+def test_get_messages_in_conversation_carries_distinct_senders(client, db):
+    """Multi-sender conversation → each row's sender fields match its writer."""
+    from wazzup.api import messages
+    from wazzup.models import MessageCreate
+    alice = users.create(db, UserCreate(name="Alice", slug="alice", type="human"))
+    bob = users.create(db, UserCreate(name="Bob", slug="bob", type="human"))
+    eng = topics.create(db, TopicCreate(name="Engineering"))
+    conv_id = topics.get_default_conversation_id(db, eng.id)
+    messages.create(db, MessageCreate(conversation_id=conv_id, sender_id=alice.id, text="from alice"))
+    messages.create(db, MessageCreate(conversation_id=conv_id, sender_id=bob.id, text="from bob"))
+
+    resp = client.get(
+        f"/conversations/{eng.default_conversation_slug}/messages",
+        headers={"X-User-Slug": "alice"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    by_text = {m["text"]: m for m in body}
+    assert by_text["from alice"]["sender_slug"] == "alice"
+    assert by_text["from bob"]["sender_slug"] == "bob"
+    assert by_text["from alice"]["sender_name"] == "Alice"
+    assert by_text["from bob"]["sender_name"] == "Bob"
 
 
 def test_get_messages_in_conversation_404_when_slug_missing(client, db):

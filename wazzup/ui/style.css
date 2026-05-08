@@ -77,12 +77,64 @@ section#conversation {
   padding: 1rem;
 }
 
+#conversation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+#conversation-header h2 {
+  margin: 0;
+}
+
+#clear-chat {
+  background: transparent;
+  color: #d70015;
+  border: 1px solid #d70015;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+#clear-chat:hover {
+  background: #d70015;
+  color: white;
+}
+
 #messages-list {
   flex: 1;
   overflow-y: auto;
   list-style: none;
   padding: 0;
   margin: 0 0 1rem 0;
+}
+
+#messages-list .message {
+  padding: 0.25rem 0;
+  line-height: 1.5;
+}
+
+#messages-list .message .sender {
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+#messages-list .message .text {
+  color: #1d1d1f;
+}
+
+#messages-list .message.mine .sender {
+  color: #0071e3;
+}
+
+#messages-list .message.optimistic {
+  opacity: 0.7;          /* slight ghost while waiting for server confirmation */
+}
+
+#messages-list .message.typing {
+  font-style: italic;
+  color: #6e6e73;
+  padding: 0.5rem 0;
 }
 
 #compose-form {

@@ -362,6 +362,48 @@ def is_accessible_by(
     return user_id in get_participant_ids(db, conversation_id)
 
 
+def clear_messages(
+    db: Connection,
+    *,
+    conversation_id: int,
+    hard: bool = False,
+) -> int:
+    """Delete every live message in a conversation. Returns count cleared.
+
+    Each message goes through ``messages.delete``, which routes through
+    ``cascade_delete`` — the message's ``belongs_to`` and ``sent_by``
+    rels are swept alongside the row. Soft by default; ``hard=True``
+    physically removes the rows.
+
+    Caller owns the transaction. Useful for "clear chat" surfaces (DMs
+    only — see the http route, which restricts this to DM
+    conversations to avoid wiping public topic history).
+    """
+    # Lazy import: messages → conversations cycle would otherwise show
+    # up if this lands at module top.
+    from wazzup.api import messages as messages_api
+
+    rows = db.execute(
+        """
+        SELECT m.id FROM message m
+        JOIN rels r ON r.src_id = m.id
+                  AND r.src_type = 'message'
+                  AND r.rel_type = 'belongs_to'
+                  AND r.tgt_type = 'conversation'
+                  AND r.tgt_id = ?
+                  AND r.deleted_at IS NULL
+        WHERE m.deleted_at IS NULL
+        ORDER BY m.id
+        """,
+        (conversation_id,),
+    ).fetchall()
+    count = 0
+    for row in rows:
+        messages_api.delete(db, row["id"], hard=hard)
+        count += 1
+    return count
+
+
 def query(
     db: Connection,
     *,

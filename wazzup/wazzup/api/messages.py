@@ -231,6 +231,72 @@ def query(
     return [_row_to_messageread(r) for r in rows]
 
 
+def query_with_senders(
+    db: Connection,
+    *,
+    conversation_id: int,
+    sender_id: int | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> list:
+    """Same shape as ``query`` but enriches each row with sender info.
+
+    Returns a list of ``MessageReadInConversation`` (stored columns +
+    ``sender_id`` / ``sender_slug`` / ``sender_name``). One SQL query
+    via three JOINs — ``message`` × ``rels`` (belongs_to) × ``rels``
+    (sent_by) × ``user``. The route-local denormalization documented
+    in the ``MessageReadInConversation`` docstring; api owns the JOIN
+    so routes stay thin.
+
+    Used by the list routes:
+    - ``GET /conversations/{slug}/messages``
+    - ``GET /messages?conversation_id=...``
+    """
+    # Imported here to keep the module-level import block uncluttered;
+    # MessageReadInConversation is only used by this function.
+    from wazzup.models import MessageReadInConversation
+
+    sql = """
+        SELECT m.*,
+               u.id   AS sender_id,
+               u.slug AS sender_slug,
+               u.name AS sender_name
+        FROM message m
+        JOIN rels r_conv
+            ON r_conv.src_id = m.id
+           AND r_conv.src_type = 'message'
+           AND r_conv.rel_type = 'belongs_to'
+           AND r_conv.deleted_at IS NULL
+        JOIN rels r_send
+            ON r_send.src_id = m.id
+           AND r_send.src_type = 'message'
+           AND r_send.rel_type = 'sent_by'
+           AND r_send.deleted_at IS NULL
+        JOIN user u
+            ON u.id = r_send.tgt_id
+           AND u.deleted_at IS NULL
+        WHERE r_conv.tgt_id = ?
+          AND r_conv.tgt_type = 'conversation'
+          AND m.deleted_at IS NULL
+    """
+    params: list = [conversation_id]
+
+    if sender_id is not None:
+        sql += " AND r_send.tgt_id = ? AND r_send.tgt_type = 'user'"
+        params.append(sender_id)
+
+    sql += " ORDER BY m.id LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+
+    rows = db.execute(sql, params).fetchall()
+    enriched = []
+    for r in rows:
+        raw = dict(r)
+        raw["details"] = json.loads(raw["details"]) if raw["details"] else {}
+        enriched.append(MessageReadInConversation.model_validate(raw))
+    return enriched
+
+
 def recent_history(
     db: Connection,
     *,

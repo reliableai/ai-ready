@@ -81,16 +81,29 @@ The principle: production code doesn't know that tests want extra tables, indexe
 - **Errors**: `401` — missing `X-User-Slug`. (Invalid `type` values fall through silently — the api layer accepts any string and returns no rows; tightening this is a follow-up if it bites.)
 - **Soft-delete behavior**: soft-deleted users are excluded. There's no `include_deleted` flag — a separate audit endpoint would be the right place if that's ever needed.
 
-## conversations (one route only — internal plumbing)
+## conversations (two routes — list messages, clear DM)
 
-In v0.2, conversations are not user-facing. The only HTTP route is the messages-list endpoint the UI's chat view hits. `POST /conversations`, `GET /conversations`, and `GET /conversations/{slug}` were deleted with the boundary refactor — `topics.create()` and `conversations.get_or_create_dm()` are the only public producers of conversations.
+In v0.2, conversations are not user-facing. The only HTTP routes are the messages-list endpoint the UI's chat view hits and (v0.3) a DM-only "clear" route for resetting a 1:1 thread. `POST /conversations`, `GET /conversations`, and `GET /conversations/{slug}` were deleted with the boundary refactor — `topics.create()` and `conversations.get_or_create_dm()` are the only public producers of conversations.
+
+### `DELETE /conversations/{slug}/messages`
+- **Auth**: required.
+- **Path param**: `slug` — the conversation's slug.
+- **Restriction**: DMs only. Topic-default conversations (those with an `in_topic` rel) reject this with 403, since clearing a public topic's messages would wipe content shared with other users.
+- **Access control**: same as the read route — caller must pass `conversations.is_accessible_by`. For DMs that means being one of the two `participates_in` users; non-participant → 403.
+- **Effect**: every live message in the conversation gets soft-deleted via `messages.delete` (which routes through `cascade_delete`). Each message's `belongs_to` and `sent_by` rels are cascade-soft-deleted alongside.
+- **Success**: `204 No Content`.
+- **Errors**:
+  - `404` — no live conversation with that slug.
+  - `403` — caller not a participant, OR the conversation is a topic-default.
+  - `401` — missing `X-User-Slug`.
+- **Soft-delete behavior**: messages stay in the DB with `deleted_at` set; recoverable via SQL but invisible to all reads. A subsequent post in the same DM starts the chat fresh from the new message.
 
 ### `GET /conversations/{slug}/messages` (#21)
 - **Auth**: required.
 - **Path param**: `slug` — the conversation's slug. Resolves to a `conversation_id` via `conversations.get_by_slug` before querying messages.
 - **Query params**: `limit` (1..200, default 20 — smaller than entity-list 50; messages are higher-volume), `offset` (≥0, default 0). Same `Query(ge=…, le=…)` bounds as the other list routes.
 - **Access control**: after slug resolution, the route calls `conversations.is_accessible_by(db, conversation_id=conv.id, user_id=current_user.id)`. Topic-default conversations gate through `topics.can_access` (today: always True, since v0.1 topics are public). DMs require the caller to be one of the two `participates_in` users. Non-participant on a DM → **403** (not 404 — the conversation's existence isn't secret; its contents are).
-- **Success**: `200 OK` + JSON array of `MessageRead`, ordered by id (oldest first).
+- **Success**: `200 OK` + JSON array of `MessageReadInConversation`, ordered by id (oldest first). Each row carries the stored `MessageRead` columns *plus* `sender_id` / `sender_slug` / `sender_name` denormalized through the `sent_by` rel — the UI renders multi-party threads without an N+1 fetch.
 - **Errors**:
   - `404` — no live conversation with that slug. Body: `{"detail": "conversation slug='nope' not found"}`.
   - `403` — caller is not a participant in the DM (or, when private topics ship, not a member of the topic). Body: `{"detail": "not a participant of this conversation"}`.
@@ -173,7 +186,7 @@ In v0.2, conversations are not user-facing. The only HTTP route is the messages-
   - `sender_id` — optional; integer. Filters within the conversation.
   - `limit` (1..200, default 20), `offset` (≥0, default 0). Same `Query(ge=…, le=…)` bounds as the other list routes.
 - **Access control**: same rule as `GET /conversations/{slug}/messages` — caller must pass `conversations.is_accessible_by(...)`. Non-participant on a DM → **403**.
-- **Success**: `200 OK` + JSON array of `MessageRead`. Empty array on no match.
+- **Success**: `200 OK` + JSON array of `MessageReadInConversation` (same enriched shape as the slug-based variant — stored columns + `sender_id` / `sender_slug` / `sender_name`). Empty array on no match.
 - **Errors**:
   - `422` — `conversation_id` missing or non-integer; `limit`/`offset` out of bounds.
   - `403` — caller is not a participant.

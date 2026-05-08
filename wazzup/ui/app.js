@@ -20,9 +20,14 @@ const USER_SLUG_KEY = "wazzup.user_slug";
 // currently displayed. The conversation can be either a topic's
 // default conversation or a DM — the UI doesn't care which; the slug
 // + id are enough to load and post messages.
+//
+// ``currentUserName`` is cached at login (``renderUserInfo``) so the
+// optimistic-render path can show the right display name on the
+// message *before* the server roundtrip completes.
 let currentConvSlug = null;
 let currentConvId = null;
 let currentConvName = null;
+let currentUserName = null;
 
 
 // ----- auth + fetch wrapper -----
@@ -136,6 +141,7 @@ async function renderUserInfo() {
       if (u.slug === slug) {
         opt.selected = true;
         foundCurrent = true;
+        currentUserName = u.name;     // cache for optimistic-render in postMessage
       }
       select.appendChild(opt);
     }
@@ -171,12 +177,16 @@ async function loadUsers() {
   // People sidebar: every live user except the current one (no self-DM).
   // Click → POST /dms/{peer_slug} → loadMessages on the returned conversation.
   // Empty-state hint when no peers exist so the sidebar doesn't look broken.
+  // Sorted alphabetically by display name with localeCompare so unicode
+  // collation is correct (e.g., Min Ho before Plato regardless of locale).
   try {
     const users = await fetchUsers();
     const me = getCurrentUserSlug();
     const ul = document.getElementById("users-list");
     ul.innerHTML = "";
-    const peers = users.filter((u) => u.slug !== me);
+    const peers = users
+      .filter((u) => u.slug !== me)
+      .sort((a, b) => a.name.localeCompare(b.name));
     if (peers.length === 0) {
       const hint = document.createElement("li");
       hint.classList.add("empty-state");
@@ -221,6 +231,15 @@ async function loadTopics() {
 
 // ----- open conversation: topic-default or DM -----
 
+// Tracks whether the open conversation is a DM. Drives the visibility
+// of the "Clear chat" button (DMs only — clearing a public topic
+// would wipe everyone else's content, server enforces this too).
+let currentConvIsDM = false;
+
+function setClearButtonVisible(visible) {
+  document.getElementById("clear-chat").hidden = !visible;
+}
+
 function openTopic(topic) {
   // TopicRead carries both the default conversation id and slug — see
   // wazzup/models.py and wazzup/api/topics.py. Carrying both spares the
@@ -234,7 +253,9 @@ function openTopic(topic) {
   currentConvId = topic.default_conversation_id;
   currentConvSlug = topic.default_conversation_slug;
   currentConvName = `Topic: ${topic.name}`;
+  currentConvIsDM = false;
   document.getElementById("conversation-name").textContent = currentConvName;
+  setClearButtonVisible(false);
   loadMessagesForCurrent();
 }
 
@@ -247,11 +268,56 @@ async function openDM(peerSlug, peerName) {
     currentConvId = conv.id;
     currentConvSlug = conv.slug;
     currentConvName = `DM with ${peerName}`;
+    currentConvIsDM = true;
     document.getElementById("conversation-name").textContent = currentConvName;
+    setClearButtonVisible(true);
     await loadMessagesForCurrent();
   } catch (e) {
     showError(`open DM: ${e.message}`);
   }
+}
+
+async function clearCurrentChat() {
+  if (!currentConvSlug || !currentConvIsDM) return;
+  // Destructive — confirm. Soft-delete on the server, but the user
+  // sees them disappear; the recover path is "ask an admin" / SQL.
+  if (!window.confirm(`Clear all messages in ${currentConvName}? This can't be undone from the UI.`)) {
+    return;
+  }
+  try {
+    await fetchAPI(
+      `/conversations/${encodeURIComponent(currentConvSlug)}/messages`,
+      { method: "DELETE" },
+    );
+    await loadMessagesForCurrent();
+  } catch (e) {
+    showError(`clear chat: ${e.message}`);
+  }
+}
+
+function renderMessageItem(m, myslug) {
+  // Build one <li> for a message. Used by both the canonical render
+  // (loadMessagesForCurrent) and the optimistic render (postMessage).
+  // Keeps the two paths visually identical so the swap-after-fetch
+  // doesn't flicker.
+  const li = document.createElement("li");
+  li.classList.add("message");
+  li.classList.add(`sender-${m.sender_slug}`);
+  if (m.sender_slug === myslug) li.classList.add("mine");
+
+  const senderEl = document.createElement("span");
+  senderEl.className = "sender";
+  senderEl.textContent = m.sender_name;
+  const textEl = document.createElement("span");
+  textEl.className = "text";
+  textEl.textContent = m.text;
+  li.append(senderEl, document.createTextNode(": "), textEl);
+  return li;
+}
+
+function scrollMessagesToBottom() {
+  const ol = document.getElementById("messages-list");
+  ol.scrollTop = ol.scrollHeight;
 }
 
 async function loadMessagesForCurrent() {
@@ -262,14 +328,14 @@ async function loadMessagesForCurrent() {
     );
     const ol = document.getElementById("messages-list");
     ol.innerHTML = "";
+    const myslug = getCurrentUserSlug();
     for (const m of messages) {
-      const li = document.createElement("li");
-      // Sender display: MessageRead is stored-columns-only (no sender_id),
-      // per the rels-only design. A future MessageReadInConversation route
-      // would JOIN through the sent_by rel and surface the sender name.
-      li.textContent = m.text;
-      ol.appendChild(li);
+      // Server returns MessageReadInConversation (the route denormalizes
+      // through the sent_by rel). Each row carries sender_name + sender_slug
+      // so we can render multi-party threads cleanly.
+      ol.appendChild(renderMessageItem(m, myslug));
     }
+    scrollMessagesToBottom();
   } catch (e) {
     showError(`load messages: ${e.message}`);
   }
@@ -283,6 +349,36 @@ async function postMessage(text) {
     showError("select a topic or DM first");
     return;
   }
+
+  // ----- 1. Optimistic UI -----
+  // Append the message to the DOM *before* the server roundtrip. The
+  // server's POST /messages handler runs the agent dispatcher (one
+  // LLM call per agent) before returning, which can take 5-15s — too
+  // long to leave the user staring at an empty composer wondering if
+  // anything happened. So: render the message immediately, then let
+  // ``loadMessagesForCurrent`` rebuild the list when the server returns.
+  // The rebuild replaces the optimistic <li> with the canonical one
+  // *plus* the agent replies; the visual shape is the same so the
+  // swap is seamless.
+  const myslug = getCurrentUserSlug();
+  const optimistic = renderMessageItem(
+    { sender_slug: myslug, sender_name: currentUserName || myslug, text },
+    myslug,
+  );
+  optimistic.classList.add("optimistic");
+  const ol = document.getElementById("messages-list");
+  ol.appendChild(optimistic);
+
+  // Typing indicator — tells the user "agents are working" while the
+  // server's dispatcher loops. Removed when the canonical fetch
+  // completes (loadMessagesForCurrent rebuilds the list).
+  const typing = document.createElement("li");
+  typing.className = "message typing";
+  typing.textContent = "agents are typing…";
+  ol.appendChild(typing);
+  scrollMessagesToBottom();
+
+  // ----- 2. Server roundtrip -----
   try {
     await fetchAPI("/messages", {
       method: "POST",
@@ -293,9 +389,13 @@ async function postMessage(text) {
         text: text,
       }),
     });
+    // Refresh from server: replaces optimistic + typing indicator with
+    // canonical list (now includes our message and any agent replies).
     await loadMessagesForCurrent();
   } catch (e) {
     showError(`post message: ${e.message}`);
+    // Rollback: re-fetch to remove the dangling optimistic <li>.
+    await loadMessagesForCurrent();
   }
 }
 
@@ -310,6 +410,10 @@ document.getElementById("compose-form").addEventListener("submit", (e) => {
     postMessage(text);
     ta.value = "";
   }
+});
+
+document.getElementById("clear-chat").addEventListener("click", () => {
+  clearCurrentChat();
 });
 
 // Initial load.

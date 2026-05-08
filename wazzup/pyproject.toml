@@ -15,6 +15,7 @@ dependencies = [
     "openai>=1.40",
     "httpx>=0.27", # used by FastAPI's TestClient and by examples
     "pytest>=9.0.3",
+    "mcp>=1.0",                # FastMCP server (lesson 3): wraps api/ as MCP tools
 ]
 
 [project.optional-dependencies]

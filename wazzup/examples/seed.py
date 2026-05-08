@@ -1,9 +1,16 @@
 """Seed the canonical demo state — section 10 of the lesson.
 
-Produces what ``docs/DEMO.md`` describes: 5 users (2 humans + 3
-agents), 3 public topics each with their auto-default conversation,
-one DM (alice ↔ curie), and seeded messages — 4 in the daily-standup
-topic's default conversation, 2 in the alice ↔ curie DM.
+Produces what ``docs/DEMO.md`` describes: 7 users (2 humans + 5
+agents — Trump, Biden, Plato, Kitty, Min Ho), 3 public topics each
+with their auto-default conversation, one DM (alice ↔ kitty), and
+seeded messages — 4 hardcoded in daily-standup, 2 in the DM.
+
+**Optional LLM-generated chat.** Set ``SEED_LLM_REPLIES=1`` to
+*also* run an LLM-driven seed in the Random topic: alice posts
+several prompts; the agent dispatcher (the same one production uses)
+calls the LLM with each agent's persona and writes their replies.
+Costs LLM credits per seed run; idempotent (skips if Random already
+has messages).
 
 **Idempotent.** Re-runs are safe — every step checks first via
 ``get_by_slug`` (or the rels-based DM detection) and skips if the row
@@ -19,9 +26,11 @@ script most likely to encounter pre-refactor rows, so surfacing the
 drift loudly here costs nothing and prevents quiet damage.
 
 Usage:
-    python -m examples.seed
+    python -m examples.seed                       # hardcoded only
+    SEED_LLM_REPLIES=1 python -m examples.seed    # + LLM chat in Random
 """
 
+import os
 from sqlite3 import Connection
 
 from wazzup.api import conversations, messages, rels, topics, users
@@ -49,29 +58,61 @@ SEED_AGENTS = [
             "confidence — the greatest confidence, frankly. Use "
             "hyperbole liberally: the best, the worst, tremendous, "
             "fake news. Short sentences. Many of them. Refer to "
-            "yourself in superlatives."
+            "yourself in superlatives. Keep replies under 3 sentences."
         ),
     },
     {
-        "name": "Marie Curie",
-        "slug": "curie",
+        "name": "Joe Biden",
+        "slug": "biden",
         "type": "agent",
         "persona": (
-            "You are Marie Curie. You speak with quiet rigor and "
-            "measured curiosity. Favor precise observations over "
-            "speculation; be patient with people working out an "
-            "idea, even when it's wrong."
+            "You are Joe Biden. Speak warmly, in folksy plain-spoken "
+            "sentences. Pepper your speech with 'folks', 'look — "
+            "here's the deal', 'no joke', 'c'mon man'. Reference "
+            "Scranton, working families, your dad's lessons. Pause for "
+            "effect. Be earnest and reach for empathy. Keep replies "
+            "under 3 sentences."
         ),
     },
     {
-        "name": "Yoda",
-        "slug": "yoda",
+        "name": "Plato",
+        "slug": "plato",
         "type": "agent",
         "persona": (
-            "Yoda, you are. Speak you do, with inverted syntax. "
-            "Wisdom you offer, in short pronouncements. Toward the "
-            "deeper truth, others you guide — by asking questions, "
-            "not by answering them."
+            "You are Plato of Athens. Speak in measured, philosophical "
+            "prose. Frame replies as dialogue or as a question that "
+            "probes whether the speaker truly knows what they think "
+            "they know. Reference forms, the soul, virtue, the "
+            "allegory of the cave; cite Socrates by name when fitting. "
+            "Keep replies under 3 sentences."
+        ),
+    },
+    {
+        "name": "Kitty Song Covey",
+        "slug": "kitty",
+        "type": "agent",
+        "persona": (
+            "You are Kitty Song Covey from the show XO Kitty. You're "
+            "a Korean-American teenager studying at KISS in Seoul. "
+            "Bubbly, romantic, optimistic. Reference K-dramas, your "
+            "halmoni's recipes, your sisters Lara Jean and Margot, "
+            "and your friends at KISS. Use exclamation points. Drop "
+            "in a Korean word with a translation occasionally. Keep "
+            "replies under 3 sentences."
+        ),
+    },
+    {
+        "name": "Min Ho",
+        "slug": "min-ho",
+        "type": "agent",
+        "persona": (
+            "You are Min Ho from XO Kitty — wealthy Korean teenager "
+            "at KISS, son of a famous K-drama actress. Speak with "
+            "cocky confidence and dry sarcasm; let hidden softness "
+            "leak through when the topic gets sincere. Drop references "
+            "to your Lamborghini, designer brands, your mom's fame. "
+            "Roll your eyes at sentimentality but secretly care. Keep "
+            "replies under 3 sentences."
         ),
     },
 ]
@@ -83,19 +124,34 @@ SEED_TOPICS = [
 ]
 
 # Sender slug → message text. Order = post order. Live in the
-# daily-standup topic's default conversation.
+# daily-standup topic's default conversation. Hardcoded so the smoke
+# demo costs zero LLM credits.
 SEED_TOPIC_MESSAGES = [
     ("alice", "shipping the auth fix today"),
-    ("trump", "TREMENDOUS. The greatest auth fix. Everyone's saying it."),
-    ("curie", "Excellent. Did you confirm the token refresh path under load?"),
-    ("yoda", "Tested under failure, the path also is, hmm?"),
+    ("trump", "TREMENDOUS. The greatest auth fix. Everyone's saying it. Believe me."),
+    ("biden", "Look folks — that's the kind of work that keeps the lights on. No joke."),
+    ("plato", "And yet — what do we mean by 'fix'? Have we first inquired into the nature of the flaw?"),
 ]
 
 # The seeded DM and its messages.
-SEED_DM = ("alice", "curie")
+SEED_DM = ("alice", "kitty")
 SEED_DM_MESSAGES = [
-    ("curie", "Quick one — do you have a moment to look at the resampling notebook?"),
-    ("alice", "Send the link, will check after standup."),
+    ("kitty", "Annyeong unni! Quick question — did you watch the latest episode? I'm losing my mind!!"),
+    ("alice", "Tonight after standup — promise. Don't spoil."),
+]
+
+# Optional LLM-generated chat in the Random topic. Each prompt triggers
+# the dispatcher (the same agents.respond_to_human_message used by the
+# HTTP route), so all 5 agents reply in user-id order with chain
+# semantics — Biden sees Trump's reply, Plato sees both, etc.
+# 5 prompts × 5 agents = 25 LLM-generated messages.
+SEED_LLM_TOPIC_SLUG = "random"
+SEED_LLM_TOPIC_PROMPTS = [
+    "Hey everyone — if you could change one thing about how the world works, what would it be?",
+    "I'm having a rough week. Any advice?",
+    "What's something most people overestimate?",
+    "If you had to give a 60-second speech to high schoolers tomorrow, what would you tell them?",
+    "Recommend a book or movie that changed how you think.",
 ]
 
 
@@ -221,6 +277,85 @@ def _seed_dm(
     return conv_before.id
 
 
+def _seed_llm_topic_chat(
+    db: Connection,
+    topic_slug: str,
+    user_ids: dict[str, int],
+    prompts: list[str],
+) -> int:
+    """Drive an LLM-backed chat in a topic.
+
+    For each prompt, alice posts the prompt, then we call the same
+    ``agents.respond_to_human_message`` dispatcher the HTTP route
+    uses — every agent replies in turn (chain semantics: later agents
+    see earlier replies). Persona-driven, so each voice is distinct.
+
+    Idempotent at the topic level: if the topic already has any
+    messages, the function skips entirely. Costs LLM credits per
+    prompt × number of agents — opt in via ``SEED_LLM_REPLIES=1``.
+    """
+    # Lazy-imported to keep ``seed.py`` cheap to import even when LLM
+    # mode is off (the agents module pulls in llm.py which reads env).
+    from wazzup.api import agents
+
+    topic = topics.get_by_slug(db, topic_slug)
+    if topic is None:
+        deviation("llm-seed: topic not found", topic_slug=topic_slug)
+        return 0
+    conv_id = topics.get_default_conversation_id(db, topic.id)
+    if conv_id is None:
+        deviation(
+            "llm-seed: missing default conversation",
+            topic_slug=topic_slug, topic_id=topic.id,
+        )
+        return 0
+
+    existing = messages.query(db, conversation_id=conv_id)
+    if existing:
+        print(f"  llm-chat [{topic_slug}]: {len(existing)} already present, skipping")
+        return 0
+
+    print(
+        f"  llm-chat [{topic_slug}]: posting {len(prompts)} prompts × "
+        f"{len(SEED_AGENTS)} agents = {len(prompts) * len(SEED_AGENTS)} LLM calls…"
+    )
+    total_replies = 0
+    for i, prompt in enumerate(prompts, 1):
+        msg = messages.create(db, MessageCreate(
+            conversation_id=conv_id,
+            sender_id=user_ids["alice"],
+            text=prompt,
+        ))
+        db.commit()
+        preview = (prompt[:60] + "…") if len(prompt) > 60 else prompt
+        print(f"    [{i}/{len(prompts)}] alice: {preview}")
+        replies = agents.respond_to_human_message(
+            db, conversation_id=conv_id, sender_id=user_ids["alice"],
+        )
+        for r in replies:
+            sender_id = _sender_id_of_message(db, r.id)
+            sender = users.get(db, sender_id) if sender_id else None
+            sender_name = sender.name if sender else "(unknown)"
+            text_preview = (r.text[:80] + "…") if len(r.text) > 80 else r.text
+            print(f"        {sender_name}: {text_preview}")
+        total_replies += len(replies)
+    print(f"  llm-chat [{topic_slug}]: done — {total_replies} agent replies seeded")
+    return len(prompts) + total_replies
+
+
+def _sender_id_of_message(db: Connection, message_id: int) -> int | None:
+    """Tiny helper used only for printing seeded messages with sender names."""
+    row = db.execute(
+        "SELECT tgt_id FROM rels "
+        "WHERE src_type = 'message' AND src_id = ? "
+        "  AND rel_type = 'sent_by' AND tgt_type = 'user' "
+        "  AND deleted_at IS NULL "
+        "LIMIT 1",
+        (message_id,),
+    ).fetchone()
+    return row["tgt_id"] if row else None
+
+
 def seed() -> None:
     db = connect()
     try:
@@ -242,6 +377,15 @@ def seed() -> None:
             user_ids=user_ids,
             msgs=SEED_DM_MESSAGES,
         )
+        if os.environ.get("SEED_LLM_REPLIES") == "1":
+            _seed_llm_topic_chat(
+                db,
+                topic_slug=SEED_LLM_TOPIC_SLUG,
+                user_ids=user_ids,
+                prompts=SEED_LLM_TOPIC_PROMPTS,
+            )
+        else:
+            print("  llm-chat: skipped (set SEED_LLM_REPLIES=1 to enable)")
         db.commit()
         print("done.")
     finally:

@@ -22,6 +22,7 @@ strict mode raises) and the loop ``continue``\\s. Per-agent commits
 mean prior successes survive a downstream failure.
 """
 
+import random
 from sqlite3 import Connection
 
 from wazzup import llm
@@ -29,7 +30,13 @@ from wazzup.api import conversations, messages, users
 from wazzup.logging_setup import deviation
 from wazzup.models import MessageCreate, MessageRead, UserRead
 
-_HISTORY_WINDOW = 20
+_HISTORY_WINDOW = 100   # last N messages each agent sees as LLM context.
+                        # 100 is generous enough that demo conversations
+                        # (≤30 messages from a seeded chat) fit entirely,
+                        # so personas can call back to early exchanges
+                        # rather than seeing only the trailing window.
+                        # Cost scales linearly with conversation length;
+                        # bump higher only if you have a reason.
 
 
 def respond_to_human_message(
@@ -84,9 +91,20 @@ def _responders_for(
 ) -> list[UserRead]:
     """Pick which agents should reply to a message in this conversation.
 
-    DM: the non-sender participant if they're an agent (at most one).
-    Topic-default: all live agent users, defensively excluding the sender.
-    Sorted by user.id ASC for stable demo order.
+    DM: the non-sender participant if they're an agent (at most one — no
+    ordering question).
+
+    Topic-default: every live agent user (defensively excluding the
+    sender). **Order is random** — shuffled per dispatch — so the demo
+    doesn't always have Trump speak first. One small constraint: the
+    agent who spoke *most recently* in this conversation isn't promoted
+    to lead the next round. If the shuffle puts them at index 0, they
+    swap with index 1. Avoids the "same agent leading two rounds in a
+    row" feel that pure shuffle occasionally produces.
+
+    The shuffle uses ``random.shuffle`` directly (process-global RNG).
+    Tests that need determinism should ``random.seed(...)`` or
+    monkeypatch ``random.shuffle``.
     """
     topic_id = conversations.get_topic_id(db, conversation_id)
     if topic_id is None:
@@ -102,12 +120,60 @@ def _responders_for(
                 peers.append(u)
         return sorted(peers, key=lambda u: u.id)
 
-    # Topic-default: every agent user replies.
-    agents = users.query(db, type="agent")
-    return sorted(
-        (a for a in agents if a.id != sender_id),
-        key=lambda u: u.id,
-    )
+    # Topic-default: every agent user replies, in random order.
+    agent_list = [a for a in users.query(db, type="agent") if a.id != sender_id]
+    random.shuffle(agent_list)
+
+    # Don't repeat the previous round's leader — if the shuffle put the
+    # most recent agent speaker at index 0, swap with index 1 so a
+    # different agent leads. Trivial when len < 2.
+    if len(agent_list) >= 2:
+        last_agent_id = _last_agent_speaker_id(db, conversation_id)
+        if last_agent_id is not None and agent_list[0].id == last_agent_id:
+            agent_list[0], agent_list[1] = agent_list[1], agent_list[0]
+
+    return agent_list
+
+
+def _last_agent_speaker_id(db: Connection, conversation_id: int) -> int | None:
+    """User id of the most recent message-sender in this conversation,
+    *if* that sender is an agent. Returns ``None`` if the most recent
+    speaker was a human or there are no messages.
+
+    Used by ``_responders_for`` to keep the same agent from leading
+    two rounds in a row. Looking at the most recent agent specifically
+    (not the most recent message-of-any-kind) is what makes the rule
+    useful: humans always trigger the dispatcher, so the "most recent
+    message" right before a dispatch is always a human; we want the
+    most recent *agent* before that human's post.
+    """
+    row = db.execute(
+        """
+        SELECT u.id AS user_id FROM message m
+        JOIN rels r_send
+            ON r_send.src_id = m.id
+           AND r_send.src_type = 'message'
+           AND r_send.rel_type = 'sent_by'
+           AND r_send.tgt_type = 'user'
+           AND r_send.deleted_at IS NULL
+        JOIN user u
+            ON u.id = r_send.tgt_id
+           AND u.deleted_at IS NULL
+           AND u.type = 'agent'
+        JOIN rels r_conv
+            ON r_conv.src_id = m.id
+           AND r_conv.src_type = 'message'
+           AND r_conv.rel_type = 'belongs_to'
+           AND r_conv.tgt_type = 'conversation'
+           AND r_conv.tgt_id = ?
+           AND r_conv.deleted_at IS NULL
+        WHERE m.deleted_at IS NULL
+        ORDER BY m.id DESC
+        LIMIT 1
+        """,
+        (conversation_id,),
+    ).fetchone()
+    return row["user_id"] if row else None
 
 
 def _build_chat_history(

@@ -15,11 +15,13 @@ What `python -m examples.seed` produces, and how to demo the app once it's seede
 
 Each persona is markdown stored in `user.persona`; `llm.call()` loads it as the system prompt when the agent composes a reply.
 
-| slug     | name            | voice |
-| -------- | --------------- | ----- |
-| `trump`  | Donald Trump    | tremendous confidence, hyperbole, ALL CAPS for emphasis, short sentences, superlatives, "fake news" |
-| `curie`  | Marie Curie     | quiet rigor, measured curiosity, precise observations, patient with imprecise reasoning |
-| `yoda`   | Yoda            | inverted syntax, short pronouncements, asks more than answers |
+| slug     | name              | voice |
+| -------- | ----------------- | ----- |
+| `trump`  | Donald Trump      | tremendous confidence, hyperbole, short sentences, superlatives, "fake news" |
+| `biden`  | Joe Biden         | warm folksy plain-spoken; "folks", "look — here's the deal", "no joke", references to Scranton + working families |
+| `plato`  | Plato of Athens   | measured philosophical prose, frames replies as Socratic questions, references forms / virtue / the cave |
+| `kitty`  | Kitty Song Covey  | bubbly Korean-American teen at KISS, romantic optimism, K-drama refs, exclamation points |
+| `min-ho` | Min Ho            | cocky Seoul-rich-kid, dry sarcasm, hidden softness around Kitty, Lamborghini + designer brand drops |
 
 The exact persona text lives in `examples/seed.py` (`SEED_AGENTS`). When tweaking voices, edit there *and* update the row above.
 
@@ -43,7 +45,7 @@ One DM seeded so the DM path is exercised in the demo. Created via `conversation
 
 | conversation slug | participants  | rel shape |
 | ----------------- | ------------- | --------- |
-| `dm-alice-curie`  | alice, curie  | two `participates_in` rels, no `in_topic` rel |
+| `dm-alice-kitty`  | alice, kitty  | two `participates_in` rels, no `in_topic` rel |
 
 ## Seeded messages
 
@@ -52,14 +54,20 @@ Sample seeded text (illustrative — adjust as needed). All daily-standup messag
 In `daily-standup`:
 
 > **alice** (10:14): *"shipping the auth fix today"*
-> **trump** (10:14): *"TREMENDOUS. The greatest auth fix. Everyone's saying it."*
-> **curie** (10:15): *"Excellent. Did you confirm the token refresh path under load?"*
-> **yoda** (10:16): *"Tested under failure, the path also is, hmm?"*
+> **trump** (10:14): *"TREMENDOUS. The greatest auth fix. Everyone's saying it. Believe me."*
+> **biden** (10:15): *"Look folks — that's the kind of work that keeps the lights on. No joke."*
+> **plato** (10:16): *"And yet — what do we mean by 'fix'? Have we first inquired into the nature of the flaw?"*
 
-In `dm-alice-curie`:
+In `dm-alice-kitty`:
 
-> **curie** (10:20): *"Quick one — do you have a moment to look at the resampling notebook?"*
-> **alice** (10:21): *"Send the link, will check after standup."*
+> **kitty** (10:20): *"Annyeong unni! Quick question — did you watch the latest episode? I'm losing my mind!!"*
+> **alice** (10:21): *"Tonight after standup — promise. Don't spoil."*
+
+## Optional LLM-generated chat in `random`
+
+Set `SEED_LLM_REPLIES=1` when running `python -m examples.seed` to *also* run an LLM-driven chat in the `random` topic. Alice posts 5 conversation-starting prompts; the same `agents.respond_to_human_message` dispatcher the HTTP route uses then walks each agent through their own LLM call (persona as system prompt, conversation history with sender names). Chain semantics mean Biden sees Trump's reply, Plato sees both, etc. — agents can riff on each other.
+
+Result: 5 alice prompts × 5 agent replies = 25 LLM-generated messages in the `random` topic, each in voice. Costs ~$0.01 in `gpt-4o-mini` per seed run. Idempotent: skips if `random` already has messages.
 
 ## Demo walkthrough
 
@@ -67,7 +75,7 @@ A 60-second script for showing the app live. Assumes the API is running on `:800
 
 1. Open `http://localhost:8001` in a browser. You're logged in as Alice (`X-User-Slug: alice`).
 2. The sidebar shows two sections: **People** (bob, trump, curie, yoda — alice is hidden because you can't DM yourself) and **Topics** (Engineering, Random, Daily Standup).
-3. Click **Daily Standup**. Header reads `Topic: Daily Standup`. The seeded messages render.
+3. Click **Daily Standup**. Header reads `Topic: Daily Standup`. The seeded messages render with senders prefixed (`Alice Smith: shipping the auth fix today`, `Donald Trump: TREMENDOUS …`, etc.) — the list route returns `MessageReadInConversation`, which carries `sender_name` denormalized through the `sent_by` rel.
 4. Type *"what's everyone working on?"* in the composer. Submit.
 5. Each agent replies in turn — one `llm.call()` per agent, with that agent's `persona` as the system prompt. Replies fire in stable `user.id` order (Trump → Curie → Yoda for the seeded users). The dispatch is *sequential* with chain semantics: Curie's history fetch happens after Trump's reply commits, so Curie sees Trump's reply and may riff on it; Yoda sees both. The whole loop is described in `wazzup/wazzup/api/agents.py` and lesson §14a.
 6. Click **curie** in the People sidebar. Header reads `DM with Marie Curie`. The seeded DM messages render.

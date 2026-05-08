@@ -134,10 +134,10 @@ A human posting a message triggers agent users to respond in voice. The rule liv
 | Aspect | Rule |
 |---|---|
 | **Trigger** | Only `user.type='human'` posts. Agent posts never trigger replies (loop guard). |
-| **Topic-default scope** | Every `user.type='agent'` user replies, in stable user-id order. With seeded 3 agents = 3 replies per topic post. |
+| **Topic-default scope** | Every `user.type='agent'` user replies, in **random order per dispatch** (a `random.shuffle` over the agent list). One guard: if the shuffle puts the agent who spoke *most recently* in this conversation at index 0, swap with index 1 — same agent doesn't lead two rounds in a row. With seeded 5 agents = 5 replies per topic post. |
 | **DM scope** | If the DM peer is an agent, that agent replies. Human↔human DM → no reply. Agent↔agent DM (rare) → no reply (no human triggered). |
 | **History** | Each agent receives the persona as `role="system"`, then the conversation's recent messages via `messages.recent_history`, with each non-self user prefixed `"{name}: {text}"` as `role="user"` and the responding agent's prior messages as `role="assistant"`. |
-| **Sequencing** | Sequential, in user-id order. Each agent's history fetch happens *after* the prior agent's commit, so Curie sees Trump's just-typed reply (chain semantics). Snapshot-once semantics is an explicit non-default. |
+| **Sequencing** | Sequential, with chain semantics: each agent's history fetch happens *after* the prior agent's commit, so whoever fires second sees whoever fired first. Order within a round is random (see "Topic-default scope"). Snapshot-once semantics is an explicit non-default. |
 | **Failure** | Each agent reply wrapped in `try/except`. On `llm.call` failure: `deviation("agent reply failed", ...)` + skip. Lax mode logs and continues; strict mode raises and the request 500s — but prior committed replies + the human's message survive. |
 | **Transaction** | The `POST /messages` handler commits the human's message *before* dispatching agents. This is the one documented exception to the "caller owns transaction" rule (see `wazzup/CLAUDE.md`). Without the explicit commit, a strict-mode raise mid-loop would unwind the human's message via `get_db`'s rollback path. Each successful agent reply also commits before the next agent runs. |
 

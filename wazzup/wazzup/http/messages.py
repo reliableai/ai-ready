@@ -40,7 +40,13 @@ from wazzup.api import agents as agents_api
 from wazzup.api import conversations as conversations_api
 from wazzup.api import messages as messages_api
 from wazzup.http.dependencies import current_user, get_db, require_auth
-from wazzup.models import MessageCreate, MessageDetails, MessageRead, UserRead
+from wazzup.models import (
+    MessageCreate,
+    MessageDetails,
+    MessageRead,
+    MessageReadInConversation,
+    UserRead,
+)
 
 
 def _require_access(db: Connection, *, conversation_id: int, user_id: int) -> None:
@@ -111,7 +117,7 @@ def create_message(
     return human_msg
 
 
-@router.get("", response_model=list[MessageRead])
+@router.get("", response_model=list[MessageReadInConversation])
 def list_messages(
     conversation_id: int,
     sender_id: int | None = None,
@@ -119,7 +125,7 @@ def list_messages(
     offset: int = Query(0, ge=0),
     db: Connection = Depends(get_db),
     me: UserRead = Depends(current_user),
-) -> list[MessageRead]:
+) -> list[MessageReadInConversation]:
     """List live messages, filtered by conversation. Optional sender filter.
 
     ``conversation_id`` is a **required** query param — there's no "all
@@ -137,16 +143,14 @@ def list_messages(
     surfaces a 404 instead of an empty array — that's a behavior
     change documented in ``tests/tests.md``.
 
-    A nested view of the same data lives at
-    ``GET /conversations/{slug}/messages``, which resolves the slug
-    via ``conversations.get_by_slug`` before querying — use that when
-    you have a slug, this when you have an id. Both call into the
-    same ``messages_api.query`` after the same access check.
+    Response shape: ``MessageReadInConversation`` (same as the slug-
+    based variant) — each row carries the stored columns plus
+    ``sender_id`` / ``sender_slug`` / ``sender_name``.
     """
     if conversations_api.get(db, conversation_id) is None:
         raise NotFound(f"conversation_id={conversation_id} not found")
     _require_access(db, conversation_id=conversation_id, user_id=me.id)
-    return messages_api.query(
+    return messages_api.query_with_senders(
         db,
         conversation_id=conversation_id,
         sender_id=sender_id,
