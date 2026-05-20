@@ -45,3 +45,6 @@ labs/**/datasets/
 
 # Personal / unshared notes
 TODO.md
+
+# Private instructor notes (separate private repo at reliableai/ai-native-private)
+private/
