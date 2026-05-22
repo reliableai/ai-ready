@@ -20,9 +20,9 @@ Run with::
 
     uv run python -m wazzup.mcp.server
 
-The server listens on ``http://127.0.0.1:8001/mcp`` (streamable HTTP).
+The server listens on ``http://127.0.0.1:8002/mcp`` (streamable HTTP).
 Wire it to Claude Code via ``claude mcp add --transport http wazzup
-http://127.0.0.1:8001/mcp``.
+http://127.0.0.1:8002/mcp``.
 """
 
 from contextlib import contextmanager
@@ -48,8 +48,11 @@ from wazzup.models import (
     UserRead,
 )
 
-mcp = FastMCP("wazzup", host="127.0.0.1", port=8001)
-# Bind to 8001 because the FastAPI server already owns 8000. FastMCP
+mcp = FastMCP("wazzup", host="127.0.0.1", port=8002)
+# Bind to 8002 because the FastAPI server owns 8000 and the static UI
+# server (``python -m http.server 8001 -d ui/``) owns 8001. Three
+# processes, three ports — the ``/mcp`` path lives inside this
+# process's port, not as a way to share a port with the UI. FastMCP
 # reads host/port at construction; mutating ``mcp.settings.*`` after
 # the fact does NOT take effect.
 
@@ -242,7 +245,7 @@ def open_dm(as_user_slug: str, peer_slug: str) -> ConversationRead:
 
 
 def main():
-    """Run the MCP server on streamable HTTP at ``127.0.0.1:8001/mcp``.
+    """Run the MCP server on streamable HTTP at ``127.0.0.1:8002/mcp``.
 
     Bind address is set at the ``FastMCP(...)`` construction above,
     not here — FastMCP doesn't accept host/port on ``run()``.
